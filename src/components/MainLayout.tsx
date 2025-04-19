@@ -1,14 +1,17 @@
+
 import React from 'react';
 import { BrandGuideProvider } from '@/context/BrandGuideContext';
 import { Toaster } from "@/components/ui/toaster";
-import { Type, Palette, Image, FileDown, Save, Plus, User, LogIn } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BrandStudioLogo } from '@/components/BrandStudioLogo';
+
 interface MainLayoutProps {
   children: React.ReactNode;
   standalone?: boolean;
 }
+
 export function MainLayout({
   children,
   standalone = false
@@ -19,6 +22,7 @@ export function MainLayout({
       navigate(path);
     }
   };
+  
   const content = <div className="flex flex-col min-h-screen">
       <header className="border-b bg-background">
         <div className="container mx-auto py-4 px-4 flex items-center justify-between">
@@ -27,12 +31,7 @@ export function MainLayout({
           </div>
           
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild>
-              
-            </Button>
-            <Button size="sm">
-              <LogIn className="h-4 w-4 mr-2" /> Sign In
-            </Button>
+            {/* Removed "View complete guide" button as requested */}
           </div>
         </div>
       </header>
@@ -46,8 +45,6 @@ export function MainLayout({
       <main className="flex-1 bg-background py-6">
         {children}
       </main>
-      
-      
       
       <footer className="bg-muted py-6 border-t">
         <div className="container mx-auto px-4">
@@ -68,10 +65,12 @@ export function MainLayout({
       
       <Toaster />
     </div>;
+    
   if (standalone) {
     return <BrandGuideProvider>
         {content}
       </BrandGuideProvider>;
   }
+  
   return content;
 }

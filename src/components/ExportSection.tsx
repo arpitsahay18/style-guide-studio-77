@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { Button } from '@/components/ui/button';
@@ -22,11 +21,10 @@ import {
   Check,
   Copy,
   Share,
-  Mail
+  Mail,
+  Eye
 } from 'lucide-react';
 import { generateTypographyCss } from '@/utils/typographyUtils';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { useNavigate } from 'react-router-dom';
 
 export function ExportSection() {
@@ -134,27 +132,9 @@ export function ExportSection() {
     setShareEmail('');
   };
   
-  // Export as PDF function
-  const exportAsPDF = async () => {
-    toast({
-      title: "Preparing PDF export",
-      description: "Generating preview page for export...",
-    });
-    
-    try {
-      // Navigate to the preview page where we'll generate the PDF
-      navigate('/preview');
-      
-      // The actual PDF generation happens in the Preview component
-      // This is just to navigate there, the PDF generation will be triggered automatically
-    } catch (error) {
-      console.error("PDF export error:", error);
-      toast({
-        title: "Export failed",
-        description: "An error occurred while generating the PDF.",
-        variant: "destructive",
-      });
-    }
+  // Navigate to preview page
+  const viewCompleteGuide = () => {
+    navigate('/preview');
   };
   
   return (
@@ -178,10 +158,10 @@ export function ExportSection() {
               <CardContent className="space-y-4">
                 <Button 
                   className="w-full justify-start" 
-                  onClick={exportAsPDF}
+                  onClick={viewCompleteGuide}
                 >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Export as PDF
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Complete Guide
                 </Button>
                 
                 <Button 
@@ -234,7 +214,7 @@ export function ExportSection() {
                 
                 <div className="pt-4">
                   <p className="text-sm text-muted-foreground">
-                    The PDF export includes all typography, colors, and logo guidelines in a presentation-ready format.
+                    View the complete guide to see all typography, colors, and logo guidelines in a presentation-ready format.
                   </p>
                 </div>
               </CardContent>
