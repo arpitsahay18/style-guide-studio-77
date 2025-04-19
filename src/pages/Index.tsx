@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MainLayout } from '@/components/MainLayout';
@@ -9,32 +8,20 @@ import { ExportSection } from '@/components/ExportSection';
 import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState('typography');
   const navigate = useNavigate();
-  
   const viewPreview = () => {
     navigate('/preview');
   };
-  
-  return (
-    <MainLayout>
+  return <MainLayout>
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Brand Guideline Generator</h1>
-          <Button variant="outline" onClick={viewPreview}>
-            <FileDown className="h-4 w-4 mr-2" />
-            View Complete Guide
-          </Button>
+          
         </div>
         
-        <Tabs 
-          defaultValue="typography" 
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
+        <Tabs defaultValue="typography" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full grid grid-cols-4 mb-8">
             <TabsTrigger value="typography">Typography</TabsTrigger>
             <TabsTrigger value="colors">Colors</TabsTrigger>
@@ -59,8 +46,6 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </MainLayout>
-  );
+    </MainLayout>;
 };
-
 export default Index;
