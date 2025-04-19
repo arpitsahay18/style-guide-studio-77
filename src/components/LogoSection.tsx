@@ -38,9 +38,7 @@ import {
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 
-// Maximum file size in bytes (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
-// Allowed file types
 const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml'];
 
 interface LogoUploadProps {
@@ -81,13 +79,11 @@ function LogoUpload({ onUpload }: LogoUploadProps) {
   const validateAndProcessFile = (file: File) => {
     setError('');
     
-    // Check file type
     if (!ALLOWED_FILE_TYPES.includes(file.type)) {
       setError('Invalid file type. Please upload PNG, JPG, or SVG files only.');
       return;
     }
     
-    // Check file size
     if (file.size > MAX_FILE_SIZE) {
       setError('File size exceeds 5MB limit.');
       return;
@@ -154,12 +150,10 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   
-  // Handle zoom change
   const handleZoomChange = (value: number[]) => {
     setZoom(value[0]);
   };
   
-  // Handle drag operations
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -176,11 +170,9 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
       const containerSize = containerRect.width;
       const imageSize = containerSize * zoom;
       
-      // Calculate new position
       let newX = e.clientX - dragStart.x;
       let newY = e.clientY - dragStart.y;
       
-      // Constrain position within boundaries
       const maxOffset = (imageSize - containerSize) / 2;
       newX = Math.max(-maxOffset, Math.min(newX, maxOffset));
       newY = Math.max(-maxOffset, Math.min(newY, maxOffset));
@@ -193,7 +185,6 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
     setIsDragging(false);
   };
   
-  // Handle touch events for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       e.preventDefault();
@@ -214,11 +205,9 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
       const containerSize = containerRect.width;
       const imageSize = containerSize * zoom;
       
-      // Calculate new position
       let newX = touch.clientX - dragStart.x;
       let newY = touch.clientY - dragStart.y;
       
-      // Constrain position within boundaries
       const maxOffset = (imageSize - containerSize) / 2;
       newX = Math.max(-maxOffset, Math.min(newX, maxOffset));
       newY = Math.max(-maxOffset, Math.min(newY, maxOffset));
@@ -231,7 +220,6 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
     setIsDragging(false);
   };
   
-  // Execute crop operation
   const handleCrop = () => {
     if (!imageRef.current || !containerRef.current) return;
     
@@ -244,12 +232,10 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Calculate source dimensions and position for cropping
     const imageSize = containerSize * zoom;
     const sourceX = (imageSize / 2) - (containerSize / 2) - position.x;
     const sourceY = (imageSize / 2) - (containerSize / 2) - position.y;
     
-    // Create a temporary image to ensure it's fully loaded
     const img = new Image();
     img.crossOrigin = "Anonymous";
     img.onload = () => {
@@ -261,7 +247,6 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
         containerSize, containerSize
       );
       
-      // Convert to data URL
       const croppedImage = canvas.toDataURL('image/png');
       onCrop(croppedImage);
     };
@@ -269,7 +254,6 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
     img.src = imageUrl;
   };
   
-  // Effect to initialize the image position
   useEffect(() => {
     setPosition({ x: 0, y: 0 });
     setZoom(1);
@@ -307,13 +291,12 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
             transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px)`,
             opacity: isDragging ? 0.8 : 1,
             transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-            pointerEvents: 'none', // Prevent image from interfering with drag events
+            pointerEvents: 'none',
           }}
           alt="Logo to crop"
           draggable={false}
         />
         
-        {/* Grid overlay */}
         <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-50">
           {Array.from({ length: 2 }).map((_, i) => (
             <React.Fragment key={i}>
@@ -323,7 +306,6 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
           ))}
         </div>
         
-        {/* Drag hint */}
         <div className="absolute top-2 left-2 bg-black/60 rounded-full p-1.5 pointer-events-none">
           <Move className="h-4 w-4 text-white" />
         </div>
@@ -378,33 +360,27 @@ interface LogoVariationCreatorProps {
 }
 
 function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreatorProps) {
-  // Generate the standard logo variations
   const generateVariations = () => {
-    // Create variations for each container shape and background
     const variations: LogoVariation[] = [];
     
-    // Full color on white background
     variations.push({
       src: originalLogo,
       background: '#FFFFFF',
       type: 'color'
     });
     
-    // Full color on black background
     variations.push({
       src: originalLogo,
       background: '#000000',
       type: 'color'
     });
     
-    // White on primary color background (using a default blue for now)
     variations.push({
       src: originalLogo,
       background: '#0062FF',
       type: 'white'
     });
     
-    // Black on white background
     variations.push({
       src: originalLogo,
       background: '#FFFFFF',
@@ -447,11 +423,9 @@ export function LogoSection() {
   const { currentGuide, updateLogos } = useBrandGuide();
   const [showUploader, setShowUploader] = useState(!currentGuide.logos.original);
   const [showCropper, setShowCropper] = useState(false);
-  const [showVariationCreator, setShowVariationCreator] = useState(false);
   const [uploadedImage, setUploadedImage] = useState('');
   const [croppedImage, setCroppedImage] = useState('');
   
-  // Handle logo upload
   const handleLogoUpload = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -464,25 +438,20 @@ export function LogoSection() {
     reader.readAsDataURL(file);
   };
   
-  // Handle logo crop completion
   const handleCropComplete = (croppedImage: string) => {
     setCroppedImage(croppedImage);
     
-    // Update the original logo in the guide
     const updatedLogos: LogoSet = {
       ...currentGuide.logos,
       original: croppedImage
     };
     
     updateLogos(updatedLogos);
-    
     setShowCropper(false);
     setShowVariationCreator(true);
   };
   
-  // Handle logo variations completion
   const handleVariationsComplete = (variations: LogoVariation[]) => {
-    // Create variations for each container shape
     const updatedLogos: LogoSet = {
       ...currentGuide.logos,
       square: variations,
@@ -494,7 +463,6 @@ export function LogoSection() {
     setShowVariationCreator(false);
   };
   
-  // Handle logo deletion and restart the process
   const handleDeleteLogo = () => {
     const updatedLogos: LogoSet = {
       original: '',
@@ -511,12 +479,9 @@ export function LogoSection() {
     setCroppedImage('');
   };
   
-  // Mock function for logo download
   const handleDownloadLogo = () => {
-    // In a real application, this would generate a zip file with all logo variations
     console.log('Downloading logo pack...');
     
-    // For demo, just download the original
     if (currentGuide.logos.original) {
       const link = document.createElement('a');
       link.download = 'logo.png';
