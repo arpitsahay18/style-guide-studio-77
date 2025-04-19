@@ -1,30 +1,17 @@
-
 import React from 'react';
 import { BrandGuideProvider } from '@/context/BrandGuideContext';
 import { Toaster } from "@/components/ui/toaster";
-import {
-  LayoutGrid,
-  Type,
-  Palette,
-  Image,
-  FileDown,
-  Save,
-  Plus,
-  User,
-  LogIn
-} from 'lucide-react';
+import { LayoutGrid, Type, Palette, Image, FileDown, Save, Plus, User, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-
 interface MainLayoutProps {
   children: React.ReactNode;
 }
-
-export function MainLayout({ children }: MainLayoutProps) {
+export function MainLayout({
+  children
+}: MainLayoutProps) {
   const navigate = useNavigate();
-  
-  return (
-    <BrandGuideProvider>
+  return <BrandGuideProvider>
       <div className="flex flex-col min-h-screen">
         <header className="border-b bg-background">
           <div className="container mx-auto py-4 px-4 flex items-center justify-between">
@@ -46,20 +33,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         
         <nav className="bg-muted/50 border-b">
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-1 overflow-x-auto">
-              <Button variant="ghost" className="rounded-none py-6 px-4 h-auto">
-                <Type className="h-4 w-4 mr-2" /> Typography
-              </Button>
-              <Button variant="ghost" className="rounded-none py-6 px-4 h-auto">
-                <Palette className="h-4 w-4 mr-2" /> Colors
-              </Button>
-              <Button variant="ghost" className="rounded-none py-6 px-4 h-auto">
-                <Image className="h-4 w-4 mr-2" /> Logo
-              </Button>
-              <Button variant="ghost" className="rounded-none py-6 px-4 h-auto">
-                <FileDown className="h-4 w-4 mr-2" /> Export
-              </Button>
-            </div>
+            
           </div>
         </nav>
         
@@ -95,6 +69,5 @@ export function MainLayout({ children }: MainLayoutProps) {
         
         <Toaster />
       </div>
-    </BrandGuideProvider>
-  );
+    </BrandGuideProvider>;
 }
