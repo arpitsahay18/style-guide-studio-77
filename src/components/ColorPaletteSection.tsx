@@ -14,7 +14,6 @@ import {
   CardDescription, 
   CardFooter 
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, X, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, X, AlertCircle, RefreshCw, Copy, Check } from 'lucide-react';
 import { 
   hexToRgb, 
   formatRgb, 
@@ -35,8 +34,10 @@ import {
   generateTints, 
   generateShades, 
   calculateContrastRatio,
-  getTriadicColors
+  getTriadicColors,
+  hslToHex
 } from '@/utils/colorUtils';
+import { useToast } from "@/components/ui/use-toast";
 
 interface ColorFormProps {
   onAdd: (color: string) => void;
@@ -100,6 +101,19 @@ interface ColorDetailProps {
 }
 
 function ColorDetail({ color }: ColorDetailProps) {
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+  
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast({
+      title: "Color code copied!",
+      description: `${text} has been copied to your clipboard.`,
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
+  
   return (
     <div className="p-4 border border-border rounded-md bg-card animate-scale-in">
       <div className="flex flex-col gap-4">
@@ -110,10 +124,20 @@ function ColorDetail({ color }: ColorDetailProps) {
               {color.rgb} · {color.cmyk}
             </p>
           </div>
-          <div 
-            className="w-16 h-16 rounded-md border border-border shadow-sm"
-            style={{ backgroundColor: color.hex }}
-          />
+          <div className="flex gap-2">
+            <div 
+              className="w-16 h-16 rounded-md border border-border shadow-sm"
+              style={{ backgroundColor: color.hex }}
+            />
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => copyToClipboard(color.hex)}
+              className="h-8 w-8"
+            >
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
         
         <div>
@@ -146,9 +170,10 @@ function ColorDetail({ color }: ColorDetailProps) {
             {color.tints.map((tint, index) => (
               <div
                 key={`tint-${index}`}
-                className="w-full aspect-square rounded-sm border border-border"
+                className="w-full aspect-square rounded-sm border border-border cursor-pointer"
                 style={{ backgroundColor: tint }}
                 title={tint}
+                onClick={() => copyToClipboard(tint)}
               />
             ))}
           </div>
@@ -160,9 +185,10 @@ function ColorDetail({ color }: ColorDetailProps) {
             {color.shades.map((shade, index) => (
               <div
                 key={`shade-${index}`}
-                className="w-full aspect-square rounded-sm border border-border"
+                className="w-full aspect-square rounded-sm border border-border cursor-pointer"
                 style={{ backgroundColor: shade }}
                 title={shade}
+                onClick={() => copyToClipboard(shade)}
               />
             ))}
           </div>
@@ -258,8 +284,10 @@ function ColorCategory({
 export function ColorPaletteSection() {
   const { currentGuide, updateColors } = useBrandGuide();
   const [showHarmonyTool, setShowHarmonyTool] = useState(false);
-  const [harmonyBaseColor, setHarmonyBaseColor] = useState('#000000');
+  const [harmonyBaseColor, setHarmonyBaseColor] = useState('#3B82F6');
   const [harmonyColors, setHarmonyColors] = useState<string[]>([]);
+  const { toast } = useToast();
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   
   // Helper function to process a color when added
   const processColor = (hex: string): ColorWithVariants => {
@@ -308,7 +336,20 @@ export function ColorPaletteSection() {
   // Add a harmony color to a category
   const addHarmonyColor = (category: 'primary' | 'secondary' | 'neutral', colorHex: string) => {
     addColor(category, colorHex);
-    setShowHarmonyTool(false);
+    toast({
+      title: "Color added",
+      description: `Added ${colorHex} to ${category} palette.`,
+    });
+  };
+  
+  const copyHarmonyColor = (color: string, index: number) => {
+    navigator.clipboard.writeText(color);
+    setCopiedIndex(index);
+    toast({
+      title: "Color copied!",
+      description: `${color} has been copied to your clipboard.`,
+    });
+    setTimeout(() => setCopiedIndex(null), 2000);
   };
   
   return (
@@ -318,7 +359,7 @@ export function ColorPaletteSection() {
         
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" onClick={() => setShowHarmonyTool(true)}>
+            <Button variant="outline">
               <RefreshCw className="h-4 w-4 mr-2" />
               Color Harmony Tool
             </Button>
@@ -357,41 +398,53 @@ export function ColorPaletteSection() {
               {harmonyColors.length > 0 && (
                 <div>
                   <h4 className="text-sm font-medium mb-2">Triadic Color Harmony</h4>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-4">
                     {harmonyColors.map((color, index) => (
                       <div key={index} className="space-y-2">
                         <div
                           className="w-full aspect-square rounded-md border border-border"
                           style={{ backgroundColor: color }}
                         />
-                        <p className="text-xs font-mono text-center">{color}</p>
-                        <div className="flex justify-center">
-                          <div className="grid grid-cols-3 gap-1">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-xs h-7 px-2"
-                              onClick={() => addHarmonyColor('primary', color)}
-                            >
-                              Primary
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-xs h-7 px-1"
-                              onClick={() => addHarmonyColor('secondary', color)}
-                            >
-                              Secondary
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-xs h-7 px-1"
-                              onClick={() => addHarmonyColor('neutral', color)}
-                            >
-                              Neutral
-                            </Button>
-                          </div>
+                        <div className="flex justify-between items-center">
+                          <p className="text-xs font-mono">{color}</p>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            className="h-6 w-6" 
+                            onClick={() => copyHarmonyColor(color, index)}
+                          >
+                            {copiedIndex === index ? (
+                              <Check className="h-3 w-3" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-xs h-7 px-2"
+                            onClick={() => addHarmonyColor('primary', color)}
+                          >
+                            Primary
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-xs h-7 px-1"
+                            onClick={() => addHarmonyColor('secondary', color)}
+                          >
+                            Secondary
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-xs h-7 px-1"
+                            onClick={() => addHarmonyColor('neutral', color)}
+                          >
+                            Neutral
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -407,70 +460,31 @@ export function ColorPaletteSection() {
         </AlertDialog>
       </div>
       
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className="w-full grid grid-cols-4 mb-8">
-          <TabsTrigger value="all">All Colors</TabsTrigger>
-          <TabsTrigger value="primary">Primary</TabsTrigger>
-          <TabsTrigger value="secondary">Secondary</TabsTrigger>
-          <TabsTrigger value="neutral">Neutral</TabsTrigger>
-        </TabsList>
+      <div className="space-y-8">
+        <ColorCategory
+          title="Primary Colors"
+          description="The main brand colors that represent your identity. These colors should be used for main UI elements and branding."
+          colors={currentGuide.colors.primary}
+          onAddColor={(color) => addColor('primary', color)}
+          onRemoveColor={(index) => removeColor('primary', index)}
+        />
         
-        <TabsContent value="all" className="space-y-8 animate-fade-in">
-          <ColorCategory
-            title="Primary Colors"
-            description="The main brand colors that represent your identity. These colors should be used for main UI elements and branding."
-            colors={currentGuide.colors.primary}
-            onAddColor={(color) => addColor('primary', color)}
-            onRemoveColor={(index) => removeColor('primary', index)}
-          />
-          
-          <ColorCategory
-            title="Secondary Colors"
-            description="Complementary colors that support the primary palette. Use these for accents, highlights, and to add visual interest."
-            colors={currentGuide.colors.secondary}
-            onAddColor={(color) => addColor('secondary', color)}
-            onRemoveColor={(index) => removeColor('secondary', index)}
-          />
-          
-          <ColorCategory
-            title="Neutral Colors"
-            description="Grayscale and background tones for text, backgrounds, and UI elements. These provide balance to your color scheme."
-            colors={currentGuide.colors.neutral}
-            onAddColor={(color) => addColor('neutral', color)}
-            onRemoveColor={(index) => removeColor('neutral', index)}
-          />
-        </TabsContent>
+        <ColorCategory
+          title="Secondary Colors"
+          description="Complementary colors that support the primary palette. Use these for accents, highlights, and to add visual interest."
+          colors={currentGuide.colors.secondary}
+          onAddColor={(color) => addColor('secondary', color)}
+          onRemoveColor={(index) => removeColor('secondary', index)}
+        />
         
-        <TabsContent value="primary" className="animate-fade-in">
-          <ColorCategory
-            title="Primary Colors"
-            description="The main brand colors that represent your identity. These colors should be used for main UI elements and branding."
-            colors={currentGuide.colors.primary}
-            onAddColor={(color) => addColor('primary', color)}
-            onRemoveColor={(index) => removeColor('primary', index)}
-          />
-        </TabsContent>
-        
-        <TabsContent value="secondary" className="animate-fade-in">
-          <ColorCategory
-            title="Secondary Colors"
-            description="Complementary colors that support the primary palette. Use these for accents, highlights, and to add visual interest."
-            colors={currentGuide.colors.secondary}
-            onAddColor={(color) => addColor('secondary', color)}
-            onRemoveColor={(index) => removeColor('secondary', index)}
-          />
-        </TabsContent>
-        
-        <TabsContent value="neutral" className="animate-fade-in">
-          <ColorCategory
-            title="Neutral Colors"
-            description="Grayscale and background tones for text, backgrounds, and UI elements. These provide balance to your color scheme."
-            colors={currentGuide.colors.neutral}
-            onAddColor={(color) => addColor('neutral', color)}
-            onRemoveColor={(index) => removeColor('neutral', index)}
-          />
-        </TabsContent>
-      </Tabs>
+        <ColorCategory
+          title="Neutral Colors"
+          description="Grayscale and background tones for text, backgrounds, and UI elements. These provide balance to your color scheme."
+          colors={currentGuide.colors.neutral}
+          onAddColor={(color) => addColor('neutral', color)}
+          onRemoveColor={(index) => removeColor('neutral', index)}
+        />
+      </div>
     </div>
   );
 }

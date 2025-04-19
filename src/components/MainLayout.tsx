@@ -1,23 +1,28 @@
+
 import React from 'react';
 import { BrandGuideProvider } from '@/context/BrandGuideContext';
 import { Toaster } from "@/components/ui/toaster";
-import { LayoutGrid, Type, Palette, Image, FileDown, Save, Plus, User, LogIn } from 'lucide-react';
+import { Type, Palette, Image, FileDown, Save, Plus, User, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { BrandStudioLogo } from '@/components/BrandStudioLogo';
+
 interface MainLayoutProps {
   children: React.ReactNode;
 }
+
 export function MainLayout({
   children
 }: MainLayoutProps) {
   const navigate = useNavigate();
-  return <BrandGuideProvider>
+  
+  return (
+    <BrandGuideProvider>
       <div className="flex flex-col min-h-screen">
         <header className="border-b bg-background">
           <div className="container mx-auto py-4 px-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <LayoutGrid className="h-6 w-6" />
-              <span className="font-bold text-xl">Brand Studio</span>
+              <BrandStudioLogo />
             </div>
             
             <div className="flex items-center gap-4">
@@ -69,5 +74,6 @@ export function MainLayout({
         
         <Toaster />
       </div>
-    </BrandGuideProvider>;
+    </BrandGuideProvider>
+  );
 }

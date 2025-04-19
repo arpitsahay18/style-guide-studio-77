@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { useToast } from "@/components/ui/use-toast";
 import { 
   Card, 
   CardContent, 
@@ -24,6 +25,9 @@ import {
   Mail
 } from 'lucide-react';
 import { generateTypographyCss } from '@/utils/typographyUtils';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import { useNavigate } from 'react-router-dom';
 
 export function ExportSection() {
   const { currentGuide, exportGuide } = useBrandGuide();
@@ -35,6 +39,8 @@ export function ExportSection() {
   });
   const [copied, setCopied] = useState(false);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
   
   // Generate a complete CSS stylesheet from the brand guide
   const generateCSS = () => {
@@ -81,16 +87,28 @@ export function ExportSection() {
     return css;
   };
   
-  // Generate a sharable link (mock function)
+  // Generate a sharable link
   const generateShareableLink = () => {
     setIsGeneratingLink(true);
     
-    // Mock API call delay
+    // Encode the current guide data as a URL-safe string
+    const guideData = JSON.stringify(currentGuide);
+    const encodedData = encodeURIComponent(guideData);
+    const baseUrl = window.location.origin;
+    
+    // Create a shareable link to the preview page
+    const shareableUrl = `${baseUrl}/preview/${encodedData}`;
+    
+    // Since the URL might be too long, we'd normally use a URL shortener service
+    // For this demo, we'll simulate a delay and then return a shortened URL
     setTimeout(() => {
-      // In a real app, this would make an API call to create a shareable link
-      const mockUrl = `https://brand-studio.example.com/share/${currentGuide.id}?expires=${shareOptions.expiresIn}&view=${shareOptions.viewOnly ? 'only' : 'edit'}`;
-      setShareUrl(mockUrl);
+      const shortUrl = `${baseUrl}/preview/${currentGuide.id}`;
+      setShareUrl(shortUrl);
       setIsGeneratingLink(false);
+      toast({
+        title: "Shareable link generated!",
+        description: "You can now share this link with others.",
+      });
     }, 1500);
   };
   
@@ -98,6 +116,10 @@ export function ExportSection() {
   const copyLinkToClipboard = () => {
     navigator.clipboard.writeText(shareUrl);
     setCopied(true);
+    toast({
+      title: "Link copied!",
+      description: "The shareable link has been copied to your clipboard.",
+    });
     setTimeout(() => setCopied(false), 2000);
   };
   
@@ -105,8 +127,34 @@ export function ExportSection() {
   const shareViaEmail = () => {
     // In a real app, this would send an API request to share via email
     console.log(`Shared guide with ${shareEmail}`);
+    toast({
+      title: "Brand guide shared",
+      description: `Your brand guide has been shared with ${shareEmail}.`,
+    });
     setShareEmail('');
-    alert(`Brand guide has been shared with ${shareEmail}`);
+  };
+  
+  // Export as PDF function
+  const exportAsPDF = async () => {
+    toast({
+      title: "Preparing PDF export",
+      description: "Generating preview page for export...",
+    });
+    
+    try {
+      // Navigate to the preview page where we'll generate the PDF
+      navigate('/preview');
+      
+      // The actual PDF generation happens in the Preview component
+      // This is just to navigate there, the PDF generation will be triggered automatically
+    } catch (error) {
+      console.error("PDF export error:", error);
+      toast({
+        title: "Export failed",
+        description: "An error occurred while generating the PDF.",
+        variant: "destructive",
+      });
+    }
   };
   
   return (
@@ -130,7 +178,7 @@ export function ExportSection() {
               <CardContent className="space-y-4">
                 <Button 
                   className="w-full justify-start" 
-                  onClick={() => exportGuide('pdf')}
+                  onClick={exportAsPDF}
                 >
                   <FileDown className="h-4 w-4 mr-2" />
                   Export as PDF
@@ -138,7 +186,22 @@ export function ExportSection() {
                 
                 <Button 
                   className="w-full justify-start" 
-                  onClick={() => exportGuide('json')}
+                  onClick={() => {
+                    const jsonString = JSON.stringify(currentGuide, null, 2);
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${currentGuide.name.replace(/\s+/g, '-').toLowerCase()}-guide.json`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    toast({
+                      title: "JSON exported",
+                      description: "Your brand guide has been exported as JSON.",
+                    });
+                  }}
                   variant="outline"
                 >
                   <FileJson className="h-4 w-4 mr-2" />
@@ -157,6 +220,11 @@ export function ExportSection() {
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
+                    
+                    toast({
+                      title: "CSS exported",
+                      description: "Your brand guide CSS variables have been exported.",
+                    });
                   }}
                   variant="outline"
                 >
@@ -261,6 +329,23 @@ export function ExportSection() {
                 {generateCSS()}
               </pre>
             </CardContent>
+            <CardFooter className="pt-0">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="ml-auto"
+                onClick={() => {
+                  navigator.clipboard.writeText(generateCSS());
+                  toast({
+                    title: "CSS copied",
+                    description: "The CSS code has been copied to your clipboard.",
+                  });
+                }}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copy CSS
+              </Button>
+            </CardFooter>
           </Card>
         </CardContent>
       </Card>

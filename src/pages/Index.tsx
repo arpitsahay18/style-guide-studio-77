@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MainLayout } from '@/components/MainLayout';
@@ -5,14 +6,28 @@ import { TypographySection } from '@/components/TypographySection';
 import { ColorPaletteSection } from '@/components/ColorPaletteSection';
 import { LogoSection } from '@/components/LogoSection';
 import { ExportSection } from '@/components/ExportSection';
+import { Button } from '@/components/ui/button';
+import { FileDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('typography');
+  const navigate = useNavigate();
+  
+  const viewPreview = () => {
+    navigate('/preview');
+  };
   
   return (
     <MainLayout>
       <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold mb-6">Brand Guideline Generator</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Brand Guideline Generator</h1>
+          <Button variant="outline" onClick={viewPreview}>
+            <FileDown className="h-4 w-4 mr-2" />
+            View Complete Guide
+          </Button>
+        </div>
         
         <Tabs 
           defaultValue="typography" 

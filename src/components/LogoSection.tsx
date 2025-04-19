@@ -162,6 +162,7 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
   
   // Handle drag operations
   const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
     setIsDragging(true);
     setDragStart({
       x: e.clientX - position.x,
@@ -171,6 +172,7 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
   
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging && containerRef.current) {
+      e.preventDefault();
       const containerRect = containerRef.current.getBoundingClientRect();
       const containerSize = containerRect.width;
       const imageSize = containerSize * zoom;
@@ -192,6 +194,44 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
     setIsDragging(false);
   };
   
+  // Handle touch events for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      setIsDragging(true);
+      setDragStart({
+        x: touch.clientX - position.x,
+        y: touch.clientY - position.y
+      });
+    }
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isDragging && e.touches.length === 1 && containerRef.current) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const containerSize = containerRect.width;
+      const imageSize = containerSize * zoom;
+      
+      // Calculate new position
+      let newX = touch.clientX - dragStart.x;
+      let newY = touch.clientY - dragStart.y;
+      
+      // Constrain position within boundaries
+      const maxOffset = (imageSize - containerSize) / 2;
+      newX = Math.max(-maxOffset, Math.min(newX, maxOffset));
+      newY = Math.max(-maxOffset, Math.min(newY, maxOffset));
+      
+      setPosition({ x: newX, y: newY });
+    }
+  };
+  
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+  
   // Execute crop operation
   const handleCrop = () => {
     if (!imageRef.current || !containerRef.current) return;
@@ -210,18 +250,31 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
     const sourceX = (imageSize / 2) - (containerSize / 2) - position.x;
     const sourceY = (imageSize / 2) - (containerSize / 2) - position.y;
     
-    ctx.drawImage(
-      imageRef.current,
-      sourceX, sourceY,
-      containerSize, containerSize,
-      0, 0,
-      containerSize, containerSize
-    );
+    // Create a temporary image to ensure it's fully loaded
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = () => {
+      ctx.drawImage(
+        img,
+        sourceX, sourceY,
+        containerSize, containerSize,
+        0, 0,
+        containerSize, containerSize
+      );
+      
+      // Convert to data URL
+      const croppedImage = canvas.toDataURL('image/png');
+      onCrop(croppedImage);
+    };
     
-    // Convert to data URL
-    const croppedImage = canvas.toDataURL('image/png');
-    onCrop(croppedImage);
+    img.src = imageUrl;
   };
+  
+  // Effect to initialize the image position
+  useEffect(() => {
+    setPosition({ x: 0, y: 0 });
+    setZoom(1);
+  }, [imageUrl]);
   
   return (
     <div className="space-y-6">
@@ -240,6 +293,9 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <img
           ref={imageRef}
@@ -252,6 +308,7 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
             transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px)`,
             opacity: isDragging ? 0.8 : 1,
             transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+            pointerEvents: 'none', // Prevent image from interfering with drag events
           }}
           alt="Logo to crop"
           draggable={false}
@@ -261,8 +318,8 @@ function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
         <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-50">
           {Array.from({ length: 2 }).map((_, i) => (
             <React.Fragment key={i}>
-              <div className="border-r border-white h-full" style={{ left: `${(i + 1) * 33.33}%` }} />
-              <div className="border-b border-white w-full" style={{ top: `${(i + 1) * 33.33}%` }} />
+              <div className="absolute border-r border-white h-full" style={{ left: `${(i + 1) * 33.33}%` }} />
+              <div className="absolute border-b border-white w-full" style={{ top: `${(i + 1) * 33.33}%` }} />
             </React.Fragment>
           ))}
         </div>
