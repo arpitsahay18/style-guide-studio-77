@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MainLayout } from '@/components/MainLayout';
@@ -6,20 +7,53 @@ import { ColorPaletteSection } from '@/components/ColorPaletteSection';
 import { LogoSection } from '@/components/LogoSection';
 import { ExportSection } from '@/components/ExportSection';
 import { Button } from '@/components/ui/button';
-import { FileDown } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useBrandGuide } from '@/context/BrandGuideContext';
+import { useToast } from '@/hooks/use-toast';
+import { BrandGuideWarning } from '@/components/BrandGuideWarning';
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState('typography');
   const navigate = useNavigate();
+  const { currentGuide } = useBrandGuide();
+  const { toast } = useToast();
+
+  // Check if guide is complete
+  const isGuideComplete = 
+    currentGuide.colors.primary.length > 0 && 
+    currentGuide.colors.secondary.length > 0 && 
+    Boolean(currentGuide.logos.original);
+  
   const viewPreview = () => {
+    if (!isGuideComplete) {
+      toast({
+        variant: "destructive",
+        title: "Brand guide incomplete",
+        description: "Please add at least one primary color, one secondary color, and a logo.",
+      });
+      return;
+    }
+    
     navigate('/preview');
   };
-  return <MainLayout>
+
+  return (
+    <MainLayout>
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Brand Guideline Generator</h1>
-          
+          <Button onClick={viewPreview} variant="outline">
+            <Eye className="h-4 w-4 mr-2" />
+            Preview Brand Guide
+          </Button>
         </div>
+        
+        {!isGuideComplete && (
+          <div className="mb-6">
+            <BrandGuideWarning />
+          </div>
+        )}
         
         <Tabs defaultValue="typography" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full grid grid-cols-4 mb-8">
@@ -46,6 +80,8 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </MainLayout>;
+    </MainLayout>
+  );
 };
+
 export default Index;

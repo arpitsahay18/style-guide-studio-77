@@ -16,6 +16,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
   const [filteredFonts, setFilteredFonts] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadedFonts, setLoadedFonts] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // Fetch Google Fonts
@@ -53,12 +54,40 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
     }
   }, [searchQuery, fonts]);
 
+  // Load font stylesheet when it's selected
+  useEffect(() => {
+    if (value && !loadedFonts.has(value) && value !== 'inherit') {
+      const fontFamily = value.replace(/\s+/g, '+');
+      const link = document.createElement('link');
+      link.href = `https://fonts.googleapis.com/css2?family=${fontFamily}:wght@300;400;500;600;700&display=swap`;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+      
+      setLoadedFonts(prev => new Set(prev).add(value));
+    }
+  }, [value, loadedFonts]);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
 
+  const handleFontSelect = (font: string) => {
+    onChange(font);
+    
+    // Preload the font if it's not already loaded
+    if (!loadedFonts.has(font) && font !== 'inherit') {
+      const fontFamily = font.replace(/\s+/g, '+');
+      const link = document.createElement('link');
+      link.href = `https://fonts.googleapis.com/css2?family=${fontFamily}:wght@300;400;500;600;700&display=swap`;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+      
+      setLoadedFonts(prev => new Set(prev).add(font));
+    }
+  };
+
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={handleFontSelect}>
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
@@ -78,7 +107,11 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
             </div>
           ) : filteredFonts.length > 0 ? (
             filteredFonts.map(font => (
-              <SelectItem key={font} value={font}>
+              <SelectItem 
+                key={font} 
+                value={font}
+                style={{ fontFamily: font }}
+              >
                 <span style={{ fontFamily: font }}>{font}</span>
               </SelectItem>
             ))
