@@ -157,7 +157,7 @@ export function TypographySection() {
                     <SelectValue placeholder="Select font" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Select a font</SelectItem>
+                    {/* Removed the empty value Select.Item and replaced with default SelectItem */}
                     {fontOptions.map((font) => (
                       <SelectItem key={font.value} value={font.value}>
                         {font.label}
@@ -177,7 +177,7 @@ export function TypographySection() {
                     <SelectValue placeholder="Select font" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Select a font</SelectItem>
+                    {/* Removed the empty value Select.Item and replaced with default SelectItem */}
                     {fontOptions.map((font) => (
                       <SelectItem key={font.value} value={font.value}>
                         {font.label}
@@ -197,7 +197,7 @@ export function TypographySection() {
                     <SelectValue placeholder="Select font" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Select a font</SelectItem>
+                    {/* Removed the empty value Select.Item and replaced with default SelectItem */}
                     {fontOptions.map((font) => (
                       <SelectItem key={font.value} value={font.value}>
                         {font.label}
