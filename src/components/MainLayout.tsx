@@ -2,9 +2,7 @@
 import React from 'react';
 import { BrandGuideProvider } from '@/context/BrandGuideContext';
 import { Toaster } from "@/components/ui/toaster";
-import { LogIn } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { BrandStudioLogo } from '@/components/BrandStudioLogo';
 
 interface MainLayoutProps {
@@ -31,7 +29,7 @@ export function MainLayout({
           </div>
           
           <div className="flex items-center gap-4">
-            {/* Removed "View complete guide" button as requested */}
+            {/* "View complete guide" button removed as requested */}
           </div>
         </div>
       </header>

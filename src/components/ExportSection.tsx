@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { Button } from '@/components/ui/button';
@@ -14,13 +15,11 @@ import {
   CardTitle 
 } from '@/components/ui/card';
 import {
-  FileDown,
   FileJson,
   FileCode,
   Link,
   Check,
   Copy,
-  Share,
   Mail,
   Eye
 } from 'lucide-react';
@@ -159,6 +158,7 @@ export function ExportSection() {
                 <Button 
                   className="w-full justify-start" 
                   onClick={viewCompleteGuide}
+                  variant="default"
                 >
                   <Eye className="h-4 w-4 mr-2" />
                   View Complete Guide

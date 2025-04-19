@@ -4,7 +4,6 @@ import { useBrandGuide } from '@/context/BrandGuideContext';
 import { TypographyPreview } from '@/components/ui/TypographyPreview';
 import { ColorSwatch } from '@/components/ui/ColorSwatch';
 import { LogoPreview } from '@/components/ui/LogoPreview';
-import { BrandStudioLogo } from '@/components/BrandStudioLogo';
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/components/ui/use-toast";
 import { jsPDF } from 'jspdf';

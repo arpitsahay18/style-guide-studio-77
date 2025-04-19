@@ -8,7 +8,6 @@ import {
   LogoSet 
 } from '@/types';
 import { defaultTypographySet } from '@/utils/typographyUtils';
-import { supabase } from '@/integrations/supabase/client';
 
 // Default empty color palette
 const defaultColorPalette: ColorPalette = {
@@ -67,6 +66,29 @@ const getSessionId = (): string => {
   return sessionId;
 }
 
+// Helper to load guides from localStorage
+const loadGuidesFromStorage = (): BrandGuide[] => {
+  const guidesJson = localStorage.getItem('brandStudioGuides');
+  if (guidesJson) {
+    try {
+      const guidesData = JSON.parse(guidesJson);
+      return guidesData.map((guide: any) => ({
+        ...guide,
+        createdAt: new Date(guide.createdAt),
+        updatedAt: new Date(guide.updatedAt)
+      }));
+    } catch (error) {
+      console.error('Error parsing guides from localStorage:', error);
+    }
+  }
+  return [];
+};
+
+// Helper to save guides to localStorage
+const saveGuidesToStorage = (guides: BrandGuide[]): void => {
+  localStorage.setItem('brandStudioGuides', JSON.stringify(guides));
+};
+
 export const BrandGuideProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentGuide, setCurrentGuide] = useState<BrandGuide>(createDefaultBrandGuide());
   const [savedGuides, setSavedGuides] = useState<BrandGuide[]>([]);
@@ -74,38 +96,41 @@ export const BrandGuideProvider: React.FC<{ children: ReactNode }> = ({ children
   const [previewText, setPreviewText] = useState<string>('The quick brown fox jumps over the lazy dog');
   const [sessionId] = useState<string>(getSessionId());
 
-  // Load user's guide from localStorage/Supabase on initial load
+  // Load user's guide from localStorage on initial load
   useEffect(() => {
-    const loadSavedGuide = async () => {
+    const loadSavedGuide = () => {
       try {
-        // Try to get from Supabase first
-        const { data, error } = await supabase
-          .from('brand_guides')
-          .select('*')
-          .eq('session_id', sessionId)
-          .order('updated_at', { ascending: false })
-          .limit(1);
+        // Get all saved guides
+        const guides = loadGuidesFromStorage();
+        if (guides.length > 0) {
+          setSavedGuides(guides);
           
-        if (data && data.length > 0 && !error) {
-          // Found guide in Supabase
-          const guide = data[0];
-          const loadedGuide: BrandGuide = {
-            ...guide.guide_data,
-            id: guide.id,
-            createdAt: new Date(guide.created_at),
-            updatedAt: new Date(guide.updated_at)
-          };
-          setCurrentGuide(loadedGuide);
-          setSavedGuides([loadedGuide]);
-          return;
+          // Try to find the last edited guide
+          const lastGuide = guides.sort((a, b) => 
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          )[0];
+          
+          if (lastGuide) {
+            setCurrentGuide(lastGuide);
+            return;
+          }
         }
         
-        // Fall back to localStorage if not in Supabase
+        // If no guides found, check for the current guide in localStorage
         const savedGuideJson = localStorage.getItem('currentBrandGuide');
         if (savedGuideJson) {
           const savedGuide = JSON.parse(savedGuideJson);
+          // Convert string dates back to Date objects
+          savedGuide.createdAt = new Date(savedGuide.createdAt);
+          savedGuide.updatedAt = new Date(savedGuide.updatedAt);
           setCurrentGuide(savedGuide);
-          setSavedGuides([savedGuide]);
+          // Also add to saved guides if not already there
+          setSavedGuides(prev => {
+            if (!prev.some(g => g.id === savedGuide.id)) {
+              return [...prev, savedGuide];
+            }
+            return prev;
+          });
         }
       } catch (error) {
         console.error("Error loading saved guide:", error);
@@ -114,34 +139,25 @@ export const BrandGuideProvider: React.FC<{ children: ReactNode }> = ({ children
     };
     
     loadSavedGuide();
-  }, [sessionId]);
+  }, []);
 
   // Auto-save guide changes to localStorage
   useEffect(() => {
-    const autoSave = async () => {
-      // Save to localStorage as a backup
+    const autoSave = () => {
+      // Save current guide to localStorage
       localStorage.setItem('currentBrandGuide', JSON.stringify(currentGuide));
       
-      try {
-        // Save to Supabase
-        const { data, error } = await supabase
-          .from('brand_guides')
-          .upsert({
-            id: currentGuide.id,
-            session_id: sessionId,
-            guide_data: currentGuide,
-            created_at: currentGuide.createdAt.toISOString(),
-            updated_at: new Date().toISOString(),
-            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days expiry
-          }, { onConflict: 'id' })
-          .select();
-          
-        if (error) {
-          console.error("Error saving to Supabase:", error);
+      // Update guide in saved guides array if it exists
+      setSavedGuides(prev => {
+        const existingIndex = prev.findIndex(g => g.id === currentGuide.id);
+        if (existingIndex >= 0) {
+          const updated = [...prev];
+          updated[existingIndex] = currentGuide;
+          saveGuidesToStorage(updated);
+          return updated;
         }
-      } catch (error) {
-        console.error("Error in auto-save:", error);
-      }
+        return prev;
+      });
     };
     
     // Don't auto-save on first render or if guide is empty
@@ -150,7 +166,7 @@ export const BrandGuideProvider: React.FC<{ children: ReactNode }> = ({ children
         currentGuide.logos.original) {
       autoSave();
     }
-  }, [currentGuide, sessionId]);
+  }, [currentGuide]);
 
   const setGuideName = (name: string) => {
     setCurrentGuide(prev => ({
@@ -184,42 +200,26 @@ export const BrandGuideProvider: React.FC<{ children: ReactNode }> = ({ children
     }));
   };
 
-  const saveCurrentGuide = async () => {
+  const saveCurrentGuide = () => {
     // Update local state
     setSavedGuides(prev => {
       // Check if the guide already exists
       const existingIndex = prev.findIndex(guide => guide.id === currentGuide.id);
       
+      let updatedGuides;
       if (existingIndex >= 0) {
         // Update existing guide
-        const updatedGuides = [...prev];
+        updatedGuides = [...prev];
         updatedGuides[existingIndex] = currentGuide;
-        return updatedGuides;
       } else {
         // Add new guide
-        return [...prev, currentGuide];
+        updatedGuides = [...prev, currentGuide];
       }
+      
+      // Save to localStorage
+      saveGuidesToStorage(updatedGuides);
+      return updatedGuides;
     });
-    
-    // Save to Supabase
-    try {
-      const { error } = await supabase
-        .from('brand_guides')
-        .upsert({
-          id: currentGuide.id,
-          session_id: sessionId,
-          guide_data: currentGuide,
-          created_at: currentGuide.createdAt.toISOString(),
-          updated_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days expiry
-        }, { onConflict: 'id' });
-        
-      if (error) {
-        console.error("Error saving to Supabase:", error);
-      }
-    } catch (error) {
-      console.error("Error saving guide:", error);
-    }
   };
 
   const createNewGuide = () => {
@@ -229,32 +229,7 @@ export const BrandGuideProvider: React.FC<{ children: ReactNode }> = ({ children
     setCurrentGuide(createDefaultBrandGuide());
   };
 
-  const loadGuide = async (guideId: string) => {
-    // Try to load from Supabase first
-    try {
-      const { data, error } = await supabase
-        .from('brand_guides')
-        .select('*')
-        .eq('id', guideId)
-        .limit(1);
-        
-      if (data && data.length > 0 && !error) {
-        // Found guide in Supabase
-        const guide = data[0];
-        const loadedGuide: BrandGuide = {
-          ...guide.guide_data,
-          id: guide.id,
-          createdAt: new Date(guide.created_at),
-          updatedAt: new Date(guide.updated_at)
-        };
-        setCurrentGuide(loadedGuide);
-        return;
-      }
-    } catch (error) {
-      console.error("Error loading guide from Supabase:", error);
-    }
-    
-    // Fall back to local state
+  const loadGuide = (guideId: string) => {
     const guide = savedGuides.find(g => g.id === guideId);
     if (guide) {
       setCurrentGuide(guide);
@@ -272,34 +247,26 @@ export const BrandGuideProvider: React.FC<{ children: ReactNode }> = ({ children
         updatedAt: new Date()
       };
       
-      setSavedGuides(prev => [...prev, duplicatedGuide]);
-      setCurrentGuide(duplicatedGuide);
+      setSavedGuides(prev => {
+        const updatedGuides = [...prev, duplicatedGuide];
+        saveGuidesToStorage(updatedGuides);
+        return updatedGuides;
+      });
       
-      // Save the duplicated guide to Supabase
-      saveCurrentGuide();
+      setCurrentGuide(duplicatedGuide);
     }
   };
 
-  const deleteGuide = async (guideId: string) => {
-    setSavedGuides(prev => prev.filter(guide => guide.id !== guideId));
+  const deleteGuide = (guideId: string) => {
+    setSavedGuides(prev => {
+      const updatedGuides = prev.filter(guide => guide.id !== guideId);
+      saveGuidesToStorage(updatedGuides);
+      return updatedGuides;
+    });
     
     // If the current guide is deleted, create a new one
     if (currentGuide.id === guideId) {
       setCurrentGuide(createDefaultBrandGuide());
-    }
-    
-    // Remove from Supabase
-    try {
-      const { error } = await supabase
-        .from('brand_guides')
-        .delete()
-        .eq('id', guideId);
-        
-      if (error) {
-        console.error("Error deleting guide from Supabase:", error);
-      }
-    } catch (error) {
-      console.error("Error deleting guide:", error);
     }
   };
 
