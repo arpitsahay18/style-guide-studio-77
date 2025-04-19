@@ -13,7 +13,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Download, ArrowLeft } from 'lucide-react';
 
 const Preview = () => {
-  const { currentGuide } = useBrandGuide();
+  const { currentGuide, previewText } = useBrandGuide();
   const { toast } = useToast();
   const previewRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -94,6 +94,9 @@ const Preview = () => {
       }, 1500); // Give time for images to load
     }
   }, []);
+
+  // Default sample text if not available in typography settings
+  const defaultSampleText = "The quick brown fox jumps over the lazy dog.";
   
   return (
     <div className="bg-white text-black min-h-screen">
@@ -133,7 +136,7 @@ const Preview = () => {
                     key={key}
                     name={`Display ${key}`}
                     style={style}
-                    previewText={currentGuide.typography.sampleText || "The quick brown fox jumps over the lazy dog."}
+                    previewText={previewText || defaultSampleText}
                     showCode={false}
                   />
                 ))}
@@ -148,7 +151,7 @@ const Preview = () => {
                     key={key}
                     name={`Heading ${key}`}
                     style={style}
-                    previewText={currentGuide.typography.sampleText || "The quick brown fox jumps over the lazy dog."}
+                    previewText={previewText || defaultSampleText}
                     showCode={false}
                   />
                 ))}
@@ -165,7 +168,7 @@ const Preview = () => {
                       key={key}
                       name={`Body ${key}`}
                       style={style}
-                      previewText={currentGuide.typography.sampleText || "The quick brown fox jumps over the lazy dog."}
+                      previewText={previewText || defaultSampleText}
                       showCode={false}
                     />
                   ))}
