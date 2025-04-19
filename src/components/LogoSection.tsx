@@ -1,5 +1,4 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { LogoVariation, LogoSet } from '@/types';
 import { LogoPreview, LogoWithSpacingGuidelines } from '@/components/ui/LogoPreview';
