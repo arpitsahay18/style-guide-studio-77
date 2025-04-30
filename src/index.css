@@ -74,6 +74,11 @@
     flex-direction: column;
     max-height: 400px;
   }
+  
+  /* Ensure the Google Fonts attribution is always visible */
+  .font-selector-content [data-radix-select-viewport] {
+    padding-bottom: 40px; /* Add space at the bottom for the Google attribution */
+  }
 }
  
 @layer base {
@@ -98,3 +103,7 @@
   animation: fade-in 0.3s ease-in-out;
 }
 
+/* Custom styles for font preview */
+[style*="font-family"] {
+  font-display: swap; /* Ensure text remains visible during webfont load */
+}
