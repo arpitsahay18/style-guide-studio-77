@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 
 interface FontSelectorProps {
   value: string;
@@ -20,7 +20,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
 
   useEffect(() => {
     // Fetch Google Fonts
-    fetch('https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyAOES8EmKhuJEPMXTVJ9WQvCyOJ3NObCUQ')
+    fetch('https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyAOES8EmKhuJEPMXTVJ9WQvCyOJ3NObCUQ&sort=popularity')
       .then(response => response.json())
       .then(data => {
         const fontNames = data.items.map((font: any) => font.family);
@@ -93,12 +93,15 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
       </SelectTrigger>
       <SelectContent>
         <div className="p-2 sticky top-0 bg-background z-10 border-b">
-          <Input 
-            placeholder="Search fonts..." 
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="mb-1"
-          />
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search fonts..." 
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="pl-8 mb-1"
+            />
+          </div>
         </div>
         <ScrollArea className="h-72">
           {loading ? (
@@ -121,6 +124,15 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
             </div>
           )}
         </ScrollArea>
+        <div className="p-2 text-xs text-center text-muted-foreground border-t flex items-center justify-center">
+          <span className="mr-1">Powered by</span>
+          <img 
+            src="https://www.gstatic.com/images/branding/googlelogo/svg/googlelogo_clr_74x24px.svg" 
+            alt="Google" 
+            className="h-3 inline-block mr-1" 
+          />
+          <span>Fonts</span>
+        </div>
       </SelectContent>
     </Select>
   );

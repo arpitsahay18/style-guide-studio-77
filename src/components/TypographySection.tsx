@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { TypographySet, TypographyStyle } from '@/types';
@@ -20,31 +19,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-
-// Common web-safe fonts
-const fontOptions = [
-  { value: 'Inter, sans-serif', label: 'Inter', category: 'sans-serif' },
-  { value: 'Arial, sans-serif', label: 'Arial', category: 'sans-serif' },
-  { value: 'Helvetica, sans-serif', label: 'Helvetica', category: 'sans-serif' },
-  { value: 'Roboto, sans-serif', label: 'Roboto', category: 'sans-serif' },
-  { value: 'Open Sans, sans-serif', label: 'Open Sans', category: 'sans-serif' },
-  { value: 'Montserrat, sans-serif', label: 'Montserrat', category: 'sans-serif' },
-  { value: 'Georgia, serif', label: 'Georgia', category: 'serif' },
-  { value: 'Times New Roman, serif', label: 'Times New Roman', category: 'serif' },
-  { value: 'Merriweather, serif', label: 'Merriweather', category: 'serif' },
-  { value: 'Playfair Display, serif', label: 'Playfair Display', category: 'serif' },
-  { value: 'Courier New, monospace', label: 'Courier New', category: 'monospace' },
-  { value: 'JetBrains Mono, monospace', label: 'JetBrains Mono', category: 'monospace' },
-];
+import { FontSelector } from '@/components/FontSelector';
 
 // Font weight options
 const fontWeightOptions = [
@@ -80,13 +56,9 @@ export function TypographySection() {
     value: string, 
     category: 'display' | 'heading' | 'body'
   ) => {
-    const selectedFont = fontOptions.find(f => f.value === value);
-    
-    if (!selectedFont) return;
-    
     const updatedTypography = setFontFamily(
       currentGuide.typography,
-      selectedFont.value,
+      value,
       category
     );
     
@@ -94,11 +66,11 @@ export function TypographySection() {
     
     // Update local state for display
     if (category === 'display') {
-      setDisplayFontFamily(selectedFont.label);
+      setDisplayFontFamily(value.split(',')[0].trim());
     } else if (category === 'heading') {
-      setHeadingFontFamily(selectedFont.label);
+      setHeadingFontFamily(value.split(',')[0].trim());
     } else if (category === 'body') {
-      setBodyFontFamily(selectedFont.label);
+      setBodyFontFamily(value.split(',')[0].trim());
     }
   };
   
@@ -149,62 +121,29 @@ export function TypographySection() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               <div>
                 <Label>Display Font</Label>
-                <Select 
-                  value={fontOptions.find(f => f.label === displayFontFamily)?.value}
-                  onValueChange={(value) => handleFontFamilyChange(value, 'display')}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select font" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Removed the empty value Select.Item and replaced with default SelectItem */}
-                    {fontOptions.map((font) => (
-                      <SelectItem key={font.value} value={font.value}>
-                        {font.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FontSelector 
+                  value={displayFontFamily}
+                  onChange={(value) => handleFontFamilyChange(value, 'display')}
+                  placeholder="Select display font"
+                />
               </div>
               
               <div>
                 <Label>Heading Font</Label>
-                <Select
-                  value={fontOptions.find(f => f.label === headingFontFamily)?.value}
-                  onValueChange={(value) => handleFontFamilyChange(value, 'heading')}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select font" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Removed the empty value Select.Item and replaced with default SelectItem */}
-                    {fontOptions.map((font) => (
-                      <SelectItem key={font.value} value={font.value}>
-                        {font.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FontSelector
+                  value={headingFontFamily}
+                  onChange={(value) => handleFontFamilyChange(value, 'heading')}
+                  placeholder="Select heading font"
+                />
               </div>
               
               <div>
                 <Label>Body Font</Label>
-                <Select
-                  value={fontOptions.find(f => f.label === bodyFontFamily)?.value}
-                  onValueChange={(value) => handleFontFamilyChange(value, 'body')}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select font" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Removed the empty value Select.Item and replaced with default SelectItem */}
-                    {fontOptions.map((font) => (
-                      <SelectItem key={font.value} value={font.value}>
-                        {font.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FontSelector
+                  value={bodyFontFamily}
+                  onChange={(value) => handleFontFamilyChange(value, 'body')}
+                  placeholder="Select body font"
+                />
               </div>
             </div>
           </div>

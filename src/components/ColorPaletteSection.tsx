@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, X, AlertCircle, RefreshCw, Copy, Check } from 'lucide-react';
+import { Plus, X, AlertCircle, RefreshCw, Copy, Check, Palette } from 'lucide-react';
 import { hexToRgb, formatRgb, rgbToCmyk, formatCmyk, generateTints, generateShades, calculateContrastRatio, getTriadicColors, hslToHex } from '@/utils/colorUtils';
 import { useToast } from "@/components/ui/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HexColorPicker } from "react-colorful";
 
 interface ColorFormProps {
   onAdd: (color: string) => void;
@@ -32,14 +34,52 @@ function ColorForm({
     }
     onAdd(colorValue.toUpperCase());
   };
+  const handleColorChange = (color: string) => {
+    setColorValue(color.toUpperCase());
+    setError(''); // Clear any previous errors
+  };
   return <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <Label htmlFor="color-hex">Hex Color Code</Label>
         <div className="flex gap-2 mt-1">
-          <Input id="color-hex" type="text" value={colorValue} onChange={e => setColorValue(e.target.value)} placeholder="#000000" className="font-mono" />
-          <div className="w-10 h-10 rounded-md border border-border" style={{
-          backgroundColor: colorValue
-        }} />
+          <Input 
+            id="color-hex" 
+            type="text" 
+            value={colorValue} 
+            onChange={e => setColorValue(e.target.value)} 
+            placeholder="#000000" 
+            className="font-mono" 
+          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-10 h-10 p-0" 
+                style={{backgroundColor: colorValue}}
+              >
+                <span className="sr-only">Pick a color</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="flex flex-col gap-4">
+                <h4 className="font-medium">Pick a color</h4>
+                <HexColorPicker color={colorValue} onChange={handleColorChange} />
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground">
+                    Selected: {colorValue}
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="secondary"
+                    onClick={() => onAdd(colorValue.toUpperCase())}
+                  >
+                    <Palette className="h-4 w-4 mr-1" />
+                    Select
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
         {error && <p className="text-destructive text-sm mt-1 flex items-center">
             <AlertCircle className="h-3 w-3 mr-1" /> {error}
