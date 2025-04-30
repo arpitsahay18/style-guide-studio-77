@@ -11,10 +11,6 @@ interface FontSelectorProps {
   placeholder?: string;
 }
 
-// API key for Google Fonts
-const GOOGLE_FONTS_API_KEY = 'AIzaSyAOES8EmKhuJEPMXTVJ9WQvCyOJ3NObCUQ';
-const GOOGLE_FONTS_API_URL = `https://www.googleapis.com/webfonts/v1/webfonts?key=${GOOGLE_FONTS_API_KEY}&sort=popularity`;
-
 export function FontSelector({ value, onChange, placeholder = "Select font..." }: FontSelectorProps) {
   const [fonts, setFonts] = useState<string[]>([]);
   const [filteredFonts, setFilteredFonts] = useState<string[]>([]);
@@ -23,50 +19,23 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
   const [loadedFonts, setLoadedFonts] = useState<Set<string>>(new Set());
   const apiLoaded = useRef(false);
 
-  // Function to load and cache Google Fonts
-  const loadGoogleFont = (fontFamily: string) => {
-    if (!fontFamily || fontFamily === 'inherit' || loadedFonts.has(fontFamily)) {
-      return;
-    }
-    
-    const formattedFontFamily = fontFamily.replace(/\s+/g, '+');
-    const link = document.createElement('link');
-    link.href = `https://fonts.googleapis.com/css2?family=${formattedFontFamily}:wght@300;400;500;600;700&display=swap`;
-    link.rel = 'stylesheet';
-    document.head.appendChild(link);
-    
-    setLoadedFonts(prev => new Set(prev).add(fontFamily));
-    console.log(`Loaded font: ${fontFamily}`);
-  };
-
-  // Fetch fonts from Google Fonts API
   useEffect(() => {
     if (apiLoaded.current) return;
     
     apiLoaded.current = true;
     setLoading(true);
     
-    fetch(GOOGLE_FONTS_API_URL)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Google Fonts API responded with status: ${response.status}`);
-        }
-        return response.json();
-      })
+    // Fetch Google Fonts
+    fetch('https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyAOES8EmKhuJEPMXTVJ9WQvCyOJ3NObCUQ&sort=popularity')
+      .then(response => response.json())
       .then(data => {
         if (data.items && Array.isArray(data.items)) {
           const fontNames = data.items.map((font: any) => font.family);
           setFonts(fontNames);
           setFilteredFonts(fontNames);
-          console.log(`Successfully loaded ${fontNames.length} fonts from Google Fonts API`);
-          
-          // Preload the first 10 popular fonts
-          fontNames.slice(0, 10).forEach(fontFamily => loadGoogleFont(fontFamily));
-          
-          // Always load the current selected font if it exists
-          if (value) loadGoogleFont(value);
+          console.log(`Loaded ${fontNames.length} fonts from Google Fonts API`);
         } else {
-          throw new Error('Invalid response format from Google Fonts API');
+          throw new Error('Invalid response format');
         }
         setLoading(false);
       })
@@ -82,7 +51,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
         setFilteredFonts(fallbackFonts);
         setLoading(false);
       });
-  }, [value]);
+  }, []);
 
   // Filter fonts based on search query
   useEffect(() => {
@@ -96,12 +65,18 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
     }
   }, [searchQuery, fonts]);
 
-  // Load font when it's selected
+  // Load font stylesheet when it's selected
   useEffect(() => {
-    if (value) {
-      loadGoogleFont(value);
+    if (value && !loadedFonts.has(value) && value !== 'inherit') {
+      const fontFamily = value.replace(/\s+/g, '+');
+      const link = document.createElement('link');
+      link.href = `https://fonts.googleapis.com/css2?family=${fontFamily}:wght@300;400;500;600;700&display=swap`;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+      
+      setLoadedFonts(prev => new Set(prev).add(value));
     }
-  }, [value]);
+  }, [value, loadedFonts]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -109,23 +84,16 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
 
   const handleFontSelect = (font: string) => {
     onChange(font);
-    loadGoogleFont(font);
-  };
-
-  // Dynamically load another batch of fonts when scrolling near the end
-  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    const target = event.currentTarget;
-    const nearBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 200;
     
-    if (nearBottom && filteredFonts.length > 0) {
-      // Find index of last visible font
-      const lastVisibleFont = filteredFonts[Math.min(filteredFonts.length - 1, 30)];
-      if (lastVisibleFont) {
-        // Load the next batch of fonts
-        const lastIndex = fonts.indexOf(lastVisibleFont);
-        const nextBatch = fonts.slice(lastIndex + 1, lastIndex + 11);
-        nextBatch.forEach(loadGoogleFont);
-      }
+    // Preload the font if it's not already loaded
+    if (!loadedFonts.has(font) && font !== 'inherit') {
+      const fontFamily = font.replace(/\s+/g, '+');
+      const link = document.createElement('link');
+      link.href = `https://fonts.googleapis.com/css2?family=${fontFamily}:wght@300;400;500;600;700&display=swap`;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+      
+      setLoadedFonts(prev => new Set(prev).add(font));
     }
   };
 
@@ -147,7 +115,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
           </div>
         </div>
         
-        <ScrollArea className="h-72 overflow-y-auto" onScroll={handleScroll}>
+        <ScrollArea className="h-72 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-4">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -157,6 +125,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
               <SelectItem 
                 key={font} 
                 value={font}
+                style={{ fontFamily: font }}
               >
                 <span style={{ fontFamily: font }}>{font}</span>
               </SelectItem>
@@ -168,7 +137,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
           )}
         </ScrollArea>
         
-        <div className="p-2 text-xs text-center text-muted-foreground border-t bg-background sticky bottom-0">
+        <div className="p-2 text-xs text-center text-muted-foreground border-t mt-auto">
           <div className="flex items-center justify-center">
             <span className="mr-1">Powered by</span>
             <img 
