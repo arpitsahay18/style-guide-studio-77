@@ -161,6 +161,7 @@ export const loadGoogleFont = (fontFamily: string): void => {
   const existingLinks = document.querySelectorAll(`link[href^="https://fonts.googleapis.com/css2?family=${formattedFontFamily}"]`);
   if (existingLinks.length === 0) {
     document.head.appendChild(link);
+    console.log(`Loaded font: ${fontFamily}`);
   }
 };
 

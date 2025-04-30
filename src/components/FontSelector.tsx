@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,8 +17,14 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadedFonts, setLoadedFonts] = useState<Set<string>>(new Set());
+  const apiLoaded = useRef(false);
 
   useEffect(() => {
+    if (apiLoaded.current) return;
+    
+    apiLoaded.current = true;
+    setLoading(true);
+    
     // Fetch Google Fonts
     fetch('https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyAOES8EmKhuJEPMXTVJ9WQvCyOJ3NObCUQ&sort=popularity')
       .then(response => response.json())
@@ -27,6 +33,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
           const fontNames = data.items.map((font: any) => font.family);
           setFonts(fontNames);
           setFilteredFonts(fontNames);
+          console.log(`Loaded ${fontNames.length} fonts from Google Fonts API`);
         } else {
           throw new Error('Invalid response format');
         }
@@ -95,7 +102,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent className="font-selector-content">
+      <SelectContent className="font-selector-content relative">
         <div className="p-2 sticky top-0 bg-background z-10 border-b">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -107,7 +114,8 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
             />
           </div>
         </div>
-        <ScrollArea className="h-72">
+        
+        <ScrollArea className="h-72 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-4">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -128,14 +136,17 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
             </div>
           )}
         </ScrollArea>
-        <div className="p-2 text-xs text-center text-muted-foreground border-t flex items-center justify-center">
-          <span className="mr-1">Powered by</span>
-          <img 
-            src="https://www.gstatic.com/images/branding/googlelogo/svg/googlelogo_clr_74x24px.svg" 
-            alt="Google" 
-            className="h-3 inline-block mr-1" 
-          />
-          <span>Fonts</span>
+        
+        <div className="p-2 text-xs text-center text-muted-foreground border-t mt-auto">
+          <div className="flex items-center justify-center">
+            <span className="mr-1">Powered by</span>
+            <img 
+              src="https://www.gstatic.com/images/branding/googlelogo/svg/googlelogo_clr_74x24px.svg" 
+              alt="Google" 
+              className="h-3 inline-block mr-1" 
+            />
+            <span>Fonts</span>
+          </div>
         </div>
       </SelectContent>
     </Select>
