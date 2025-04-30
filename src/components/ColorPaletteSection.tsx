@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, X, AlertCircle, RefreshCw, Copy, Check } from 'lucide-react';
 import { hexToRgb, formatRgb, rgbToCmyk, formatCmyk, generateTints, generateShades, calculateContrastRatio, getTriadicColors, hslToHex } from '@/utils/colorUtils';
 import { useToast } from "@/components/ui/use-toast";
+
 interface ColorFormProps {
   onAdd: (color: string) => void;
   onCancel: () => void;
@@ -53,6 +54,7 @@ function ColorForm({
       </div>
     </form>;
 }
+
 interface ColorDetailProps {
   color: ColorWithVariants;
 }
@@ -135,6 +137,7 @@ function ColorDetail({
       </div>
     </div>;
 }
+
 interface ColorCategoryProps {
   title: string;
   description: string;
@@ -153,13 +156,16 @@ function ColorCategory({
 }: ColorCategoryProps) {
   const [showColorForm, setShowColorForm] = useState(false);
   const [selectedColorIndex, setSelectedColorIndex] = useState<number | null>(null);
+  
   const handleAddColor = (color: string) => {
     onAddColor(color);
     setShowColorForm(false);
   };
+  
   const handleColorClick = (index: number) => {
     setSelectedColorIndex(index === selectedColorIndex ? null : index);
   };
+  
   return <Card className="mb-8">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
@@ -168,7 +174,11 @@ function ColorCategory({
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           {colors.map((color, index) => <div key={index} className="relative group">
-              <ColorSwatch color={color.hex} size="lg" className={`w-full cursor-pointer transition-all duration-300 ${selectedColorIndex === index ? 'ring-2 ring-primary' : ''}`} onClick={() => handleColorClick(index)} />
+              <ColorSwatch 
+                color={color.hex} 
+                className={`w-full cursor-pointer transition-all duration-300 ${selectedColorIndex === index ? 'ring-2 ring-primary' : ''}`} 
+                onClick={() => handleColorClick(index)} 
+              />
               <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200" onClick={() => onRemoveColor(index)}>
                 <X className="h-3 w-3" />
               </Button>
@@ -187,6 +197,7 @@ function ColorCategory({
       </CardContent>
     </Card>;
 }
+
 export function ColorPaletteSection() {
   const {
     currentGuide,
