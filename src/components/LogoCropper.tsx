@@ -1,6 +1,6 @@
 
-import React, { useState, useRef } from 'react';
-import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
+import React, { useState, useRef, useCallback } from 'react';
+import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
@@ -12,88 +12,74 @@ interface LogoCropperProps {
   onCancel: () => void;
 }
 
-function getCroppedImg(
-  image: HTMLImageElement,
-  crop: PixelCrop,
-  scale = 1,
-  rotate = 0,
-): Promise<string> {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-
-  if (!ctx) {
-    throw new Error('No 2d context');
-  }
-
-  const scaleX = image.naturalWidth / image.width;
-  const scaleY = image.naturalHeight / image.height;
-
-  const pixelRatio = window.devicePixelRatio;
-  canvas.width = Math.floor(crop.width * scaleX * pixelRatio);
-  canvas.height = Math.floor(crop.height * scaleY * pixelRatio);
-
-  ctx.scale(pixelRatio, pixelRatio);
-  ctx.imageSmoothingQuality = 'high';
-
-  const cropX = crop.x * scaleX;
-  const cropY = crop.y * scaleY;
-  const centerX = image.naturalWidth / 2;
-  const centerY = image.naturalHeight / 2;
-
-  ctx.save();
-  ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate(rotate * (Math.PI / 180));
-  ctx.scale(scale, scale);
-  ctx.translate(-centerX, -centerY);
-  ctx.drawImage(
-    image,
-    0,
-    0,
-    image.naturalWidth,
-    image.naturalHeight,
-    0,
-    0,
-    image.naturalWidth,
-    image.naturalHeight,
+function centerAspectCrop(
+  mediaWidth: number,
+  mediaHeight: number,
+  aspect: number,
+) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: '%',
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight,
+    ),
+    mediaWidth,
+    mediaHeight,
   );
-  ctx.restore();
-
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        throw new Error('Canvas is empty');
-      }
-      resolve(URL.createObjectURL(blob));
-    }, 'image/png');
-  });
 }
 
 export function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
-  const [crop, setCrop] = useState<Crop>({
-    unit: '%',
-    width: 50,
-    height: 50,
-    x: 25,
-    y: 25
-  });
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [scale, setScale] = useState(1);
   const imgRef = useRef<HTMLImageElement>(null);
-  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  
+  // This creates a preview canvas when crop completes
+  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    setCrop(centerAspectCrop(width, height, 1)); // Square aspect ratio
+  }, []);
 
-  const handleComplete = async () => {
+  const handleComplete = useCallback(() => {
     if (completedCrop && imgRef.current) {
-      try {
-        const croppedImageUrl = await getCroppedImg(
-          imgRef.current,
-          completedCrop,
-          scale
-        );
-        onCrop(croppedImageUrl);
-      } catch (e) {
-        console.error('Error cropping image:', e);
+      const image = imgRef.current;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) {
+        throw new Error('No 2d context');
       }
+
+      // Calculate the size of the cropped area at the original scale
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+
+      // Set the canvas size to the cropped area dimensions
+      canvas.width = completedCrop.width * scaleX;
+      canvas.height = completedCrop.height * scaleY;
+
+      // Draw only the cropped area onto the canvas
+      ctx.drawImage(
+        image,
+        completedCrop.x * scaleX,
+        completedCrop.y * scaleY,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      // Convert to base64
+      const base64Image = canvas.toDataURL('image/png');
+      onCrop(base64Image);
     }
-  };
+  }, [completedCrop, onCrop]);
 
   return (
     <div className="space-y-6">
@@ -117,6 +103,8 @@ export function LogoCropper({ imageUrl, onCrop, onCancel }: LogoCropperProps) {
             src={imageUrl}
             style={{ transform: `scale(${scale})` }}
             alt="Logo to crop"
+            onLoad={onImageLoad}
+            crossOrigin="anonymous"
           />
         </ReactCrop>
       </div>

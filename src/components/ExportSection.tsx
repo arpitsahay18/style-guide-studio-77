@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export function ExportSection() {
   const navigate = useNavigate();
-  const { currentGuide, exportGuide } = useBrandGuide();
+  const { currentGuide, exportGuide, activeSection } = useBrandGuide();
   const { toast } = useToast();
   
   // Check if guide is complete
@@ -53,9 +53,12 @@ export function ExportSection() {
     exportGuide('json');
   };
   
+  // Only show warning when active section is export
+  const showWarning = activeSection === 'export' && !isGuideComplete;
+  
   return (
     <div className="grid gap-6">
-      <BrandGuideWarning />
+      {showWarning && <BrandGuideWarning />}
       
       <Card>
         <CardHeader>

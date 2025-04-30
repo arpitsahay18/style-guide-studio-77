@@ -46,13 +46,20 @@ const Preview = () => {
       });
       
       const content = contentRef.current;
+      
+      // Improved PDF generation with better quality/size balance
       const canvas = await html2canvas(content, {
-        scale: 2,
+        scale: 1, // Lower scale for better file size
         useCORS: true,
         logging: false,
+        imageTimeout: 0,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
       });
       
-      const imgData = canvas.toDataURL('image/png');
+      // Optimize image quality vs file size
+      const imgData = canvas.toDataURL('image/jpeg', 0.7); // Use JPEG with 70% quality
+      
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -63,12 +70,29 @@ const Preview = () => {
       const imgWidth = 210; // A4 width in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      // Split into pages if content is too long
+      const pageHeight = 297; // A4 height in mm
+      let heightLeft = imgHeight;
+      let position = 0;
+      let page = 1;
+      
+      // Add first page
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      // Add subsequent pages if needed
+      while (heightLeft > 0) {
+        position = -pageHeight * page;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+        page++;
+      }
       
       // Add watermark
       pdf.setFontSize(10);
       pdf.setTextColor(150, 150, 150);
-      pdf.text('Created with Brand Studio', 105, imgHeight + 10, { align: 'center' });
+      pdf.text('Created with Brand Studio', 105, 290, { align: 'center' });
       
       pdf.save(`${currentGuide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
       
