@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { BrandGuideProvider } from '@/context/BrandGuideContext';
 import { Toaster } from "@/components/ui/toaster";
 import { useNavigate } from 'react-router-dom';
 import { BrandStudioLogo } from '@/components/BrandStudioLogo';
@@ -21,7 +20,8 @@ export function MainLayout({
     }
   };
   
-  const content = <div className="flex flex-col min-h-screen">
+  const content = (
+    <div className="flex flex-col min-h-screen">
       <header className="border-b bg-background">
         <div className="container mx-auto py-4 px-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -62,13 +62,10 @@ export function MainLayout({
       </footer>
       
       <Toaster />
-    </div>;
-    
-  if (standalone) {
-    return <BrandGuideProvider>
-        {content}
-      </BrandGuideProvider>;
-  }
+    </div>
+  );
   
+  // Remove the BrandGuideProvider wrapper when not standalone
+  // as it's already provided by the App component
   return content;
 }

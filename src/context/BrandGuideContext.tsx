@@ -89,15 +89,15 @@ const saveGuidesToStorage = (guides: BrandGuide[]): void => {
   localStorage.setItem('brandStudioGuides', JSON.stringify(guides));
 };
 
-export const BrandGuideProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [currentGuide, setCurrentGuide] = useState<BrandGuide>(createDefaultBrandGuide());
-  const [savedGuides, setSavedGuides] = useState<BrandGuide[]>([]);
-  const [activeSection, setActiveSection] = useState<'typography' | 'colors' | 'logos' | 'preview' | 'export'>('typography');
-  const [previewText, setPreviewText] = useState<string>('The quick brown fox jumps over the lazy dog');
-  const [sessionId] = useState<string>(getSessionId());
+export const BrandGuideProvider = ({ children }: { children: ReactNode }) => {
+  const [currentGuide, setCurrentGuide] = React.useState<BrandGuide>(createDefaultBrandGuide());
+  const [savedGuides, setSavedGuides] = React.useState<BrandGuide[]>([]);
+  const [activeSection, setActiveSection] = React.useState<'typography' | 'colors' | 'logos' | 'preview' | 'export'>('typography');
+  const [previewText, setPreviewText] = React.useState<string>('The quick brown fox jumps over the lazy dog');
+  const [sessionId] = React.useState<string>(getSessionId());
 
   // Load user's guide from localStorage on initial load
-  useEffect(() => {
+  React.useEffect(() => {
     const loadSavedGuide = () => {
       try {
         // Get all saved guides
@@ -142,7 +142,7 @@ export const BrandGuideProvider: React.FC<{ children: ReactNode }> = ({ children
   }, []);
 
   // Auto-save guide changes to localStorage
-  useEffect(() => {
+  React.useEffect(() => {
     const autoSave = () => {
       // Save current guide to localStorage
       localStorage.setItem('currentBrandGuide', JSON.stringify(currentGuide));
