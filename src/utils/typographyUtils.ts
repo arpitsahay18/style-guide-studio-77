@@ -147,6 +147,24 @@ export const defaultTypographySet: TypographySet = {
 };
 
 /**
+ * Load a Google Font
+ */
+export const loadGoogleFont = (fontFamily: string): void => {
+  if (!fontFamily || fontFamily === 'inherit') return;
+  
+  const formattedFontFamily = fontFamily.replace(/\s+/g, '+');
+  const link = document.createElement('link');
+  link.href = `https://fonts.googleapis.com/css2?family=${formattedFontFamily}:wght@300;400;500;600;700&display=swap`;
+  link.rel = 'stylesheet';
+  
+  // Check if this font is already loaded
+  const existingLinks = document.querySelectorAll(`link[href^="https://fonts.googleapis.com/css2?family=${formattedFontFamily}"]`);
+  if (existingLinks.length === 0) {
+    document.head.appendChild(link);
+  }
+};
+
+/**
  * Generates CSS rule text for a typography style
  */
 export const generateTypographyCss = (style: TypographyStyle): string => {
@@ -194,6 +212,9 @@ export const setFontFamily = (
       }
     }
   }
+  
+  // Load the Google Font
+  loadGoogleFont(fontFamily);
   
   return newTypographySet;
 };

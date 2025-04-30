@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MainLayout } from '@/components/MainLayout';
@@ -29,6 +30,15 @@ const Index = () => {
     Boolean(currentGuide.logos.original);
   
   const viewPreview = () => {
+    if (!brandName.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Brand name missing",
+        description: "Please enter a brand name before previewing the guide.",
+      });
+      return;
+    }
+    
     if (!isGuideComplete) {
       toast({
         variant: "destructive",

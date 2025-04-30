@@ -23,9 +23,13 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
     fetch('https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyAOES8EmKhuJEPMXTVJ9WQvCyOJ3NObCUQ&sort=popularity')
       .then(response => response.json())
       .then(data => {
-        const fontNames = data.items.map((font: any) => font.family);
-        setFonts(fontNames);
-        setFilteredFonts(fontNames);
+        if (data.items && Array.isArray(data.items)) {
+          const fontNames = data.items.map((font: any) => font.family);
+          setFonts(fontNames);
+          setFilteredFonts(fontNames);
+        } else {
+          throw new Error('Invalid response format');
+        }
         setLoading(false);
       })
       .catch(error => {
@@ -44,7 +48,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
 
   // Filter fonts based on search query
   useEffect(() => {
-    if (searchQuery) {
+    if (searchQuery.trim()) {
       const filtered = fonts.filter(font => 
         font.toLowerCase().includes(searchQuery.toLowerCase())
       );
@@ -91,7 +95,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="font-selector-content">
         <div className="p-2 sticky top-0 bg-background z-10 border-b">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />

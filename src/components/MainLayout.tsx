@@ -3,6 +3,8 @@ import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { useNavigate } from 'react-router-dom';
 import { BrandStudioLogo } from '@/components/BrandStudioLogo';
+import { useBrandGuide } from '@/context/BrandGuideContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -14,8 +16,19 @@ export function MainLayout({
   standalone = false
 }: MainLayoutProps) {
   const navigate = !standalone ? useNavigate() : null;
+  const { currentGuide } = useBrandGuide();
+  const { toast } = useToast();
+  
   const handleNavigation = (path: string) => {
     if (navigate) {
+      if (!currentGuide.name.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Brand name missing",
+          description: "Please enter a brand name before proceeding.",
+        });
+        return;
+      }
       navigate(path);
     }
   };
