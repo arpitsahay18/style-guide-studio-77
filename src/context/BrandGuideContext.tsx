@@ -150,12 +150,13 @@ const optimizeGuideForStorage = (guide: BrandGuide): BrandGuide => {
   return optimizedGuide;
 };
 
-export const BrandGuideProvider = ({ children }: { children: ReactNode }) => {
+export const BrandGuideProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentGuide, setCurrentGuide] = React.useState<BrandGuide>(createDefaultBrandGuide());
   const [savedGuides, setSavedGuides] = React.useState<BrandGuide[]>([]);
   const [activeSection, setActiveSection] = React.useState<'typography' | 'colors' | 'logos' | 'preview' | 'export'>('typography');
   const [previewText, setPreviewText] = React.useState<string>('The quick brown fox jumps over the lazy dog');
   const [sessionId] = React.useState<string>(getSessionId());
+  const [activeTab, setActiveTab] = useState('typography');
 
   // Load user's guide from localStorage on initial load
   React.useEffect(() => {
@@ -414,6 +415,8 @@ export const BrandGuideProvider = ({ children }: { children: ReactNode }) => {
         exportGuide,
         previewText,
         setPreviewText,
+        activeTab,
+        setActiveTab,
       }}
     >
       {children}

@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -102,6 +101,17 @@
     margin-top: auto;
     border-top: 1px solid var(--border);
   }
+  
+  /* Added shake animation for tutorial */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+  }
+  
+  body.shake {
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+  }
 }
  
 @layer base {
@@ -124,4 +134,16 @@
 
 .animate-fade-in {
   animation: fade-in 0.3s ease-in-out;
+}
+
+/* Overlay styles for welcome dialog */
+.welcome-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 40;
 }

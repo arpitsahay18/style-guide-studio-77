@@ -12,6 +12,9 @@ import { Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { useToast } from '@/hooks/use-toast';
+import { WelcomeDialog } from '@/components/WelcomeDialog';
+import { TooltipTour, tourRefs } from '@/components/TooltipTour';
+import { storage } from '@/lib/storage';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('typography');
@@ -19,6 +22,26 @@ const Index = () => {
   const { currentGuide, setGuideName } = useBrandGuide();
   const { toast } = useToast();
   const [brandName, setBrandName] = useState(currentGuide.name);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+
+  // Initialize welcome dialog and tour
+  useEffect(() => {
+    // Check if user has seen the welcome dialog
+    if (!storage.hasSeenWelcome()) {
+      setWelcomeOpen(true);
+    }
+  }, []);
+
+  // Handle welcome dialog completion
+  const handleWelcomeComplete = () => {
+    setWelcomeOpen(false);
+    
+    // Start the tour after welcome dialog closes
+    if (!storage.hasSeenTooltips()) {
+      setShowTour(true);
+    }
+  };
 
   useEffect(() => {
     setBrandName(currentGuide.name);
@@ -59,6 +82,16 @@ const Index = () => {
 
   return (
     <MainLayout>
+      {welcomeOpen && <div className="welcome-overlay" />}
+      
+      <WelcomeDialog 
+        open={welcomeOpen} 
+        onOpenChange={setWelcomeOpen} 
+        onGetStarted={handleWelcomeComplete} 
+      />
+      
+      {showTour && <TooltipTour />}
+      
       <div className="container mx-auto px-4">
         <div className="flex flex-col gap-6 mb-6">
           <div className="flex justify-between items-center">
@@ -79,34 +112,45 @@ const Index = () => {
               value={brandName}
               onChange={handleNameChange}
               className="w-full"
+              ref={tourRefs.brandNameRef}
             />
           </div>
         </div>
         
-        <Tabs defaultValue="typography" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 mb-8">
-            <TabsTrigger value="typography">Typography</TabsTrigger>
-            <TabsTrigger value="colors">Colors</TabsTrigger>
-            <TabsTrigger value="logo">Logo</TabsTrigger>
-            <TabsTrigger value="export">Export</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="typography" className="animate-fade-in">
-            <TypographySection />
-          </TabsContent>
-          
-          <TabsContent value="colors" className="animate-fade-in">
-            <ColorPaletteSection />
-          </TabsContent>
-          
-          <TabsContent value="logo" className="animate-fade-in">
-            <LogoSection />
-          </TabsContent>
-          
-          <TabsContent value="export" className="animate-fade-in">
-            <ExportSection />
-          </TabsContent>
-        </Tabs>
+        <div ref={tourRefs.tabsRef}>
+          <Tabs defaultValue="typography" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="w-full grid grid-cols-4 mb-8">
+              <TabsTrigger value="typography">Typography</TabsTrigger>
+              <TabsTrigger value="colors">Colors</TabsTrigger>
+              <TabsTrigger value="logo">Logo</TabsTrigger>
+              <TabsTrigger value="export">Export</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="typography" className="animate-fade-in">
+              <div ref={tourRefs.fontSelectorRef}>
+                <div ref={tourRefs.typographyPreviewRef}>
+                  <TypographySection />
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="colors" className="animate-fade-in">
+              <div ref={tourRefs.colorAddRef}>
+                <ColorPaletteSection />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="logo" className="animate-fade-in">
+              <div ref={tourRefs.logoDropzoneRef}>
+                <LogoSection />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="export" className="animate-fade-in">
+              <ExportSection />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </MainLayout>
   );
