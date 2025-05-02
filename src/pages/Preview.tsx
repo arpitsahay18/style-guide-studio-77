@@ -234,12 +234,39 @@ const Preview = () => {
             
             <div>
               <h3 className="text-xl font-semibold mb-4">Logo Variations</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+              
+              {/* Square Logo Variations */}
+              <h4 className="text-lg font-medium mb-3 mt-6">Square</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
                 {currentGuide.logos.square.slice(0, 4).map((logo, index) => (
                   <LogoPreview 
                     key={index}
                     logo={logo}
                     shape="square"
+                  />
+                ))}
+              </div>
+              
+              {/* Rounded Logo Variations */}
+              <h4 className="text-lg font-medium mb-3 mt-6">Rounded</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                {currentGuide.logos.rounded.slice(0, 4).map((logo, index) => (
+                  <LogoPreview 
+                    key={index}
+                    logo={logo}
+                    shape="rounded"
+                  />
+                ))}
+              </div>
+              
+              {/* Circle Logo Variations */}
+              <h4 className="text-lg font-medium mb-3 mt-6">Circle</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                {currentGuide.logos.circle.slice(0, 4).map((logo, index) => (
+                  <LogoPreview 
+                    key={index}
+                    logo={logo}
+                    shape="circle"
                   />
                 ))}
               </div>
@@ -257,3 +284,4 @@ const Preview = () => {
 };
 
 export default Preview;
+

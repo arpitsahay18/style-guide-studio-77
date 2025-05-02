@@ -56,13 +56,17 @@ export function ExportSection() {
   };
 
   // Helper function to convert logo to data URL
-  const getLogoDataUrl = async (logo, shape) => {
+  const getLogoDataUrl = async (logo, shape): Promise<string> => {
     try {
       // Create a temporary canvas to render the logo with the correct shape
       const canvas = document.createElement('canvas');
       canvas.width = 200;
       canvas.height = 200;
       const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        throw new Error("Could not get canvas context");
+      }
       
       // Draw background
       ctx.fillStyle = logo.background;
@@ -85,7 +89,7 @@ export function ExportSection() {
       ctx.fill();
       
       // Load and draw the logo
-      return new Promise((resolve, reject) => {
+      return new Promise<string>((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
@@ -114,7 +118,7 @@ export function ExportSection() {
       });
     } catch (error) {
       console.error("Error generating logo data URL:", error);
-      return null;
+      return ''; // Return empty string on error
     }
   };
 
@@ -151,8 +155,10 @@ export function ExportSection() {
       doc.setFont("helvetica", "normal");
       doc.text("Original Logo", 50, 90);
       
-      // Add original logo
-      doc.addImage(currentGuide.logos.original, 'PNG', 50, 100, 150, 150);
+      // Add original logo as string
+      if (typeof currentGuide.logos.original === 'string') {
+        doc.addImage(currentGuide.logos.original, 'PNG', 50, 100, 150, 150);
+      }
       
       // Add logo variations heading
       doc.setFontSize(18);
@@ -165,9 +171,17 @@ export function ExportSection() {
       const circleLogo = currentGuide.logos.circle[0];
       
       // Generate logo variations with proper shapes
-      const squareDataUrl = await getLogoDataUrl(squareLogo, 'square');
-      const roundedDataUrl = await getLogoDataUrl(roundedLogo, 'rounded');
-      const circleDataUrl = await getLogoDataUrl(circleLogo, 'circle');
+      let squareDataUrl = '';
+      let roundedDataUrl = '';
+      let circleDataUrl = '';
+      
+      try {
+        squareDataUrl = await getLogoDataUrl(squareLogo, 'square');
+        roundedDataUrl = await getLogoDataUrl(roundedLogo, 'rounded');
+        circleDataUrl = await getLogoDataUrl(circleLogo, 'circle');
+      } catch (error) {
+        console.error("Error generating logo variations:", error);
+      }
       
       // Add square variation
       doc.setFontSize(12);
@@ -200,7 +214,9 @@ export function ExportSection() {
       doc.text("Maintain clear space around the logo for maximum impact and legibility.", 50, 480);
       
       // Add spacing guidelines image
-      doc.addImage(currentGuide.logos.original, 'PNG', 50, 500, 200, 200);
+      if (typeof currentGuide.logos.original === 'string') {
+        doc.addImage(currentGuide.logos.original, 'PNG', 50, 500, 200, 200);
+      }
       
       // Add grid lines to simulate spacing guidelines
       doc.setDrawColor(200, 200, 200);
@@ -330,3 +346,4 @@ export function ExportSection() {
     </div>
   );
 }
+
