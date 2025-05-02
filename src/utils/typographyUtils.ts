@@ -1,4 +1,3 @@
-
 import { TypographySet, TypographyStyle } from '@/types';
 
 /**
@@ -147,22 +146,38 @@ export const defaultTypographySet: TypographySet = {
 };
 
 /**
- * Load a Google Font
+ * Load a Google Font with better error handling
  */
 export const loadGoogleFont = (fontFamily: string): void => {
   if (!fontFamily || fontFamily === 'inherit') return;
   
-  const formattedFontFamily = fontFamily.replace(/\s+/g, '+');
-  const link = document.createElement('link');
-  link.href = `https://fonts.googleapis.com/css2?family=${formattedFontFamily}:wght@300;400;500;600;700&display=swap`;
-  link.rel = 'stylesheet';
-  
-  // Check if this font is already loaded
-  const existingLinks = document.querySelectorAll(`link[href^="https://fonts.googleapis.com/css2?family=${formattedFontFamily}"]`);
-  if (existingLinks.length === 0) {
-    document.head.appendChild(link);
-    console.log(`Loaded font: ${fontFamily}`);
+  try {
+    const formattedFontFamily = fontFamily.replace(/\s+/g, '+');
+    const link = document.createElement('link');
+    link.href = `https://fonts.googleapis.com/css2?family=${formattedFontFamily}:wght@300;400;500;600;700&display=swap`;
+    link.rel = 'stylesheet';
+    
+    // Check if this font is already loaded
+    const existingLinks = document.querySelectorAll(`link[href^="https://fonts.googleapis.com/css2?family=${formattedFontFamily}"]`);
+    if (existingLinks.length === 0) {
+      document.head.appendChild(link);
+      console.log(`Loaded font: ${fontFamily}`);
+    }
+  } catch (error) {
+    console.error(`Failed to load font: ${fontFamily}`, error);
   }
+};
+
+// Let's preload some common fonts to ensure they're available
+export const preloadCommonFonts = (): void => {
+  const commonFonts = [
+    'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 
+    'Poppins', 'Raleway'
+  ];
+  
+  commonFonts.forEach(font => {
+    loadGoogleFont(font);
+  });
 };
 
 /**

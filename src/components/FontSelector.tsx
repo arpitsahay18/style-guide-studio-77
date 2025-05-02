@@ -12,6 +12,15 @@ interface FontSelectorProps {
   placeholder?: string;
 }
 
+// Popular fonts to use as fallback if API fails
+const POPULAR_FONTS = [
+  'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 
+  'Raleway', 'Oswald', 'Merriweather', 'Playfair Display',
+  'Source Sans Pro', 'Poppins', 'Roboto Condensed', 'Ubuntu',
+  'Nunito', 'Work Sans', 'Rubik', 'Quicksand', 'Fira Sans',
+  'PT Sans', 'Mukta', 'Noto Sans', 'Titillium Web', 'Heebo'
+];
+
 export function FontSelector({ value, onChange, placeholder = "Select font..." }: FontSelectorProps) {
   const [fonts, setFonts] = useState<string[]>([]);
   const [filteredFonts, setFilteredFonts] = useState<string[]>([]);
@@ -27,8 +36,22 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
     apiLoaded.current = true;
     setLoading(true);
     
-    // Fetch Google Fonts with a more reliable approach
-    fetch('https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyAOES8EmKhuJEPMXTVJ9WQvCyOJ3NObCUQ&sort=popularity')
+    // First, initialize with popular fonts in case API fails
+    setFonts(POPULAR_FONTS);
+    setFilteredFonts(POPULAR_FONTS);
+    
+    // Set up preloading of popular fonts for better UX even before API loads
+    POPULAR_FONTS.slice(0, 8).forEach(font => {
+      const fontFamily = font.replace(/\s+/g, '+');
+      const link = document.createElement('link');
+      link.href = `https://fonts.googleapis.com/css2?family=${fontFamily}:wght@400;700&display=swap`;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+      setLoadedFonts(prev => new Set(prev).add(font));
+    });
+    
+    // Then try to fetch Google Fonts using reliable free API
+    fetch('https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyBwIX97bVWr3-6AIUvGkcNnmFgirefZ6Sw&sort=popularity')
       .then(response => {
         if (!response.ok) {
           throw new Error(`API responded with status: ${response.status}`);
@@ -42,14 +65,16 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
           setFilteredFonts(fontNames);
           console.log(`Loaded ${fontNames.length} fonts from Google Fonts API`);
           
-          // Preload the first 20 popular fonts for better performance
-          fontNames.slice(0, 20).forEach(font => {
-            const fontFamily = font.replace(/\s+/g, '+');
-            const link = document.createElement('link');
-            link.href = `https://fonts.googleapis.com/css2?family=${fontFamily}:wght@400&display=swap`;
-            link.rel = 'stylesheet';
-            link.setAttribute('data-preload', 'true');
-            document.head.appendChild(link);
+          // Only preload the first 15 most popular fonts to avoid excessive network requests
+          fontNames.slice(0, 15).forEach(font => {
+            if (!loadedFonts.has(font)) {
+              const fontFamily = font.replace(/\s+/g, '+');
+              const link = document.createElement('link');
+              link.href = `https://fonts.googleapis.com/css2?family=${fontFamily}:wght@400;700&display=swap`;
+              link.rel = 'stylesheet';
+              document.head.appendChild(link);
+              setLoadedFonts(prev => new Set(prev).add(font));
+            }
           });
         } else {
           throw new Error('Invalid response format');
@@ -59,19 +84,12 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
       .catch(error => {
         console.error('Error fetching Google Fonts:', error);
         toast({
-          variant: "destructive",
-          title: "Failed to load fonts",
-          description: "Could not load Google Fonts. Using fallback fonts instead.",
+          title: "Using curated font selection",
+          description: "Could not load Google Fonts API. Using our curated selection instead.",
+          duration: 5000,
         });
         
-        // Fallback to a limited set of fonts if API fails
-        const fallbackFonts = [
-          'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 
-          'Raleway', 'Oswald', 'Merriweather', 'Playfair Display',
-          'Source Sans Pro', 'Poppins', 'Roboto Condensed', 'Ubuntu'
-        ];
-        setFonts(fallbackFonts);
-        setFilteredFonts(fallbackFonts);
+        // Already using fallback fonts
         setLoading(false);
       });
   }, [toast]);
@@ -149,8 +167,9 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
                 key={font} 
                 value={font}
                 style={{ fontFamily: font }}
+                className="font-selector-item"
               >
-                <span style={{ fontFamily: font }}>{font}</span>
+                <span className="font-preview" style={{ fontFamily: font }}>{font}</span>
               </SelectItem>
             ))
           ) : (

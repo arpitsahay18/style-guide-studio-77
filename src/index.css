@@ -75,6 +75,22 @@
     max-height: 60vh;
   }
   
+  .font-selector-item {
+    transition: background-color 0.2s;
+  }
+  
+  .font-selector-item:hover .font-preview {
+    transform: translateX(2px);
+  }
+  
+  .font-preview {
+    transition: transform 0.15s ease;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
   /* Ensure Google Fonts attribution is always visible */
   .font-selector-content .p-2.text-xs {
     position: sticky;
