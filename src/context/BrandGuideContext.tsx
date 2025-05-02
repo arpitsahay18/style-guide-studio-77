@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -39,7 +40,10 @@ interface BrandGuideContextType {
   savedGuides: BrandGuide[];
   activeSection: 'typography' | 'colors' | 'logos' | 'preview' | 'export';
   setActiveSection: (section: 'typography' | 'colors' | 'logos' | 'preview' | 'export') => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
   setGuideName: (name: string) => void;
+  setBrandName: (name: string) => void;
   updateTypography: (typography: TypographySet) => void;
   updateColors: (colors: ColorPalette) => void;
   updateLogos: (logos: LogoSet) => void;
@@ -156,7 +160,7 @@ export const BrandGuideProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [activeSection, setActiveSection] = React.useState<'typography' | 'colors' | 'logos' | 'preview' | 'export'>('typography');
   const [previewText, setPreviewText] = React.useState<string>('The quick brown fox jumps over the lazy dog');
   const [sessionId] = React.useState<string>(getSessionId());
-  const [activeTab, setActiveTab] = useState('typography');
+  const [activeTab, setActiveTab] = React.useState('typography');
 
   // Load user's guide from localStorage on initial load
   React.useEffect(() => {
@@ -246,6 +250,11 @@ export const BrandGuideProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       name,
       updatedAt: new Date()
     }));
+  };
+
+  // Add setBrandName as an alias for setGuideName for consistency
+  const setBrandName = (name: string) => {
+    setGuideName(name);
   };
 
   const updateTypography = (typography: TypographySet) => {
@@ -404,6 +413,7 @@ export const BrandGuideProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         activeSection,
         setActiveSection,
         setGuideName,
+        setBrandName,
         updateTypography,
         updateColors,
         updateLogos,
