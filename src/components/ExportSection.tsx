@@ -55,7 +55,70 @@ export function ExportSection() {
     exportGuide('json');
   };
 
-  const handleExportLogoPack = () => {
+  // Helper function to convert logo to data URL
+  const getLogoDataUrl = async (logo, shape) => {
+    try {
+      // Create a temporary canvas to render the logo with the correct shape
+      const canvas = document.createElement('canvas');
+      canvas.width = 200;
+      canvas.height = 200;
+      const ctx = canvas.getContext('2d');
+      
+      // Draw background
+      ctx.fillStyle = logo.background;
+      ctx.beginPath();
+      
+      switch (shape) {
+        case 'square':
+          ctx.rect(0, 0, canvas.width, canvas.height);
+          break;
+        case 'rounded':
+          ctx.roundRect(0, 0, canvas.width, canvas.height, 30);
+          break;
+        case 'circle':
+          ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, 0, Math.PI * 2);
+          break;
+        default:
+          ctx.rect(0, 0, canvas.width, canvas.height);
+      }
+      
+      ctx.fill();
+      
+      // Load and draw the logo
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          // Calculate dimensions to maintain aspect ratio and fit within 75% of the canvas
+          const maxDim = canvas.width * 0.75;
+          const scale = Math.min(maxDim / img.width, maxDim / img.height);
+          const width = img.width * scale;
+          const height = img.height * scale;
+          
+          // Center the logo
+          const x = (canvas.width - width) / 2;
+          const y = (canvas.height - height) / 2;
+          
+          // Draw the logo
+          ctx.drawImage(img, x, y, width, height);
+          
+          // Get the data URL
+          resolve(canvas.toDataURL('image/png'));
+        };
+        
+        img.onerror = () => {
+          reject(new Error("Failed to load logo image"));
+        };
+        
+        img.src = logo.src;
+      });
+    } catch (error) {
+      console.error("Error generating logo data URL:", error);
+      return null;
+    }
+  };
+
+  const handleExportLogoPack = async () => {
     if (!currentGuide.logos.original) {
       toast({
         variant: "destructive",
@@ -65,113 +128,134 @@ export function ExportSection() {
       return;
     }
     
-    // Create a PDF for logo pack
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "px",
-      format: [800, 1100],
-      compress: true
-    });
-    
-    // Set up PDF with brand info
-    doc.setFontSize(24);
-    doc.setFont("helvetica", "bold");
-    doc.text(`${currentGuide.name} Logo Pack`, 50, 50);
-    
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text("Original Logo", 50, 90);
-    
-    // Convert the image to dataURL for PDF
-    const addImageToPDF = (imgData: string, x: number, y: number, width: number, height: number) => {
-      try {
-        doc.addImage(imgData, 'PNG', x, y, width, height);
-      } catch(e) {
-        console.error('Error adding image to PDF:', e);
-      }
-    };
-    
-    // Add original logo
-    addImageToPDF(currentGuide.logos.original, 50, 100, 150, 150);
-    
-    // Add logo variations heading
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("Logo Variations", 50, 280);
-    
-    // Add square variation
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text("Square", 50, 310);
-    addImageToPDF(currentGuide.logos.original, 50, 320, 100, 100);
-    
-    // Add rounded variation
-    doc.text("Rounded", 200, 310);
-    addImageToPDF(currentGuide.logos.original, 200, 320, 100, 100);
-    
-    // Add circular variation
-    doc.text("Circular", 350, 310);
-    addImageToPDF(currentGuide.logos.original, 350, 320, 100, 100);
-    
-    // Add spacing guidelines heading
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("Logo Spacing Guidelines", 50, 450);
-    
-    // Add spacing guidelines info
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text("Maintain clear space around the logo for maximum impact and legibility.", 50, 480);
-    
-    // Add spacing guidelines image
-    addImageToPDF(currentGuide.logos.original, 50, 500, 200, 200);
-    
-    // Add grid lines to simulate spacing guidelines
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.5);
-    
-    // Vertical grid lines
-    for (let i = 1; i < 4; i++) {
-      doc.line(50 + (i * 50), 500, 50 + (i * 50), 700);
-    }
-    
-    // Horizontal grid lines
-    for (let i = 1; i < 4; i++) {
-      doc.line(50, 500 + (i * 50), 250, 500 + (i * 50));
-    }
-    
-    // Add logo usage notes
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("Logo Usage Guidelines", 50, 750);
-    
-    // Add usage notes
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    const guidelines = [
-      "• Maintain the logo's proportions when resizing",
-      "• Ensure adequate contrast between the logo and background",
-      "• Preserve clear space around the logo as shown in the spacing guide",
-      "• Do not distort, rotate, or alter the logo's colors",
-      "• For questions about logo usage, refer to your complete brand guide"
-    ];
-    
-    guidelines.forEach((line, index) => {
-      doc.text(line, 50, 780 + (index * 20));
-    });
-    
-    // Add watermark/footer
-    doc.setFontSize(10);
-    doc.setTextColor(150, 150, 150);
-    doc.text(`Generated with Brand Studio | ${new Date().toLocaleDateString()}`, 50, 1050);
-    
-    // Save the PDF
-    doc.save(`${currentGuide.name.replace(/\s+/g, '-').toLowerCase()}-logo-pack.pdf`);
-    
     toast({
-      title: "Logo pack exported",
-      description: "Your logo pack has been downloaded successfully."
+      title: "Preparing logo pack",
+      description: "This might take a few seconds...",
     });
+    
+    try {
+      // Create a PDF for logo pack
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [800, 1100],
+        compress: true
+      });
+      
+      // Set up PDF with brand info
+      doc.setFontSize(24);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${currentGuide.name} Logo Pack`, 50, 50);
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text("Original Logo", 50, 90);
+      
+      // Add original logo
+      doc.addImage(currentGuide.logos.original, 'PNG', 50, 100, 150, 150);
+      
+      // Add logo variations heading
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("Logo Variations", 50, 280);
+      
+      // Get first logo from each variation type
+      const squareLogo = currentGuide.logos.square[0];
+      const roundedLogo = currentGuide.logos.rounded[0];
+      const circleLogo = currentGuide.logos.circle[0];
+      
+      // Generate logo variations with proper shapes
+      const squareDataUrl = await getLogoDataUrl(squareLogo, 'square');
+      const roundedDataUrl = await getLogoDataUrl(roundedLogo, 'rounded');
+      const circleDataUrl = await getLogoDataUrl(circleLogo, 'circle');
+      
+      // Add square variation
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text("Square", 50, 310);
+      if (squareDataUrl) {
+        doc.addImage(squareDataUrl, 'PNG', 50, 320, 100, 100);
+      }
+      
+      // Add rounded variation
+      doc.text("Rounded", 200, 310);
+      if (roundedDataUrl) {
+        doc.addImage(roundedDataUrl, 'PNG', 200, 320, 100, 100);
+      }
+      
+      // Add circular variation
+      doc.text("Circular", 350, 310);
+      if (circleDataUrl) {
+        doc.addImage(circleDataUrl, 'PNG', 350, 320, 100, 100);
+      }
+      
+      // Add spacing guidelines heading
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("Logo Spacing Guidelines", 50, 450);
+      
+      // Add spacing guidelines info
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text("Maintain clear space around the logo for maximum impact and legibility.", 50, 480);
+      
+      // Add spacing guidelines image
+      doc.addImage(currentGuide.logos.original, 'PNG', 50, 500, 200, 200);
+      
+      // Add grid lines to simulate spacing guidelines
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.5);
+      
+      // Vertical grid lines
+      for (let i = 1; i < 4; i++) {
+        doc.line(50 + (i * 50), 500, 50 + (i * 50), 700);
+      }
+      
+      // Horizontal grid lines
+      for (let i = 1; i < 4; i++) {
+        doc.line(50, 500 + (i * 50), 250, 500 + (i * 50));
+      }
+      
+      // Add logo usage notes
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("Logo Usage Guidelines", 50, 750);
+      
+      // Add usage notes
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      const guidelines = [
+        "• Maintain the logo's proportions when resizing",
+        "• Ensure adequate contrast between the logo and background",
+        "• Preserve clear space around the logo as shown in the spacing guide",
+        "• Do not distort, rotate, or alter the logo's colors",
+        "• For questions about logo usage, refer to your complete brand guide"
+      ];
+      
+      guidelines.forEach((line, index) => {
+        doc.text(line, 50, 780 + (index * 20));
+      });
+      
+      // Add watermark/footer
+      doc.setFontSize(10);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Generated with Brand Studio | ${new Date().toLocaleDateString()}`, 50, 1050);
+      
+      // Save the PDF
+      doc.save(`${currentGuide.name.replace(/\s+/g, '-').toLowerCase()}-logo-pack.pdf`);
+      
+      toast({
+        title: "Logo pack exported",
+        description: "Your logo pack has been downloaded successfully."
+      });
+    } catch (error) {
+      console.error("Error exporting logo pack:", error);
+      toast({
+        variant: "destructive",
+        title: "Export failed",
+        description: "There was an error exporting your logo pack. Please try again."
+      });
+    }
   };
   
   // Only show warning when active section is export

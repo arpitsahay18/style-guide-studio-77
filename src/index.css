@@ -72,7 +72,19 @@
   .font-selector-content {
     display: flex;
     flex-direction: column;
-    max-height: 400px;
+    max-height: 60vh;
+  }
+  
+  /* Ensure Google Fonts attribution is always visible */
+  .font-selector-content .p-2.text-xs {
+    position: sticky;
+    bottom: 0;
+    background-color: var(--background);
+    z-index: 10;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    margin-top: auto;
+    border-top: 1px solid var(--border);
   }
 }
  
@@ -97,4 +109,3 @@
 .animate-fade-in {
   animation: fade-in 0.3s ease-in-out;
 }
-

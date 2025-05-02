@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Search } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface FontSelectorProps {
   value: string;
@@ -17,23 +18,39 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadedFonts, setLoadedFonts] = useState<Set<string>>(new Set());
+  const { toast } = useToast();
   const apiLoaded = useRef(false);
-
+  
   useEffect(() => {
     if (apiLoaded.current) return;
     
     apiLoaded.current = true;
     setLoading(true);
     
-    // Fetch Google Fonts
+    // Fetch Google Fonts with a more reliable approach
     fetch('https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyAOES8EmKhuJEPMXTVJ9WQvCyOJ3NObCUQ&sort=popularity')
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`API responded with status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(data => {
         if (data.items && Array.isArray(data.items)) {
           const fontNames = data.items.map((font: any) => font.family);
           setFonts(fontNames);
           setFilteredFonts(fontNames);
           console.log(`Loaded ${fontNames.length} fonts from Google Fonts API`);
+          
+          // Preload the first 20 popular fonts for better performance
+          fontNames.slice(0, 20).forEach(font => {
+            const fontFamily = font.replace(/\s+/g, '+');
+            const link = document.createElement('link');
+            link.href = `https://fonts.googleapis.com/css2?family=${fontFamily}:wght@400&display=swap`;
+            link.rel = 'stylesheet';
+            link.setAttribute('data-preload', 'true');
+            document.head.appendChild(link);
+          });
         } else {
           throw new Error('Invalid response format');
         }
@@ -41,6 +58,12 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
       })
       .catch(error => {
         console.error('Error fetching Google Fonts:', error);
+        toast({
+          variant: "destructive",
+          title: "Failed to load fonts",
+          description: "Could not load Google Fonts. Using fallback fonts instead.",
+        });
+        
         // Fallback to a limited set of fonts if API fails
         const fallbackFonts = [
           'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 
@@ -51,7 +74,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
         setFilteredFonts(fallbackFonts);
         setLoading(false);
       });
-  }, []);
+  }, [toast]);
 
   // Filter fonts based on search query
   useEffect(() => {
@@ -102,7 +125,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent className="font-selector-content relative">
+      <SelectContent className="font-selector-content">
         <div className="p-2 sticky top-0 bg-background z-10 border-b">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -115,7 +138,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
           </div>
         </div>
         
-        <ScrollArea className="h-72 overflow-y-auto">
+        <ScrollArea className="h-72 max-h-[60vh] overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-4">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

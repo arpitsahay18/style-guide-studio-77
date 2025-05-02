@@ -31,10 +31,6 @@ const SelectTrigger = React.forwardRef<
 ))
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
 
-// Removing ScrollUpButton component
-
-// Removing ScrollDownButton component
-
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
@@ -51,7 +47,6 @@ const SelectContent = React.forwardRef<
       position={position}
       {...props}
     >
-      {/* Removing ScrollUpButton reference */}
       <SelectPrimitive.Viewport
         className={cn(
           "p-1",
@@ -61,7 +56,6 @@ const SelectContent = React.forwardRef<
       >
         {children}
       </SelectPrimitive.Viewport>
-      {/* Removing ScrollDownButton reference */}
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ))
