@@ -12,7 +12,7 @@ interface FontSelectorProps {
   placeholder?: string;
 }
 
-// Popular fonts to use as fallback if API fails
+// Popular fonts to use as default and fallback if API fails
 const POPULAR_FONTS = [
   'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 
   'Raleway', 'Oswald', 'Merriweather', 'Playfair Display',
@@ -21,15 +21,27 @@ const POPULAR_FONTS = [
   'PT Sans', 'Mukta', 'Noto Sans', 'Titillium Web', 'Heebo'
 ];
 
+// Sort fonts alphabetically
+const sortFonts = (fonts: string[]): string[] => {
+  return [...fonts].sort((a, b) => a.localeCompare(b));
+};
+
 export function FontSelector({ value, onChange, placeholder = "Select font..." }: FontSelectorProps) {
-  const [fonts, setFonts] = useState<string[]>([]);
-  const [filteredFonts, setFilteredFonts] = useState<string[]>([]);
+  // State for font lists
+  const [fonts, setFonts] = useState<string[]>(sortFonts(POPULAR_FONTS));
+  const [filteredFonts, setFilteredFonts] = useState<string[]>(sortFonts(POPULAR_FONTS));
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [loadedFonts, setLoadedFonts] = useState<Set<string>>(new Set());
   const { toast } = useToast();
-  const apiLoaded = useRef(false);
   
+  // Track if fonts API has been loaded
+  const apiLoaded = useRef(false);
+  const apiData = useRef<string[]>([]);
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  
+  // Initialize with popular fonts and load Google Fonts API
   useEffect(() => {
     if (apiLoaded.current) return;
     
@@ -37,8 +49,8 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
     setLoading(true);
     
     // First, initialize with popular fonts in case API fails
-    setFonts(POPULAR_FONTS);
-    setFilteredFonts(POPULAR_FONTS);
+    setFonts(sortFonts(POPULAR_FONTS));
+    setFilteredFonts(sortFonts(POPULAR_FONTS));
     
     // Set up preloading of popular fonts for better UX even before API loads
     POPULAR_FONTS.slice(0, 8).forEach(font => {
@@ -51,7 +63,7 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
     });
     
     // Then try to fetch Google Fonts using reliable free API
-    fetch('https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyBwIX97bVWr3-6AIUvGkcNnmFgirefZ6Sw&sort=popularity')
+    fetch('https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyBwIX97bVWr3-6AIUvGkcNnmFgirefZ6Sw&sort=alpha')
       .then(response => {
         if (!response.ok) {
           throw new Error(`API responded with status: ${response.status}`);
@@ -61,12 +73,16 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
       .then(data => {
         if (data.items && Array.isArray(data.items)) {
           const fontNames = data.items.map((font: any) => font.family);
-          setFonts(fontNames);
-          setFilteredFonts(fontNames);
+          apiData.current = fontNames; // Store full font list in ref
+          
+          // Only update the UI with a limited set initially for performance
+          const limitedFontNames = [...fontNames].slice(0, 100);
+          setFonts(limitedFontNames);
+          setFilteredFonts(limitedFontNames);
           console.log(`Loaded ${fontNames.length} fonts from Google Fonts API`);
           
           // Only preload the first 15 most popular fonts to avoid excessive network requests
-          fontNames.slice(0, 15).forEach(font => {
+          limitedFontNames.slice(0, 15).forEach(font => {
             if (!loadedFonts.has(font)) {
               const fontFamily = font.replace(/\s+/g, '+');
               const link = document.createElement('link');
@@ -94,16 +110,48 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
       });
   }, [toast]);
 
-  // Filter fonts based on search query
+  // Filter fonts based on search query with debounce
   useEffect(() => {
-    if (searchQuery.trim()) {
-      const filtered = fonts.filter(font => 
-        font.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredFonts(filtered);
-    } else {
-      setFilteredFonts(fonts);
+    // Clear any existing timeout
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
     }
+
+    // If empty search, show default limited fonts
+    if (!searchQuery.trim()) {
+      setFilteredFonts(fonts);
+      setSearchLoading(false);
+      return;
+    }
+
+    // Set loading state immediately for better UX
+    setSearchLoading(true);
+
+    // Debounce search for better performance
+    searchTimeout.current = setTimeout(() => {
+      if (apiData.current.length > 0) {
+        // Search against the full font list if available
+        const searchLower = searchQuery.toLowerCase();
+        const filtered = apiData.current.filter(font => 
+          font.toLowerCase().includes(searchLower)
+        ).slice(0, 100); // Limit results for performance
+        
+        setFilteredFonts(filtered);
+      } else {
+        // Fallback to searching the limited list
+        const filtered = fonts.filter(font => 
+          font.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        setFilteredFonts(filtered);
+      }
+      setSearchLoading(false);
+    }, 300);
+
+    return () => {
+      if (searchTimeout.current) {
+        clearTimeout(searchTimeout.current);
+      }
+    };
   }, [searchQuery, fonts]);
 
   // Load font stylesheet when it's selected
@@ -160,6 +208,12 @@ export function FontSelector({ value, onChange, placeholder = "Select font..." }
           {loading ? (
             <div className="flex items-center justify-center py-4">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">Loading fonts...</span>
+            </div>
+          ) : searchLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">Searching...</span>
             </div>
           ) : filteredFonts.length > 0 ? (
             filteredFonts.map(font => (
