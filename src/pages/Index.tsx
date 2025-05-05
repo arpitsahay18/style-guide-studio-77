@@ -17,9 +17,8 @@ import { TooltipTour, tourRefs } from '@/components/TooltipTour';
 import { storage } from '@/lib/storage';
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState('typography');
   const navigate = useNavigate();
-  const { currentGuide, setGuideName } = useBrandGuide();
+  const { currentGuide, setGuideName, activeTab, setActiveTab } = useBrandGuide();
   const { toast } = useToast();
   const [brandName, setBrandName] = useState(currentGuide.name);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
@@ -35,11 +34,14 @@ const Index = () => {
 
   // Handle welcome dialog completion
   const handleWelcomeComplete = () => {
+    storage.markWelcomeSeen();
     setWelcomeOpen(false);
     
     // Start the tour after welcome dialog closes
     if (!storage.hasSeenTooltips()) {
-      setShowTour(true);
+      setTimeout(() => {
+        setShowTour(true);
+      }, 300);
     }
   };
 
@@ -80,10 +82,11 @@ const Index = () => {
     setGuideName(newName);
   };
 
+  // Add overlay class when welcome is open
+  const overlayClass = welcomeOpen ? 'pointer-events-none blur-sm' : '';
+
   return (
     <MainLayout>
-      {welcomeOpen && <div className="welcome-overlay" />}
-      
       <WelcomeDialog 
         open={welcomeOpen} 
         onOpenChange={setWelcomeOpen} 
@@ -92,7 +95,7 @@ const Index = () => {
       
       {showTour && <TooltipTour />}
       
-      <div className="container mx-auto px-4">
+      <div className={`container mx-auto px-4 transition-all duration-300 ${overlayClass}`}>
         <div className="flex flex-col gap-6 mb-6">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">Brand Guideline Generator</h1>
@@ -118,7 +121,7 @@ const Index = () => {
         </div>
         
         <div ref={tourRefs.tabsRef}>
-          <Tabs defaultValue="typography" value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full grid grid-cols-4 mb-8">
               <TabsTrigger value="typography">Typography</TabsTrigger>
               <TabsTrigger value="colors">Colors</TabsTrigger>

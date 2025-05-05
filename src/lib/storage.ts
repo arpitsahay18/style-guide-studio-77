@@ -36,5 +36,13 @@ export const storage = {
    */
   markTooltipsSeen: (): void => {
     localStorage.setItem(KEYS.TOOLTIPS_SEEN, 'true');
+  },
+
+  /**
+   * Reset all storage (for testing)
+   */
+  resetAll: (): void => {
+    localStorage.removeItem(KEYS.WELCOME_SEEN);
+    localStorage.removeItem(KEYS.TOOLTIPS_SEEN);
   }
 };

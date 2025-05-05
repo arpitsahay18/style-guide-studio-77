@@ -75,7 +75,7 @@ const Tooltip = ({
 export function TooltipTour() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
-  const { setActiveTab, setBrandName } = useBrandGuide();
+  const { activeTab, setActiveTab, setBrandName } = useBrandGuide();
   const { toast } = useToast();
   
   // References to scroll to
@@ -96,6 +96,22 @@ export function TooltipTour() {
       return () => clearTimeout(timer);
     }
   }, []);
+
+  // Monitor tab changes to ensure tooltips are shown on the correct tab
+  useEffect(() => {
+    if (isVisible) {
+      const step = currentStep;
+      
+      // If we're on a step that requires a specific tab
+      if ((step >= 1 && step <= 3) && activeTab !== 'typography') {
+        setActiveTab('typography');
+      } else if ((step >= 4 && step <= 6) && activeTab !== 'colors') {
+        setActiveTab('colors');
+      } else if ((step === 7) && activeTab !== 'logo') {
+        setActiveTab('logo');
+      }
+    }
+  }, [currentStep, isVisible, activeTab, setActiveTab]);
   
   // Handle tooltip tour completion
   const completeTour = () => {
@@ -115,22 +131,33 @@ export function TooltipTour() {
   const handleNext = () => {
     const nextStep = currentStep + 1;
     
-    // Special case handling for certain steps
-    if (nextStep === 5) { // After showing the color tab
+    // First handle any special tab changes or scrolling needed
+    if (nextStep === 1) {
+      // Overview -> Typography tab
+      setActiveTab('typography');
+      setTimeout(() => {
+        scrollToRef(tabsRef);
+        setCurrentStep(nextStep);
+      }, 300);
+      return;
+    } else if (nextStep === 4) {
+      // Typography -> Colors tab
       setActiveTab('colors');
       setTimeout(() => {
         scrollToRef(colorAddRef);
         setCurrentStep(nextStep);
       }, 300);
       return;
-    } else if (nextStep === 7) { // After showing the logo tab
+    } else if (nextStep === 7) {
+      // Colors -> Logo tab
       setActiveTab('logo');
       setTimeout(() => {
         scrollToRef(logoDropzoneRef);
         setCurrentStep(nextStep);
       }, 300);
       return;
-    } else if (nextStep === 8) { // Simulate "View Complete Guide" click with validation fail
+    } else if (nextStep === 8) {
+      // Simulate "View Complete Guide" click with validation fail
       // Shake effect and brand name required toast
       document.body.classList.add('shake');
       setTimeout(() => {
@@ -157,9 +184,7 @@ export function TooltipTour() {
     }
     
     // Handle scrolling for specific steps
-    if (nextStep === 1) {
-      scrollToRef(tabsRef);
-    } else if (nextStep === 2) {
+    if (nextStep === 2) {
       scrollToRef(fontSelectorRef); 
     } else if (nextStep === 3) {
       scrollToRef(typographyPreviewRef);
@@ -181,101 +206,125 @@ export function TooltipTour() {
     return null;
   }
   
-  // Position tooltip based on current step
-  switch (currentStep) {
-    case 0: // Tabs overview
-      return (
-        <Tooltip 
-          className="fixed top-32 left-1/2 transform -translate-x-1/2"
-          onNext={handleNext}
-          onClose={handleClose}
-          highlight={true}
-        >
-          <p>Welcome to Brand Studio! Let's get started by exploring the tabs where you can enter details about your brand.</p>
-        </Tooltip>
-      );
-      
-    case 1: // Typography tab explanation
-      return (
-        <Tooltip 
-          className="fixed top-44 left-1/4 transform -translate-x-1/2"
-          onNext={handleNext}
-          onClose={handleClose}
-        >
-          <p>Start with the Typography tab to set up your brand's fonts and text styles.</p>
-        </Tooltip>
-      );
-      
-    case 2: // Font selector explanation
-      return (
-        <Tooltip 
-          className="fixed top-60 left-1/4"
-          onNext={handleNext}
-          onClose={handleClose}
-        >
-          <p>Select your brand fonts from this dropdown. We've integrated with Google Fonts to provide you with hundreds of options.</p>
-        </Tooltip>
-      );
-      
-    case 3: // Typography preview explanation
-      return (
-        <Tooltip 
-          className="fixed top-80 left-1/2"
-          onNext={handleNext}
-          onClose={handleClose}
-        >
-          <p>Preview how your selected fonts will look in different text styles. You can adjust size, weight, line height and letter spacing.</p>
-        </Tooltip>
-      );
-      
-    case 4: // Colors tab explanation
-      return (
-        <Tooltip 
-          className="fixed top-44 left-1/3 transform -translate-x-1/2"
-          onNext={handleNext}
-          onClose={handleClose}
-        >
-          <p>Next, let's set up your brand colors. Click on the Colors tab to continue.</p>
-        </Tooltip>
-      );
-      
-    case 5: // Add color explanation  
-      return (
-        <Tooltip 
-          className="fixed top-60 right-1/4"
-          onNext={handleNext}
-          onClose={handleClose}
-          highlight={true}
-        >
-          <p>Click the + button to add a primary color. We'll add a suggested color for you.</p>
-        </Tooltip>
-      );
-      
-    case 6: // Color details explanation
-      return (
-        <Tooltip 
-          className="fixed top-80 right-1/4"
-          onNext={handleNext}
-          onClose={handleClose}
-        >
-          <p>Check out the color's contrast ratio, tints and shades to fine-tune your selection.</p>
-        </Tooltip>
-      );
-      
-    case 7: // Logo upload explanation
-      return (
-        <Tooltip 
-          className="fixed top-60 left-1/2 transform -translate-x-1/2"
-          onNext={handleNext}
-          onClose={handleClose}
-        >
-          <p>Upload your brand logo here. It's advisable to use a transparent PNG for best results.</p>
-        </Tooltip>
-      );
-      
-    default:
-      return null;
+  // Position tooltip based on current step and active tab
+  // This ensures we only show tooltips relevant to the current tab
+  if (activeTab === 'typography') {
+    switch (currentStep) {
+      case 0: // Tabs overview
+        return (
+          <Tooltip 
+            className="fixed top-32 left-1/2 transform -translate-x-1/2"
+            onNext={handleNext}
+            onClose={handleClose}
+            highlight={true}
+          >
+            <p>Welcome to Brand Studio! Let's get started by exploring the tabs where you can enter details about your brand.</p>
+          </Tooltip>
+        );
+        
+      case 1: // Typography tab explanation
+        return (
+          <Tooltip 
+            className="fixed top-44 left-1/4 transform -translate-x-1/2"
+            onNext={handleNext}
+            onClose={handleClose}
+          >
+            <p>Start with the Typography tab to set up your brand's fonts and text styles.</p>
+          </Tooltip>
+        );
+        
+      case 2: // Font selector explanation
+        return (
+          <Tooltip 
+            className="fixed top-60 left-1/4"
+            onNext={handleNext}
+            onClose={handleClose}
+          >
+            <p>Select your brand fonts from this dropdown. We've integrated with Google Fonts to provide you with hundreds of options.</p>
+          </Tooltip>
+        );
+        
+      case 3: // Typography preview explanation
+        return (
+          <Tooltip 
+            className="fixed top-80 left-1/2"
+            onNext={handleNext}
+            onClose={handleClose}
+          >
+            <p>Preview how your selected fonts will look in different text styles. You can adjust size, weight, line height and letter spacing.</p>
+          </Tooltip>
+        );
+    }
+  } else if (activeTab === 'colors') {
+    switch (currentStep) {
+      case 4: // Colors tab explanation
+        return (
+          <Tooltip 
+            className="fixed top-44 left-1/3 transform -translate-x-1/2"
+            onNext={handleNext}
+            onClose={handleClose}
+          >
+            <p>Now, let's set up your brand colors by adding primary and secondary colors.</p>
+          </Tooltip>
+        );
+        
+      case 5: // Add color explanation  
+        return (
+          <Tooltip 
+            className="fixed top-60 right-1/4"
+            onNext={handleNext}
+            onClose={handleClose}
+            highlight={true}
+          >
+            <p>Click the + button to add a primary color. We'll add a suggested color for you.</p>
+          </Tooltip>
+        );
+        
+      case 6: // Color details explanation
+        return (
+          <Tooltip 
+            className="fixed top-80 right-1/4"
+            onNext={handleNext}
+            onClose={handleClose}
+          >
+            <p>Check out the color's contrast ratio, tints and shades to fine-tune your selection.</p>
+          </Tooltip>
+        );
+    }
+  } else if (activeTab === 'logo') {
+    switch (currentStep) {
+      case 7: // Logo upload explanation
+        return (
+          <Tooltip 
+            className="fixed top-60 left-1/2 transform -translate-x-1/2"
+            onNext={handleNext}
+            onClose={handleClose}
+          >
+            <p>Upload your brand logo here. It's advisable to use a transparent PNG for best results.</p>
+          </Tooltip>
+        );
+    }
   }
+  
+  // If we're in a state that doesn't match the current tab, help navigate
+  return (
+    <Tooltip 
+      className="fixed top-32 left-1/2 transform -translate-x-1/2"
+      onNext={() => {
+        // Smart redirect based on step
+        if (currentStep <= 3) {
+          setActiveTab('typography');
+        } else if (currentStep <= 6) {
+          setActiveTab('colors');
+        } else {
+          setActiveTab('logo');
+        }
+      }}
+      onClose={handleClose}
+    >
+      <p>Please navigate to the {currentStep <= 3 ? 'Typography' : currentStep <= 6 ? 'Colors' : 'Logo'} tab to continue the tour.</p>
+    </Tooltip>
+  );
 }
 
 // Export references to be forwarded to respective components
