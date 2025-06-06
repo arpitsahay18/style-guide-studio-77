@@ -75,7 +75,7 @@ const Tooltip = ({
 export function TooltipTour() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
-  const { activeTab, setActiveTab, setBrandName } = useBrandGuide();
+  const { activeTab, setActiveTab, currentGuide, updateColors } = useBrandGuide();
   const { toast } = useToast();
   
   // References to scroll to
@@ -112,6 +112,49 @@ export function TooltipTour() {
       }
     }
   }, [currentStep, isVisible, activeTab, setActiveTab]);
+
+  // Helper function to process a color when added
+  const processColor = (hex: string) => {
+    try {
+      // Import color utility functions
+      const { hexToRgb, formatRgb, rgbToCmyk, formatCmyk, generateTints, generateShades, calculateContrastRatio } = require('@/utils/colorUtils');
+      
+      const rgb = hexToRgb(hex);
+      const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+      
+      return {
+        hex,
+        rgb: formatRgb(rgb),
+        cmyk: formatCmyk(cmyk),
+        tints: generateTints(hex),
+        shades: generateShades(hex),
+        blackContrast: calculateContrastRatio(hex, '#000000'),
+        whiteContrast: calculateContrastRatio(hex, '#FFFFFF')
+      };
+    } catch (error) {
+      console.error('Error processing color:', error);
+      return null;
+    }
+  };
+
+  // Add a color automatically during the tour
+  const addTourColor = (colorHex: string) => {
+    try {
+      const newColor = processColor(colorHex);
+      if (!newColor) {
+        console.error('Failed to process color:', colorHex);
+        return;
+      }
+
+      const updatedColors = {
+        ...currentGuide.colors,
+        primary: [...currentGuide.colors.primary, newColor]
+      };
+      updateColors(updatedColors);
+    } catch (error) {
+      console.error('Error adding tour color:', error);
+    }
+  };
   
   // Handle tooltip tour completion
   const completeTour = () => {
@@ -147,6 +190,11 @@ export function TooltipTour() {
         scrollToRef(colorAddRef);
         setCurrentStep(nextStep);
       }, 300);
+      return;
+    } else if (nextStep === 5) {
+      // Add the tour color automatically
+      addTourColor('#4A4A4A');
+      setCurrentStep(nextStep);
       return;
     } else if (nextStep === 7) {
       // Colors -> Logo tab
@@ -276,7 +324,7 @@ export function TooltipTour() {
             onClose={handleClose}
             highlight={true}
           >
-            <p>Click the + button to add a primary color. We'll add a suggested color for you.</p>
+            <p>I've added a sample color for you. Click on it to see the color details.</p>
           </Tooltip>
         );
         
