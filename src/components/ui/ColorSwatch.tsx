@@ -24,6 +24,7 @@ export function ColorSwatch({ color, className = '', onClick }: ColorSwatchProps
     <div 
       className={`rounded-md overflow-hidden shadow-sm border ${className}`}
       onClick={onClick}
+      data-color-swatch
     >
       <div 
         className="h-24 w-full" 
