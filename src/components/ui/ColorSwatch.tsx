@@ -1,14 +1,28 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ColorWithVariants } from '@/types';
+import { Input } from '@/components/ui/input';
 
 interface ColorSwatchProps {
   color: ColorWithVariants | string;
+  colorName?: string;
+  onNameChange?: (name: string) => void;
   className?: string;
   onClick?: () => void;
+  showNameEditor?: boolean;
 }
 
-export function ColorSwatch({ color, className = '', onClick }: ColorSwatchProps) {
+export function ColorSwatch({ 
+  color, 
+  colorName, 
+  onNameChange, 
+  className = '', 
+  onClick,
+  showNameEditor = false 
+}: ColorSwatchProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempName, setTempName] = useState(colorName || '');
+  
   // Handle both string and ColorWithVariants types with proper error checking
   let colorValue = '#000000'; // Default fallback color
   
@@ -19,6 +33,31 @@ export function ColorSwatch({ color, className = '', onClick }: ColorSwatchProps
   } else {
     console.warn('Invalid color provided to ColorSwatch:', color);
   }
+  
+  const handleNameClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (showNameEditor && onNameChange) {
+      setIsEditing(true);
+      setTempName(colorName || colorValue);
+    }
+  };
+
+  const handleNameSave = () => {
+    if (onNameChange) {
+      const finalName = tempName.trim().slice(0, 15) || colorValue;
+      onNameChange(finalName);
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleNameSave();
+    } else if (e.key === 'Escape') {
+      setTempName(colorName || colorValue);
+      setIsEditing(false);
+    }
+  };
   
   return (
     <div 
@@ -31,7 +70,25 @@ export function ColorSwatch({ color, className = '', onClick }: ColorSwatchProps
         style={{ backgroundColor: colorValue }}
       />
       <div className="p-3 bg-white dark:bg-gray-800">
-        <p className="font-medium">{colorValue}</p>
+        {isEditing ? (
+          <Input
+            value={tempName}
+            onChange={(e) => setTempName(e.target.value)}
+            onBlur={handleNameSave}
+            onKeyDown={handleKeyPress}
+            className="font-medium text-sm h-6 px-1"
+            maxLength={15}
+            autoFocus
+          />
+        ) : (
+          <p 
+            className={`font-medium ${showNameEditor && onNameChange ? 'cursor-pointer hover:text-primary' : ''}`}
+            onClick={handleNameClick}
+            title={showNameEditor && onNameChange ? 'Click to edit name' : undefined}
+          >
+            {colorName || colorValue}
+          </p>
+        )}
       </div>
     </div>
   );
