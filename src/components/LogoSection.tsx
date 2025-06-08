@@ -2,8 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { LogoVariation, LogoSet } from '@/types';
-import { LogoPreview } from '@/components/ui/LogoPreview';
-import { InteractiveLogoSpacing } from '@/components/InteractiveLogoSpacing';
+import { LogoPreview, LogoWithSpacingGuidelines } from '@/components/ui/LogoPreview';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -41,8 +40,6 @@ import {
 import { Slider } from '@/components/ui/slider';
 import { LogoDropzone } from './LogoDropzone';
 import { LogoCropper } from './LogoCropper';
-import { jsPDF } from 'jspdf';
-import { useToast } from '@/hooks/use-toast';
 
 interface LogoVariationCreatorProps {
   originalLogo: string;
@@ -111,7 +108,6 @@ function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreator
 
 export function LogoSection() {
   const { currentGuide, updateLogos } = useBrandGuide();
-  const { toast } = useToast();
   const [showUploader, setShowUploader] = useState(!currentGuide.logos.original);
   const [showCropper, setShowCropper] = useState(false);
   const [uploadedImage, setUploadedImage] = useState('');
@@ -171,128 +167,14 @@ export function LogoSection() {
     setCroppedImage('');
   };
   
-  const handleDownloadLogoPack = async () => {
-    if (!currentGuide.logos.original) {
-      toast({
-        variant: "destructive",
-        title: "No logo available",
-        description: "Please upload a logo first.",
-      });
-      return;
-    }
+  const handleDownloadLogo = () => {
+    console.log('Downloading logo pack...');
     
-    toast({
-      title: "Generating logo pack",
-      description: "Creating PDF with all variations...",
-    });
-    
-    try {
-      const doc = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-      
-      // Add title
-      doc.setFontSize(24);
-      doc.setFont("helvetica", "bold");
-      doc.text(`${currentGuide.name || 'Brand'} Logo Pack`, 20, 30);
-      
-      // Add original logo
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "normal");
-      doc.text('Original Logo', 20, 50);
-      
-      if (currentGuide.logos.original) {
-        doc.addImage(currentGuide.logos.original, 'PNG', 20, 60, 60, 60);
-      }
-      
-      // Add variations section
-      doc.text('Logo Variations', 20, 140);
-      
-      let yPosition = 150;
-      const logoSets = [
-        { title: 'Square', logos: currentGuide.logos.square },
-        { title: 'Rounded', logos: currentGuide.logos.rounded },
-        { title: 'Circle', logos: currentGuide.logos.circle }
-      ];
-      
-      for (const set of logoSets) {
-        if (set.logos.length > 0) {
-          doc.setFontSize(14);
-          doc.setFont("helvetica", "bold");
-          doc.text(set.title, 20, yPosition);
-          yPosition += 10;
-          
-          // Add first 4 variations in a row
-          const logosToShow = set.logos.slice(0, 4);
-          let xPosition = 20;
-          
-          for (let i = 0; i < logosToShow.length; i++) {
-            const logo = logosToShow[i];
-            
-            // Create a canvas to render the logo with its background
-            const canvas = document.createElement('canvas');
-            canvas.width = 100;
-            canvas.height = 100;
-            const ctx = canvas.getContext('2d');
-            
-            if (ctx) {
-              // Fill background
-              ctx.fillStyle = logo.background;
-              ctx.fillRect(0, 0, 100, 100);
-              
-              // Load and draw logo
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-              
-              await new Promise<void>((resolve) => {
-                img.onload = () => {
-                  const maxDim = 75;
-                  const scale = Math.min(maxDim / img.width, maxDim / img.height);
-                  const width = img.width * scale;
-                  const height = img.height * scale;
-                  const x = (100 - width) / 2;
-                  const y = (100 - height) / 2;
-                  
-                  ctx.drawImage(img, x, y, width, height);
-                  resolve();
-                };
-                img.src = logo.src;
-              });
-              
-              const logoDataUrl = canvas.toDataURL('image/png');
-              doc.addImage(logoDataUrl, 'PNG', xPosition, yPosition, 30, 30);
-            }
-            
-            xPosition += 40;
-          }
-          
-          yPosition += 40;
-        }
-      }
-      
-      // Add footer
-      doc.setFontSize(10);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Generated on ${new Date().toLocaleDateString()}`, 20, 280);
-      
-      // Save the PDF
-      const filename = `${(currentGuide.name || 'Brand').replace(/\s+/g, '_')}_logo_pack.pdf`;
-      doc.save(filename);
-      
-      toast({
-        title: "Logo pack downloaded",
-        description: "Your complete logo pack has been saved as PDF.",
-      });
-      
-    } catch (error) {
-      console.error("Error generating logo pack:", error);
-      toast({
-        variant: "destructive",
-        title: "Export failed",
-        description: "There was an error generating your logo pack.",
-      });
+    if (currentGuide.logos.original) {
+      const link = document.createElement('a');
+      link.download = 'logo.png';
+      link.href = currentGuide.logos.original;
+      link.click();
     }
   };
   
@@ -362,7 +244,7 @@ export function LogoSection() {
                     </AlertDialogContent>
                   </AlertDialog>
                   
-                  <Button size="sm" onClick={handleDownloadLogoPack}>
+                  <Button size="sm" onClick={handleDownloadLogo}>
                     <Download className="h-4 w-4 mr-2" />
                     Download Logo Pack
                   </Button>
@@ -422,9 +304,17 @@ export function LogoSection() {
               </Tabs>
               
               <div>
-                {currentGuide.logos.square.length > 0 && (
-                  <InteractiveLogoSpacing logo={currentGuide.logos.square[0]} />
-                )}
+                <h3 className="text-lg font-medium mb-4">Logo Spacing Guidelines</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Maintain adequate clear space around your logo to ensure visibility and impact.
+                  The minimum clear space is equal to the height of the logo divided by 4.
+                </p>
+                
+                <div className="flex justify-center">
+                  {currentGuide.logos.square.length > 0 && (
+                    <LogoWithSpacingGuidelines logo={currentGuide.logos.square[0]} />
+                  )}
+                </div>
               </div>
             </div>
           )}

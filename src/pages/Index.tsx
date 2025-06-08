@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { useToast } from '@/hooks/use-toast';
 import { WelcomeDialog } from '@/components/WelcomeDialog';
+import { EnhancedTooltipTour } from '@/components/EnhancedTooltipTour';
 import { storage } from '@/lib/storage';
 
 const Index = () => {
@@ -22,7 +23,7 @@ const Index = () => {
   const [brandName, setBrandName] = useState(currentGuide.name);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
 
-  // Initialize welcome dialog
+  // Initialize welcome dialog and tour
   useEffect(() => {
     // Check if user has seen the welcome dialog
     if (!storage.hasSeenWelcome()) {
@@ -78,11 +79,78 @@ const Index = () => {
 
   return (
     <MainLayout>
+      <style>
+        {`
+          /* Enhanced Tooltip Tour Styles */
+          .tour-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 50;
+            pointer-events: none;
+          }
+
+          .tour-active {
+            overflow: hidden;
+          }
+
+          .tour-spotlight {
+            position: relative;
+            z-index: 55 !important;
+            border: 2px solid rgba(255, 255, 255, 0.8) !important;
+            border-radius: 8px;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3), 
+                        0 0 20px rgba(59, 130, 246, 0.2) !important;
+            background-color: inherit !important;
+            animation: spotlight-appear 0.3s ease-out;
+          }
+
+          .tour-active .tour-spotlight {
+            filter: brightness(1) !important;
+          }
+
+          @keyframes spotlight-appear {
+            from {
+              box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3);
+              border-color: transparent;
+            }
+            to {
+              box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3), 
+                          0 0 20px rgba(59, 130, 246, 0.2);
+              border-color: rgba(255, 255, 255, 0.8);
+            }
+          }
+
+          @media (max-width: 768px) {
+            .tour-spotlight {
+              border-width: 1px;
+              box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3), 
+                          0 0 10px rgba(59, 130, 246, 0.2) !important;
+            }
+          }
+
+          .shake {
+            animation: shake 0.5s ease-in-out;
+          }
+
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+          }
+        `}
+      </style>
+      
       <WelcomeDialog 
         open={welcomeOpen} 
         onOpenChange={setWelcomeOpen} 
         onGetStarted={handleWelcomeComplete} 
       />
+      
+      <EnhancedTooltipTour />
       
       <div className={`container mx-auto px-4 transition-all duration-300 ${overlayClass}`}>
         <div className="flex flex-col gap-6 mb-6">
