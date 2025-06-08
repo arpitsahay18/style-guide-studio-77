@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { MainLayout } from '@/components/MainLayout';
@@ -16,7 +15,9 @@ import { BrandStudioLogo } from '@/components/BrandStudioLogo';
 // Helper function to convert hex to Pantone (simplified approximation)
 const getClosestPantone = (hex: string): string => {
   // This is a simplified mapping - in reality, you'd need a comprehensive color matching system
-  const pantoneMap: { [key: string]: string } = {
+  const pantoneMap: {
+    [key: string]: string;
+  } = {
     '#FF0000': 'Pantone Red 032 C',
     '#00FF00': 'Pantone Green C',
     '#0000FF': 'Pantone Blue 072 C',
@@ -26,34 +27,30 @@ const getClosestPantone = (hex: string): string => {
     '#000000': 'Pantone Black C',
     '#FFFFFF': 'Pantone White',
     '#007BFF': 'Pantone 279 C',
-    '#6C757D': 'Pantone Cool Gray 8 C',
+    '#6C757D': 'Pantone Cool Gray 8 C'
   };
-  
+
   // Find closest match or return a generic approximation
   return pantoneMap[hex.toUpperCase()] || `Pantone ${hex.substring(1).toUpperCase()}`;
 };
-
 const Preview = () => {
-  const { 
-    currentGuide, 
-    previewText, 
-    colorNames, 
-    typographyVisibility, 
-    typographyNames 
+  const {
+    currentGuide,
+    previewText,
+    colorNames,
+    typographyVisibility,
+    typographyNames
   } = useBrandGuide();
   const contentRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const navigate = useNavigate();
-  
+
   // Check if guide is complete
-  const isGuideComplete = 
-    currentGuide.colors.primary.length > 0 && 
-    currentGuide.colors.secondary.length > 0 && 
-    Boolean(currentGuide.logos.original);
-  
+  const isGuideComplete = currentGuide.colors.primary.length > 0 && currentGuide.colors.secondary.length > 0 && Boolean(currentGuide.logos.original);
   if (!isGuideComplete) {
-    return (
-      <MainLayout>
+    return <MainLayout>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-4">
             <h1 className="text-2xl font-bold">Brand Guide Incomplete</h1>
@@ -64,27 +61,24 @@ const Preview = () => {
             </Button>
           </div>
         </div>
-      </MainLayout>
-    );
+      </MainLayout>;
   }
-
   const getColorDisplayName = (colorIndex: number, categoryType: 'primary' | 'secondary' | 'neutral') => {
     const colorKey = `${categoryType}-${colorIndex}`;
     const customName = colorNames[colorKey];
     if (customName) return customName;
-    
     const color = currentGuide.colors[categoryType][colorIndex];
     return typeof color === 'string' ? color : color?.hex || 'Unknown Color';
   };
-
   const getTypographyDisplayName = (category: 'display' | 'heading' | 'body', styleKey: string) => {
     const key = `${category}-${styleKey}`;
     const customName = typographyNames[key];
     if (customName) return customName;
-
-    const defaultNames: { [key: string]: string } = {
+    const defaultNames: {
+      [key: string]: string;
+    } = {
       'display-large': 'Display Large',
-      'display-medium': 'Display Medium', 
+      'display-medium': 'Display Medium',
       'display-regular': 'Display Regular',
       'display-thin': 'Display Thin',
       'heading-h1': 'Heading H1',
@@ -95,56 +89,53 @@ const Preview = () => {
       'heading-h6': 'Heading H6',
       'body-large': 'Body Large',
       'body-medium': 'Body Medium',
-      'body-small': 'Body Small',
+      'body-small': 'Body Small'
     };
-
     return defaultNames[key] || styleKey.charAt(0).toUpperCase() + styleKey.slice(1);
   };
-
   const generatePDF = async () => {
     if (!contentRef.current) return;
-    
     try {
       toast({
         title: "Generating PDF",
-        description: "Please wait while we generate your PDF...",
+        description: "Please wait while we generate your PDF..."
       });
-      
       const content = contentRef.current;
-      
+
       // Improved PDF generation with better quality/size balance
       const canvas = await html2canvas(content, {
-        scale: 1, // Lower scale for better file size
+        scale: 1,
+        // Lower scale for better file size
         useCORS: true,
         logging: false,
         imageTimeout: 0,
         allowTaint: true,
         backgroundColor: '#ffffff'
       });
-      
+
       // Optimize image quality vs file size
       const imgData = canvas.toDataURL('image/jpeg', 0.7); // Use JPEG with 70% quality
-      
+
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: 'a4',
+        format: 'a4'
       });
-      
+
       // Calculate aspect ratio
       const imgWidth = 210; // A4 width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+
       // Split into pages if content is too long
       const pageHeight = 297; // A4 height in mm
       let heightLeft = imgHeight;
       let position = 0;
       let page = 1;
-      
+
       // Add first page
       pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
-      
+
       // Add subsequent pages if needed
       while (heightLeft > 0) {
         position = -pageHeight * page;
@@ -153,31 +144,28 @@ const Preview = () => {
         heightLeft -= pageHeight;
         page++;
       }
-      
+
       // Add watermark
       pdf.setFontSize(10);
       pdf.setTextColor(150, 150, 150);
-      pdf.text('Made with ❤️ by Arpit Sahay', 105, 290, { align: 'center' });
-      
+      pdf.text('Made with ❤️ by Arpit Sahay', 105, 290, {
+        align: 'center'
+      });
       pdf.save(`${currentGuide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
-      
       toast({
         title: "PDF Generated Successfully",
-        description: "Your brand guide has been downloaded.",
+        description: "Your brand guide has been downloaded."
       });
-      
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast({
         variant: "destructive",
         title: "Error Generating PDF",
-        description: "There was a problem generating your PDF. Please try again.",
+        description: "There was a problem generating your PDF. Please try again."
       });
     }
   };
-
-  return (
-    <MainLayout>
+  return <MainLayout>
       {/* Fixed Header */}
       <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
@@ -185,7 +173,7 @@ const Preview = () => {
             <button onClick={() => navigate('/')} className="hover:opacity-75 transition-opacity">
               <BrandStudioLogo size="sm" />
             </button>
-            <h1 className="text-xl font-semibold">Brand Guide Preview</h1>
+            
           </div>
           <Button onClick={generatePDF}>
             <FileDown className="h-4 w-4 mr-2" />
@@ -210,57 +198,33 @@ const Preview = () => {
             <div>
               <h3 className="text-xl font-semibold mb-4">Display Typography</h3>
               <div className="grid gap-6">
-                {typographyVisibility.display.map((styleKey) => {
-                  const style = currentGuide.typography.display[styleKey];
-                  if (!style) return null;
-                  
-                  return (
-                    <TypographyPreview 
-                      key={styleKey}
-                      name={getTypographyDisplayName('display', styleKey)}
-                      style={style}
-                      previewText={previewText}
-                    />
-                  );
-                })}
+                {typographyVisibility.display.map(styleKey => {
+                const style = currentGuide.typography.display[styleKey];
+                if (!style) return null;
+                return <TypographyPreview key={styleKey} name={getTypographyDisplayName('display', styleKey)} style={style} previewText={previewText} />;
+              })}
               </div>
             </div>
             
             <div>
               <h3 className="text-xl font-semibold mb-4">Headings</h3>
               <div className="grid gap-6">
-                {typographyVisibility.heading.map((styleKey) => {
-                  const style = currentGuide.typography.heading[styleKey];
-                  if (!style) return null;
-                  
-                  return (
-                    <TypographyPreview 
-                      key={styleKey}
-                      name={getTypographyDisplayName('heading', styleKey)}
-                      style={style}
-                      previewText={previewText}
-                    />
-                  );
-                })}
+                {typographyVisibility.heading.map(styleKey => {
+                const style = currentGuide.typography.heading[styleKey];
+                if (!style) return null;
+                return <TypographyPreview key={styleKey} name={getTypographyDisplayName('heading', styleKey)} style={style} previewText={previewText} />;
+              })}
               </div>
             </div>
             
             <div>
               <h3 className="text-xl font-semibold mb-4">Body Text</h3>
               <div className="grid gap-6">
-                {typographyVisibility.body.map((styleKey) => {
-                  const style = currentGuide.typography.body[styleKey];
-                  if (!style) return null;
-                  
-                  return (
-                    <TypographyPreview 
-                      key={styleKey}
-                      name={getTypographyDisplayName('body', styleKey)}
-                      style={style}
-                      previewText={previewText}
-                    />
-                  );
-                })}
+                {typographyVisibility.body.map(styleKey => {
+                const style = currentGuide.typography.body[styleKey];
+                if (!style) return null;
+                return <TypographyPreview key={styleKey} name={getTypographyDisplayName('body', styleKey)} style={style} previewText={previewText} />;
+              })}
               </div>
             </div>
           </div>
@@ -274,61 +238,44 @@ const Preview = () => {
             <div>
               <h3 className="text-xl font-semibold mb-4">Primary Colors</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {currentGuide.colors.primary.map((color, index) => (
-                  <div key={index} className="space-y-3">
-                    <ColorSwatch 
-                      color={color} 
-                      colorName={getColorDisplayName(index, 'primary')}
-                    />
+                {currentGuide.colors.primary.map((color, index) => <div key={index} className="space-y-3">
+                    <ColorSwatch color={color} colorName={getColorDisplayName(index, 'primary')} />
                     <div className="text-sm space-y-1">
                       <p><strong>RGB:</strong> {color.rgb}</p>
                       <p><strong>CMYK:</strong> {color.cmyk}</p>
                       <p><strong>Pantone:</strong> {getClosestPantone(color.hex)}</p>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </div>
             
             <div>
               <h3 className="text-xl font-semibold mb-4">Secondary Colors</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {currentGuide.colors.secondary.map((color, index) => (
-                  <div key={index} className="space-y-3">
-                    <ColorSwatch 
-                      color={color} 
-                      colorName={getColorDisplayName(index, 'secondary')}
-                    />
+                {currentGuide.colors.secondary.map((color, index) => <div key={index} className="space-y-3">
+                    <ColorSwatch color={color} colorName={getColorDisplayName(index, 'secondary')} />
                     <div className="text-sm space-y-1">
                       <p><strong>RGB:</strong> {color.rgb}</p>
                       <p><strong>CMYK:</strong> {color.cmyk}</p>
                       <p><strong>Pantone:</strong> {getClosestPantone(color.hex)}</p>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </div>
             
-            {currentGuide.colors.neutral.length > 0 && (
-              <div>
+            {currentGuide.colors.neutral.length > 0 && <div>
                 <h3 className="text-xl font-semibold mb-4">Neutral Colors</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {currentGuide.colors.neutral.map((color, index) => (
-                    <div key={index} className="space-y-3">
-                      <ColorSwatch 
-                        color={color} 
-                        colorName={getColorDisplayName(index, 'neutral')}
-                      />
+                  {currentGuide.colors.neutral.map((color, index) => <div key={index} className="space-y-3">
+                      <ColorSwatch color={color} colorName={getColorDisplayName(index, 'neutral')} />
                       <div className="text-sm space-y-1">
                         <p><strong>RGB:</strong> {color.rgb}</p>
                         <p><strong>CMYK:</strong> {color.cmyk}</p>
                         <p><strong>Pantone:</strong> {getClosestPantone(color.hex)}</p>
                       </div>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
-              </div>
-            )}
+              </div>}
           </div>
         </section>
         
@@ -339,11 +286,7 @@ const Preview = () => {
           <div className="space-y-10">
             <div className="flex justify-center mb-8">
               <div className="w-64 h-64 flex items-center justify-center p-4 border rounded-md">
-                <img 
-                  src={currentGuide.logos.original} 
-                  alt="Original Logo" 
-                  className="max-w-full max-h-full object-contain" 
-                />
+                <img src={currentGuide.logos.original} alt="Original Logo" className="max-w-full max-h-full object-contain" />
               </div>
             </div>
             
@@ -353,37 +296,19 @@ const Preview = () => {
               {/* Square Logo Variations */}
               <h4 className="text-lg font-medium mb-3 mt-6">Square</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                {currentGuide.logos.square.slice(0, 4).map((logo, index) => (
-                  <LogoPreview 
-                    key={index}
-                    logo={logo}
-                    shape="square"
-                  />
-                ))}
+                {currentGuide.logos.square.slice(0, 4).map((logo, index) => <LogoPreview key={index} logo={logo} shape="square" />)}
               </div>
               
               {/* Rounded Logo Variations */}
               <h4 className="text-lg font-medium mb-3 mt-6">Rounded</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                {currentGuide.logos.rounded.slice(0, 4).map((logo, index) => (
-                  <LogoPreview 
-                    key={index}
-                    logo={logo}
-                    shape="rounded"
-                  />
-                ))}
+                {currentGuide.logos.rounded.slice(0, 4).map((logo, index) => <LogoPreview key={index} logo={logo} shape="rounded" />)}
               </div>
               
               {/* Circle Logo Variations */}
               <h4 className="text-lg font-medium mb-3 mt-6">Circle</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                {currentGuide.logos.circle.slice(0, 4).map((logo, index) => (
-                  <LogoPreview 
-                    key={index}
-                    logo={logo}
-                    shape="circle"
-                  />
-                ))}
+                {currentGuide.logos.circle.slice(0, 4).map((logo, index) => <LogoPreview key={index} logo={logo} shape="circle" />)}
               </div>
             </div>
           </div>
@@ -394,8 +319,6 @@ const Preview = () => {
           <p>Made with ❤️ by Arpit Sahay</p>
         </div>
       </div>
-    </MainLayout>
-  );
+    </MainLayout>;
 };
-
 export default Preview;
