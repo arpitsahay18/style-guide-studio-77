@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { saveAs } from 'file-saver';
@@ -30,15 +29,6 @@ export function ExportSection() {
     Boolean(currentGuide.logos.original);
   
   const handleViewGuide = () => {
-    if (!isGuideComplete) {
-      toast({
-        variant: "destructive",
-        title: "Brand guide incomplete",
-        description: "Please add at least one primary color, one secondary color, and a logo.",
-      });
-      return;
-    }
-    
     navigate('/preview');
   };
   
@@ -281,26 +271,28 @@ export function ExportSection() {
     <div className="grid gap-6">
       {showWarning && <BrandGuideWarning />}
       
-      <Card>
-        <CardHeader>
-          <CardTitle>View Your Brand Guide</CardTitle>
-          <CardDescription>
-            See how your brand guide looks in a complete presentation format
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            This will take you to a comprehensive view of your brand guide, 
-            perfect for presentations or sharing with your team.
-          </p>
-        </CardContent>
-        <CardFooter>
-          <Button onClick={handleViewGuide} className="w-full sm:w-auto">
-            <Eye className="mr-2 h-4 w-4" />
-            View Complete Guide
-          </Button>
-        </CardFooter>
-      </Card>
+      {isGuideComplete && (
+        <Card>
+          <CardHeader>
+            <CardTitle>View Your Brand Guide</CardTitle>
+            <CardDescription>
+              See how your brand guide looks in a complete presentation format
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              This will take you to a comprehensive view of your brand guide, 
+              perfect for presentations or sharing with your team.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button onClick={handleViewGuide} className="w-full sm:w-auto">
+              <Eye className="mr-2 h-4 w-4" />
+              View Complete Guide
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
       
       <Card>
         <CardHeader>
@@ -346,4 +338,3 @@ export function ExportSection() {
     </div>
   );
 }
-

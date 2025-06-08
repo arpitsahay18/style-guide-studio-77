@@ -11,6 +11,14 @@ interface BrandGuideData {
   };
   typographyNames?: { [key: string]: string };
   previewText?: string;
+  logoGuidelines?: {
+    [key: string]: Array<{
+      id: string;
+      type: 'horizontal' | 'vertical';
+      position: number;
+      name: string;
+    }>;
+  };
 }
 
 const STORAGE_KEY = 'brand-guide-data';

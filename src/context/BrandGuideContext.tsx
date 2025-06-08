@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrandGuide, ColorPalette, TypographySet } from '@/types';
 import { storage } from '@/lib/storage';
@@ -75,12 +76,26 @@ const defaultBrandGuide: BrandGuide = {
         lineHeight: '1.2',
         letterSpacing: '-0.02em'
       },
+      medium: {
+        fontFamily: '"Bebas Neue", sans-serif',
+        fontSize: '40px',
+        fontWeight: '600',
+        lineHeight: '1.2',
+        letterSpacing: '-0.01em'
+      },
       regular: {
         fontFamily: '"Bebas Neue", sans-serif',
         fontSize: '32px',
         fontWeight: '400',
         lineHeight: '1.3',
         letterSpacing: '-0.01em'
+      },
+      thin: {
+        fontFamily: '"Bebas Neue", sans-serif',
+        fontSize: '28px',
+        fontWeight: '300',
+        lineHeight: '1.3',
+        letterSpacing: '0em'
       }
     },
     heading: {
@@ -101,6 +116,27 @@ const defaultBrandGuide: BrandGuide = {
       h3: {
         fontFamily: '"Inter", sans-serif',
         fontSize: '24px',
+        fontWeight: '500',
+        lineHeight: '1.4',
+        letterSpacing: '0em'
+      },
+      h4: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '20px',
+        fontWeight: '500',
+        lineHeight: '1.4',
+        letterSpacing: '0em'
+      },
+      h5: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '18px',
+        fontWeight: '500',
+        lineHeight: '1.4',
+        letterSpacing: '0em'
+      },
+      h6: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '16px',
         fontWeight: '500',
         lineHeight: '1.4',
         letterSpacing: '0em'
@@ -125,6 +161,48 @@ const defaultBrandGuide: BrandGuide = {
         fontFamily: '"Inter", sans-serif',
         fontSize: '14px',
         fontWeight: '400',
+        lineHeight: '1.4',
+        letterSpacing: '0.02em'
+      },
+      largeLight: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '18px',
+        fontWeight: '300',
+        lineHeight: '1.6',
+        letterSpacing: '0em'
+      },
+      largeMedium: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '18px',
+        fontWeight: '500',
+        lineHeight: '1.6',
+        letterSpacing: '0em'
+      },
+      mediumLight: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '16px',
+        fontWeight: '300',
+        lineHeight: '1.5',
+        letterSpacing: '0em'
+      },
+      mediumMedium: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '16px',
+        fontWeight: '500',
+        lineHeight: '1.5',
+        letterSpacing: '0em'
+      },
+      smallLight: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '14px',
+        fontWeight: '300',
+        lineHeight: '1.4',
+        letterSpacing: '0.02em'
+      },
+      smallMedium: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '14px',
+        fontWeight: '500',
         lineHeight: '1.4',
         letterSpacing: '0.02em'
       }

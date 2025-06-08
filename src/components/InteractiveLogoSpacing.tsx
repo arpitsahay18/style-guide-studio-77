@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { LogoVariation } from '@/types';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
+import { useBrandGuide } from '@/context/BrandGuideContext';
 
 interface Guideline {
   id: string;
@@ -190,10 +191,10 @@ export function InteractiveLogoSpacing({
   // Generate ruler tick marks
   const generateTicks = (dimension: number, isVertical: boolean = false) => {
     const ticks = [];
-    const tickSpacing = 20; // Show tick every 20px
+    const tickSpacing = 40; // Show tick every 40px for values 0,2,4,6...
     
     for (let i = 0; i <= dimension; i += tickSpacing) {
-      const value = Math.round(i / 10); // Convert to more readable units (divide by 10)
+      const value = i / 20; // Convert to readable units (every 40px = 2 units)
       ticks.push(
         <div
           key={i}
@@ -315,7 +316,7 @@ export function InteractiveLogoSpacing({
                   zIndex: 11
                 }}
               >
-                {guideline.name}: {Math.round(guideline.position / 10)}px
+                {guideline.name}: {Math.round(guideline.position / 20)}px
               </div>
             </div>
           ))}
@@ -333,7 +334,7 @@ export function InteractiveLogoSpacing({
               <div className="grid grid-cols-2 gap-2 mt-1">
                 {guidelines.filter(g => !g.id.startsWith('temp-')).map(g => (
                   <span key={g.id} className="text-xs">
-                    {g.name}: {Math.round(g.position / 10)}px
+                    {g.name}: {Math.round(g.position / 20)}px
                   </span>
                 ))}
               </div>

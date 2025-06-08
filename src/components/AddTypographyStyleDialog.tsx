@@ -27,18 +27,19 @@ export function AddTypographyStyleDialog({ category, hiddenStyles }: AddTypograp
   const getStyleDisplayName = (styleKey: string) => {
     const displayNames: { [key: string]: string } = {
       // Display styles
+      medium: 'Display Medium',
       thin: 'Display Thin',
       // Heading styles
       h4: 'Heading H4',
       h5: 'Heading H5',
       h6: 'Heading H6',
       // Body styles
-      largeLight: 'Large Light',
-      largeMedium: 'Large Medium',
-      mediumLight: 'Medium Light',
-      mediumMedium: 'Medium Medium',
-      smallLight: 'Small Light',
-      smallMedium: 'Small Medium',
+      largeLight: 'Body Alternative Weights',
+      largeMedium: 'Body Alternative Weights',
+      mediumLight: 'Body Alternative Weights',
+      mediumMedium: 'Body Alternative Weights',
+      smallLight: 'Body Alternative Weights',
+      smallMedium: 'Body Alternative Weights',
     };
     return displayNames[styleKey] || styleKey;
   };
@@ -52,22 +53,59 @@ export function AddTypographyStyleDialog({ category, hiddenStyles }: AddTypograp
     if (!customStyleName.trim()) return;
 
     const styleKey = customStyleName.toLowerCase().replace(/\s+/g, '');
-    const baseFontFamily = currentGuide.typography[category]?.large?.fontFamily || 
-                          currentGuide.typography[category]?.h1?.fontFamily ||
-                          '"Inter", sans-serif';
+    let baseFontFamily = '"Inter", sans-serif';
+
+    // Get base font family from the category
+    if (category === 'display') {
+      baseFontFamily = currentGuide.typography.display.large?.fontFamily || '"Bebas Neue", sans-serif';
+    } else if (category === 'heading') {
+      baseFontFamily = currentGuide.typography.heading.h1?.fontFamily || '"Inter", sans-serif';
+    } else if (category === 'body') {
+      baseFontFamily = currentGuide.typography.body.medium?.fontFamily || '"Inter", sans-serif';
+    }
 
     const customStyle = {
       fontFamily: baseFontFamily,
       fontSize: '16px',
       fontWeight: '400',
       lineHeight: '1.5',
-      letterSpacing: '0'
+      letterSpacing: '0em'
     };
 
     addTypographyStyle(category, styleKey, customStyle);
     setCustomStyleName('');
     setIsOpen(false);
   };
+
+  // Group body alternative styles under one option
+  const getAvailableStyles = () => {
+    if (category === 'body') {
+      const bodyAlternatives = ['largeLight', 'largeMedium', 'mediumLight', 'mediumMedium', 'smallLight', 'smallMedium'];
+      const hasAnyBodyAlternative = bodyAlternatives.some(style => hiddenStyles.includes(style));
+      
+      if (hasAnyBodyAlternative) {
+        return [{ key: 'bodyAlternatives', label: 'Body Alternative Weights' }];
+      }
+      return [];
+    }
+    
+    return hiddenStyles.map(styleKey => ({
+      key: styleKey,
+      label: getStyleDisplayName(styleKey)
+    }));
+  };
+
+  const handleAddBodyAlternatives = () => {
+    const bodyAlternatives = ['largeLight', 'largeMedium', 'mediumLight', 'mediumMedium', 'smallLight', 'smallMedium'];
+    bodyAlternatives.forEach(styleKey => {
+      if (hiddenStyles.includes(styleKey)) {
+        addTypographyStyle(category, styleKey);
+      }
+    });
+    setIsOpen(false);
+  };
+
+  const availableStyles = getAvailableStyles();
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -86,18 +124,24 @@ export function AddTypographyStyleDialog({ category, hiddenStyles }: AddTypograp
         </DialogHeader>
         
         <div className="space-y-4">
-          {hiddenStyles.length > 0 && (
+          {availableStyles.length > 0 && (
             <div>
               <Label className="text-sm font-medium">Predefined Styles</Label>
               <div className="grid gap-2 mt-2">
-                {hiddenStyles.map((styleKey) => (
+                {availableStyles.map((style) => (
                   <Button
-                    key={styleKey}
+                    key={style.key}
                     variant="outline"
-                    onClick={() => handleAddExistingStyle(styleKey)}
+                    onClick={() => {
+                      if (style.key === 'bodyAlternatives') {
+                        handleAddBodyAlternatives();
+                      } else {
+                        handleAddExistingStyle(style.key);
+                      }
+                    }}
                     className="justify-start"
                   >
-                    {getStyleDisplayName(styleKey)}
+                    {style.label}
                   </Button>
                 ))}
               </div>

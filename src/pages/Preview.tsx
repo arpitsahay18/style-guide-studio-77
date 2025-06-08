@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { MainLayout } from '@/components/MainLayout';
@@ -5,10 +6,32 @@ import { TypographyPreview } from '@/components/ui/TypographyPreview';
 import { ColorSwatch } from '@/components/ui/ColorSwatch';
 import { LogoPreview } from '@/components/ui/LogoPreview';
 import { Button } from '@/components/ui/button';
-import { Download, FileDown } from 'lucide-react';
+import { Download, FileDown, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { BrandStudioLogo } from '@/components/BrandStudioLogo';
+
+// Helper function to convert hex to Pantone (simplified approximation)
+const getClosestPantone = (hex: string): string => {
+  // This is a simplified mapping - in reality, you'd need a comprehensive color matching system
+  const pantoneMap: { [key: string]: string } = {
+    '#FF0000': 'Pantone Red 032 C',
+    '#00FF00': 'Pantone Green C',
+    '#0000FF': 'Pantone Blue 072 C',
+    '#FFFF00': 'Pantone Yellow C',
+    '#FF00FF': 'Pantone Magenta C',
+    '#00FFFF': 'Pantone Cyan C',
+    '#000000': 'Pantone Black C',
+    '#FFFFFF': 'Pantone White',
+    '#007BFF': 'Pantone 279 C',
+    '#6C757D': 'Pantone Cool Gray 8 C',
+  };
+  
+  // Find closest match or return a generic approximation
+  return pantoneMap[hex.toUpperCase()] || `Pantone ${hex.substring(1).toUpperCase()}`;
+};
 
 const Preview = () => {
   const { 
@@ -20,6 +43,7 @@ const Preview = () => {
   } = useBrandGuide();
   const contentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   // Check if guide is complete
   const isGuideComplete = 
@@ -34,7 +58,10 @@ const Preview = () => {
           <div className="text-center space-y-4">
             <h1 className="text-2xl font-bold">Brand Guide Incomplete</h1>
             <p>Your brand guide is missing important elements. Please add at least one primary color, one secondary color, and upload a logo.</p>
-            <Button onClick={() => window.history.back()}>Go Back</Button>
+            <Button onClick={() => navigate('/')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Go Back
+            </Button>
           </div>
         </div>
       </MainLayout>
@@ -130,7 +157,7 @@ const Preview = () => {
       // Add watermark
       pdf.setFontSize(10);
       pdf.setTextColor(150, 150, 150);
-      pdf.text('Created with Brand Studio', 105, 290, { align: 'center' });
+      pdf.text('Made with ❤️ by Arpit Sahay', 105, 290, { align: 'center' });
       
       pdf.save(`${currentGuide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
       
@@ -154,7 +181,12 @@ const Preview = () => {
       {/* Fixed Header */}
       <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <h1 className="text-xl font-semibold">Brand Guide Preview</h1>
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate('/')} className="hover:opacity-75 transition-opacity">
+              <BrandStudioLogo size="sm" />
+            </button>
+            <h1 className="text-xl font-semibold">Brand Guide Preview</h1>
+          </div>
           <Button onClick={generatePDF}>
             <FileDown className="h-4 w-4 mr-2" />
             Download as PDF
@@ -241,26 +273,38 @@ const Preview = () => {
           <div className="space-y-10">
             <div>
               <h3 className="text-xl font-semibold mb-4">Primary Colors</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {currentGuide.colors.primary.map((color, index) => (
-                  <ColorSwatch 
-                    key={index} 
-                    color={color} 
-                    colorName={getColorDisplayName(index, 'primary')}
-                  />
+                  <div key={index} className="space-y-3">
+                    <ColorSwatch 
+                      color={color} 
+                      colorName={getColorDisplayName(index, 'primary')}
+                    />
+                    <div className="text-sm space-y-1">
+                      <p><strong>RGB:</strong> {color.rgb}</p>
+                      <p><strong>CMYK:</strong> {color.cmyk}</p>
+                      <p><strong>Pantone:</strong> {getClosestPantone(color.hex)}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
             
             <div>
               <h3 className="text-xl font-semibold mb-4">Secondary Colors</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {currentGuide.colors.secondary.map((color, index) => (
-                  <ColorSwatch 
-                    key={index} 
-                    color={color} 
-                    colorName={getColorDisplayName(index, 'secondary')}
-                  />
+                  <div key={index} className="space-y-3">
+                    <ColorSwatch 
+                      color={color} 
+                      colorName={getColorDisplayName(index, 'secondary')}
+                    />
+                    <div className="text-sm space-y-1">
+                      <p><strong>RGB:</strong> {color.rgb}</p>
+                      <p><strong>CMYK:</strong> {color.cmyk}</p>
+                      <p><strong>Pantone:</strong> {getClosestPantone(color.hex)}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -268,13 +312,19 @@ const Preview = () => {
             {currentGuide.colors.neutral.length > 0 && (
               <div>
                 <h3 className="text-xl font-semibold mb-4">Neutral Colors</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {currentGuide.colors.neutral.map((color, index) => (
-                    <ColorSwatch 
-                      key={index} 
-                      color={color} 
-                      colorName={getColorDisplayName(index, 'neutral')}
-                    />
+                    <div key={index} className="space-y-3">
+                      <ColorSwatch 
+                        color={color} 
+                        colorName={getColorDisplayName(index, 'neutral')}
+                      />
+                      <div className="text-sm space-y-1">
+                        <p><strong>RGB:</strong> {color.rgb}</p>
+                        <p><strong>CMYK:</strong> {color.cmyk}</p>
+                        <p><strong>Pantone:</strong> {getClosestPantone(color.hex)}</p>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -341,7 +391,7 @@ const Preview = () => {
         
         {/* Hidden watermark for PDF - only visible when exported */}
         <div className="hidden print:block text-center text-gray-400 mt-8 pt-8 border-t">
-          <p>Created with Brand Studio</p>
+          <p>Made with ❤️ by Arpit Sahay</p>
         </div>
       </div>
     </MainLayout>

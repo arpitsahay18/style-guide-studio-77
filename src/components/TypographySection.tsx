@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { TypographySet, TypographyStyle } from '@/types';
@@ -41,83 +42,6 @@ const fontWeightOptions = [
   { value: '700', label: 'Bold (700)' },
 ];
 
-interface EditableTypographyPreviewProps {
-  name: string;
-  style: TypographyStyle;
-  previewText: string;
-  onNameChange?: (name: string) => void;
-}
-
-function EditableTypographyPreview({ name, style, previewText, onNameChange }: EditableTypographyPreviewProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [tempName, setTempName] = useState(name);
-
-  const handleNameClick = () => {
-    if (onNameChange) {
-      setIsEditing(true);
-      setTempName(name);
-    }
-  };
-
-  const handleNameSave = () => {
-    if (onNameChange) {
-      const finalName = tempName.trim().slice(0, 20) || name;
-      onNameChange(finalName);
-    }
-    setIsEditing(false);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleNameSave();
-    } else if (e.key === 'Escape') {
-      setTempName(name);
-      setIsEditing(false);
-    }
-  };
-
-  return (
-    <div className="p-4 border border-border rounded-md bg-card">
-      <div className="flex justify-between items-center mb-3">
-        {isEditing ? (
-          <Input
-            value={tempName}
-            onChange={(e) => setTempName(e.target.value)}
-            onBlur={handleNameSave}
-            onKeyDown={handleKeyPress}
-            className="font-medium text-sm h-8 max-w-48"
-            maxLength={20}
-            autoFocus
-          />
-        ) : (
-          <h3 
-            className={`font-medium ${onNameChange ? 'cursor-pointer hover:text-primary' : ''}`}
-            onClick={handleNameClick}
-            title={onNameChange ? 'Click to edit name (max 20 characters)' : undefined}
-          >
-            {name}
-          </h3>
-        )}
-        <div className="text-sm text-muted-foreground">
-          {style.fontSize} / {style.fontWeight} / {style.lineHeight}
-        </div>
-      </div>
-      <div 
-        className="text-foreground" 
-        style={{
-          fontFamily: style.fontFamily,
-          fontSize: style.fontSize,
-          fontWeight: style.fontWeight,
-          lineHeight: style.lineHeight,
-          letterSpacing: style.letterSpacing
-        }}
-      >
-        {previewText}
-      </div>
-    </div>
-  );
-}
-
 export function TypographySection() {
   const { 
     currentGuide, 
@@ -141,6 +65,9 @@ export function TypographySection() {
   const [bodyFontFamily, setBodyFontFamily] = useState(
     currentGuide.typography.body.medium.fontFamily.split(',')[0].trim()
   );
+
+  const [editingName, setEditingName] = useState<string | null>(null);
+  const [tempName, setTempName] = useState('');
 
   // Handle font family changes
   const handleFontFamilyChange = (
@@ -227,7 +154,7 @@ export function TypographySection() {
 
   const getHiddenStyles = (category: 'display' | 'heading' | 'body') => {
     const allStyles = {
-      display: ['thin'],
+      display: ['medium', 'thin'],
       heading: ['h4', 'h5', 'h6'],
       body: ['largeLight', 'largeMedium', 'mediumLight', 'mediumMedium', 'smallLight', 'smallMedium']
     };
@@ -236,6 +163,30 @@ export function TypographySection() {
       !typographyVisibility[category].includes(style) &&
       currentGuide.typography[category][style]
     );
+  };
+
+  const handleNameClick = (category: 'display' | 'heading' | 'body', styleKey: string, currentName: string) => {
+    const key = `${category}-${styleKey}`;
+    setEditingName(key);
+    setTempName(currentName);
+  };
+
+  const handleNameSave = (category: 'display' | 'heading' | 'body', styleKey: string) => {
+    if (editingName) {
+      const finalName = tempName.trim().slice(0, 20) || getDisplayName(category, styleKey);
+      handleTypographyNameChange(category, styleKey, finalName);
+      setEditingName(null);
+      setTempName('');
+    }
+  };
+
+  const handleNameKeyPress = (e: React.KeyboardEvent, category: 'display' | 'heading' | 'body', styleKey: string) => {
+    if (e.key === 'Enter') {
+      handleNameSave(category, styleKey);
+    } else if (e.key === 'Escape') {
+      setEditingName(null);
+      setTempName('');
+    }
   };
 
   const renderTypographyAccordion = (category: 'display' | 'heading' | 'body') => {
@@ -250,11 +201,37 @@ export function TypographySection() {
 
           const canRemove = visibleStyles.length > 1;
           const displayName = getDisplayName(category, styleKey);
+          const editKey = `${category}-${styleKey}`;
+          const isEditing = editingName === editKey;
 
           return (
-            <AccordionItem key={styleKey} value={`${category}-${styleKey}`}>
-              <AccordionTrigger className="relative">
-                <span>{displayName}</span>
+            <AccordionItem key={styleKey} value={`${category}-${styleKey}`} className="group">
+              <AccordionTrigger className="relative hover:no-underline">
+                <div className="flex items-center justify-between w-full pr-8">
+                  {isEditing ? (
+                    <Input
+                      value={tempName}
+                      onChange={(e) => setTempName(e.target.value)}
+                      onBlur={() => handleNameSave(category, styleKey)}
+                      onKeyDown={(e) => handleNameKeyPress(e, category, styleKey)}
+                      className="font-medium text-sm h-8 max-w-48"
+                      maxLength={20}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <span 
+                      className="cursor-pointer hover:text-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNameClick(category, styleKey, displayName);
+                      }}
+                      title="Click to edit name (max 20 characters)"
+                    >
+                      {displayName}
+                    </span>
+                  )}
+                </div>
                 {canRemove && (
                   <Button
                     variant="ghost"
@@ -270,14 +247,28 @@ export function TypographySection() {
                 )}
               </AccordionTrigger>
               <AccordionContent>
-                <EditableTypographyPreview
-                  name={displayName}
-                  style={style}
-                  previewText={previewText}
-                  onNameChange={(name) => handleTypographyNameChange(category, styleKey, name)}
-                />
+                <div className="p-4 border border-border rounded-md bg-card mb-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-medium">{displayName}</h3>
+                    <div className="text-sm text-muted-foreground">
+                      {style.fontSize} / {style.fontWeight} / {style.lineHeight}
+                    </div>
+                  </div>
+                  <div 
+                    className="text-foreground" 
+                    style={{
+                      fontFamily: style.fontFamily,
+                      fontSize: style.fontSize,
+                      fontWeight: style.fontWeight,
+                      lineHeight: style.lineHeight,
+                      letterSpacing: style.letterSpacing
+                    }}
+                  >
+                    {previewText}
+                  </div>
+                </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor={`${category}-${styleKey}-size`}>Font Size</Label>
                     <Input
@@ -324,9 +315,10 @@ export function TypographySection() {
                     <Input
                       id={`${category}-${styleKey}-letter-spacing`}
                       type="text"
-                      value={style.letterSpacing}
+                      value={style.letterSpacing || '0em'}
                       onChange={(e) => handleStyleUpdate(category, styleKey, 'letterSpacing', e.target.value)}
                       className="mt-1"
+                      placeholder="0em"
                     />
                   </div>
                 </div>
