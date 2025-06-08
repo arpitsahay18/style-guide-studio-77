@@ -1,443 +1,300 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { BrandGuide, ColorPalette, TypographySet } from '@/types';
+import { storage } from '@/lib/storage';
+import { saveAs } from 'file-saver';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { 
-  BrandGuide, 
-  TypographySet, 
-  ColorPalette, 
-  LogoSet 
-} from '@/types';
-import { defaultTypographySet } from '@/utils/typographyUtils';
+interface ColorNames {
+  [key: string]: string;
+}
 
-// Default empty color palette
-const defaultColorPalette: ColorPalette = {
-  primary: [],
-  secondary: [],
-  neutral: []
-};
+interface TypographyVisibility {
+  display: string[];
+  heading: string[];
+  body: string[];
+}
 
-// Default empty logo set
-const defaultLogoSet: LogoSet = {
-  original: '',
-  square: [],
-  rounded: [],
-  circle: []
-};
-
-// Create a new default brand guide
-const createDefaultBrandGuide = (): BrandGuide => ({
-  id: uuidv4(),
-  name: 'Untitled Brand Guide',
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  typography: defaultTypographySet,
-  colors: defaultColorPalette,
-  logos: defaultLogoSet
-});
+interface TypographyNames {
+  [key: string]: string;
+}
 
 interface BrandGuideContextType {
   currentGuide: BrandGuide;
-  savedGuides: BrandGuide[];
-  activeSection: 'typography' | 'colors' | 'logos' | 'preview' | 'export';
-  setActiveSection: (section: 'typography' | 'colors' | 'logos' | 'preview' | 'export') => void;
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  setGuideName: (name: string) => void;
-  setBrandName: (name: string) => void;
-  updateTypography: (typography: TypographySet) => void;
-  updateColors: (colors: ColorPalette) => void;
-  updateLogos: (logos: LogoSet) => void;
-  saveCurrentGuide: () => void;
-  createNewGuide: () => void;
-  loadGuide: (guideId: string) => void;
-  duplicateGuide: (guideId: string) => void;
-  deleteGuide: (guideId: string) => void;
-  exportGuide: (format: 'pdf' | 'json' | 'css' | 'link') => void;
+  colorNames: ColorNames;
+  typographyVisibility: TypographyVisibility;
+  typographyNames: TypographyNames;
   previewText: string;
+  activeTab: string;
+  setGuideName: (name: string) => void;
+  updateColors: (colors: ColorPalette) => void;
+  updateTypography: (typography: TypographySet) => void;
+  updateLogos: (logos: any) => void;
   setPreviewText: (text: string) => void;
+  setActiveTab: (tab: string) => void;
+  setColorName: (colorKey: string, name: string) => void;
+  setTypographyName: (styleKey: string, name: string) => void;
+  setTypographyVisibility: (category: 'display' | 'heading' | 'body', styles: string[]) => void;
+  addTypographyStyle: (category: 'display' | 'heading' | 'body', styleKey: string, customStyle?: any) => void;
+  removeTypographyStyle: (category: 'display' | 'heading' | 'body', styleKey: string) => void;
+  exportGuide: (format: 'json' | 'pdf') => void;
+  activeSection: string;
 }
+
+const defaultBrandGuide: BrandGuide = {
+  name: 'My Brand',
+  colors: {
+    primary: [
+      {
+        hex: '#007BFF',
+        rgb: 'rgb(0, 123, 255)',
+        cmyk: 'cmyk(100%, 52%, 0%, 0%)',
+        tints: [],
+        shades: [],
+        blackContrast: 0,
+        whiteContrast: 0
+      }
+    ],
+    secondary: [
+      {
+        hex: '#6C757D',
+        rgb: 'rgb(108, 117, 125)',
+        cmyk: 'cmyk(13%, 6%, 0%, 51%)',
+        tints: [],
+        shades: [],
+        blackContrast: 0,
+        whiteContrast: 0
+      }
+    ],
+    neutral: []
+  },
+  typography: {
+    display: {
+      large: {
+        fontFamily: '"Bebas Neue", sans-serif',
+        fontSize: '48px',
+        fontWeight: '700',
+        lineHeight: '1.2',
+        letterSpacing: '-0.02em'
+      },
+      regular: {
+        fontFamily: '"Bebas Neue", sans-serif',
+        fontSize: '32px',
+        fontWeight: '400',
+        lineHeight: '1.3',
+        letterSpacing: '-0.01em'
+      }
+    },
+    heading: {
+      h1: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '36px',
+        fontWeight: '700',
+        lineHeight: '1.2',
+        letterSpacing: '-0.01em'
+      },
+      h2: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '30px',
+        fontWeight: '600',
+        lineHeight: '1.3',
+        letterSpacing: '-0.01em'
+      },
+      h3: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '24px',
+        fontWeight: '500',
+        lineHeight: '1.4',
+        letterSpacing: '0em'
+      }
+    },
+    body: {
+      large: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '18px',
+        fontWeight: '400',
+        lineHeight: '1.6',
+        letterSpacing: '0em'
+      },
+      medium: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '16px',
+        fontWeight: '400',
+        lineHeight: '1.5',
+        letterSpacing: '0em'
+      },
+      small: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '14px',
+        fontWeight: '400',
+        lineHeight: '1.4',
+        letterSpacing: '0.02em'
+      }
+    }
+  },
+  logos: {
+    original: '',
+    square: [],
+    rounded: [],
+    circle: []
+  }
+};
 
 const BrandGuideContext = createContext<BrandGuideContextType | undefined>(undefined);
 
-// Helper to get a unique session ID for the current user
-const getSessionId = (): string => {
-  let sessionId = localStorage.getItem('brandStudioSessionId');
-  if (!sessionId) {
-    sessionId = uuidv4();
-    localStorage.setItem('brandStudioSessionId', sessionId);
-  }
-  return sessionId;
-}
+export function BrandGuideProvider({ children }: { children: React.ReactNode }) {
+  const [currentGuide, setCurrentGuide] = useState<BrandGuide>(defaultBrandGuide);
+  const [colorNames, setColorNames] = useState<ColorNames>({});
+  const [typographyVisibility, setTypographyVisibilityState] = useState<TypographyVisibility>({
+    display: ['large', 'regular'],
+    heading: ['h1', 'h2', 'h3'],
+    body: ['large', 'medium', 'small']
+  });
+  const [typographyNames, setTypographyNames] = useState<TypographyNames>({});
+  const [previewText, setPreviewText] = useState('The quick brown fox jumps over the lazy dog');
+  const [activeTab, setActiveTab] = useState('typography');
+  const [activeSection, setActiveSection] = useState('');
 
-// Maximum number of guides to store in localStorage
-const MAX_SAVED_GUIDES = 10;
-
-// Helper to load guides from localStorage with error handling
-const loadGuidesFromStorage = (): BrandGuide[] => {
-  try {
-    const guidesJson = localStorage.getItem('brandStudioGuides');
-    if (guidesJson) {
-      const guidesData = JSON.parse(guidesJson);
-      const guides = guidesData.map((guide: any) => ({
-        ...guide,
-        createdAt: new Date(guide.createdAt),
-        updatedAt: new Date(guide.updatedAt)
-      }));
-      
-      // If there are too many guides, only keep the most recent ones
-      if (guides.length > MAX_SAVED_GUIDES) {
-        guides.sort((a: BrandGuide, b: BrandGuide) => 
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
-        return guides.slice(0, MAX_SAVED_GUIDES);
-      }
-      
-      return guides;
+  // Load saved data on mount
+  useEffect(() => {
+    const saved = storage.loadBrandGuide();
+    if (saved) {
+      setCurrentGuide(saved.guide);
+      if (saved.colorNames) setColorNames(saved.colorNames);
+      if (saved.typographyVisibility) setTypographyVisibilityState(saved.typographyVisibility);
+      if (saved.typographyNames) setTypographyNames(saved.typographyNames);
+      if (saved.previewText) setPreviewText(saved.previewText);
     }
-  } catch (error) {
-    console.error('Error parsing guides from localStorage:', error);
-  }
-  return [];
-};
-
-// Helper to save guides to localStorage
-const saveGuidesToStorage = (guides: BrandGuide[]): boolean => {
-  try {
-    // Limit the number of guides if needed
-    let guidesToSave = guides;
-    if (guides.length > MAX_SAVED_GUIDES) {
-      guidesToSave = guides
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-        .slice(0, MAX_SAVED_GUIDES);
-    }
-    
-    // Try to store the guides
-    localStorage.setItem('brandStudioGuides', JSON.stringify(guidesToSave));
-    return true;
-  } catch (error) {
-    console.error('Error saving guides to localStorage:', error);
-    
-    // If QuotaExceededError, try to save only the newest guides
-    if (error instanceof DOMException && 
-        (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-      try {
-        // Try with fewer guides
-        const reducedGuides = guides
-          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, Math.max(1, Math.floor(guides.length / 2)));
-        
-        localStorage.setItem('brandStudioGuides', JSON.stringify(reducedGuides));
-        return true;
-      } catch (innerError) {
-        console.error('Failed to save reduced guides list:', innerError);
-      }
-    }
-    return false;
-  }
-};
-
-// Helper to clean up image data in guides to save space
-const optimizeGuideForStorage = (guide: BrandGuide): BrandGuide => {
-  const optimizedGuide = { ...guide };
-  
-  // Limit the number of logo variations stored
-  if (optimizedGuide.logos.square.length > 4) {
-    optimizedGuide.logos.square = optimizedGuide.logos.square.slice(0, 4);
-  }
-  if (optimizedGuide.logos.rounded.length > 4) {
-    optimizedGuide.logos.rounded = optimizedGuide.logos.rounded.slice(0, 4);
-  }
-  if (optimizedGuide.logos.circle.length > 4) {
-    optimizedGuide.logos.circle = optimizedGuide.logos.circle.slice(0, 4);
-  }
-  
-  return optimizedGuide;
-};
-
-export const BrandGuideProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentGuide, setCurrentGuide] = React.useState<BrandGuide>(createDefaultBrandGuide());
-  const [savedGuides, setSavedGuides] = React.useState<BrandGuide[]>([]);
-  const [activeSection, setActiveSection] = React.useState<'typography' | 'colors' | 'logos' | 'preview' | 'export'>('typography');
-  const [previewText, setPreviewText] = React.useState<string>('The quick brown fox jumps over the lazy dog');
-  const [sessionId] = React.useState<string>(getSessionId());
-  const [activeTab, setActiveTab] = React.useState('typography');
-
-  // Load user's guide from localStorage on initial load
-  React.useEffect(() => {
-    const loadSavedGuide = () => {
-      try {
-        // Get all saved guides
-        const guides = loadGuidesFromStorage();
-        if (guides.length > 0) {
-          setSavedGuides(guides);
-          
-          // Try to find the last edited guide
-          const lastGuide = guides.sort((a, b) => 
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-          )[0];
-          
-          if (lastGuide) {
-            setCurrentGuide(lastGuide);
-            return;
-          }
-        }
-        
-        // If no guides found, check for the current guide in localStorage
-        const savedGuideJson = localStorage.getItem('currentBrandGuide');
-        if (savedGuideJson) {
-          try {
-            const savedGuide = JSON.parse(savedGuideJson);
-            // Convert string dates back to Date objects
-            savedGuide.createdAt = new Date(savedGuide.createdAt);
-            savedGuide.updatedAt = new Date(savedGuide.updatedAt);
-            setCurrentGuide(savedGuide);
-            // Also add to saved guides if not already there
-            setSavedGuides(prev => {
-              if (!prev.some(g => g.id === savedGuide.id)) {
-                return [...prev, savedGuide];
-              }
-              return prev;
-            });
-          } catch (parseError) {
-            console.error("Error parsing saved guide:", parseError);
-            // If parsing fails, use default guide
-          }
-        }
-      } catch (error) {
-        console.error("Error loading saved guide:", error);
-        // If there's an error, use the default guide
-      }
-    };
-    
-    loadSavedGuide();
   }, []);
 
-  // Auto-save guide changes to localStorage
-  React.useEffect(() => {
-    const autoSave = () => {
-      try {
-        // Save current guide to localStorage
-        localStorage.setItem('currentBrandGuide', JSON.stringify(currentGuide));
-        
-        // Update guide in saved guides array if it exists
-        setSavedGuides(prev => {
-          const existingIndex = prev.findIndex(g => g.id === currentGuide.id);
-          if (existingIndex >= 0) {
-            const updated = [...prev];
-            updated[existingIndex] = currentGuide;
-            saveGuidesToStorage(updated);
-            return updated;
-          }
-          return prev;
-        });
-      } catch (error) {
-        console.error("Error during auto-save:", error);
-        // If localStorage fails, we just continue without saving
-      }
-    };
-    
-    // Don't auto-save on first render or if guide is empty
-    if (currentGuide.colors.primary.length > 0 || 
-        currentGuide.colors.secondary.length > 0 || 
-        currentGuide.logos.original) {
-      autoSave();
-    }
-  }, [currentGuide]);
+  // Save data whenever it changes
+  useEffect(() => {
+    storage.saveBrandGuide({
+      guide: currentGuide,
+      colorNames,
+      typographyVisibility,
+      typographyNames,
+      previewText
+    });
+  }, [currentGuide, colorNames, typographyVisibility, typographyNames, previewText]);
 
   const setGuideName = (name: string) => {
-    setCurrentGuide(prev => ({
-      ...prev,
-      name,
-      updatedAt: new Date()
-    }));
-  };
-
-  // Add setBrandName as an alias for setGuideName for consistency
-  const setBrandName = (name: string) => {
-    setGuideName(name);
-  };
-
-  const updateTypography = (typography: TypographySet) => {
-    setCurrentGuide(prev => ({
-      ...prev,
-      typography,
-      updatedAt: new Date()
-    }));
+    setCurrentGuide(prev => ({ ...prev, name }));
   };
 
   const updateColors = (colors: ColorPalette) => {
-    setCurrentGuide(prev => ({
-      ...prev,
-      colors,
-      updatedAt: new Date()
-    }));
+    setCurrentGuide(prev => ({ ...prev, colors }));
   };
 
-  const updateLogos = (logos: LogoSet) => {
-    setCurrentGuide(prev => ({
-      ...prev,
-      logos,
-      updatedAt: new Date()
-    }));
+  const updateTypography = (typography: TypographySet) => {
+    setCurrentGuide(prev => ({ ...prev, typography }));
   };
 
-  const saveCurrentGuide = () => {
-    // Optimize guide before saving to reduce storage size
-    const optimizedGuide = optimizeGuideForStorage(currentGuide);
-    
-    // Update local state
-    setSavedGuides(prev => {
-      // Check if the guide already exists
-      const existingIndex = prev.findIndex(guide => guide.id === optimizedGuide.id);
-      
-      let updatedGuides;
-      if (existingIndex >= 0) {
-        // Update existing guide
-        updatedGuides = [...prev];
-        updatedGuides[existingIndex] = optimizedGuide;
-      } else {
-        // Add new guide
-        updatedGuides = [...prev, optimizedGuide];
-      }
-      
-      // Limit the number of guides if needed
-      if (updatedGuides.length > MAX_SAVED_GUIDES) {
-        updatedGuides = updatedGuides
-          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, MAX_SAVED_GUIDES);
-      }
-      
-      // Save to localStorage
-      const success = saveGuidesToStorage(updatedGuides);
-      if (!success) {
-        // If saving all guides failed, try saving only the current one
-        try {
-          localStorage.setItem('currentBrandGuide', JSON.stringify(optimizedGuide));
-        } catch (error) {
-          console.error("Failed to save current guide:", error);
+  const updateLogos = (logos: any) => {
+    setCurrentGuide(prev => ({ ...prev, logos }));
+  };
+
+  const setColorName = (colorKey: string, name: string) => {
+    setColorNames(prev => ({ ...prev, [colorKey]: name }));
+  };
+
+  const setTypographyName = (styleKey: string, name: string) => {
+    setTypographyNames(prev => ({ ...prev, [styleKey]: name }));
+  };
+
+  const setTypographyVisibility = (category: 'display' | 'heading' | 'body', styles: string[]) => {
+    setTypographyVisibilityState(prev => ({ ...prev, [category]: styles }));
+  };
+
+  const addTypographyStyle = (category: 'display' | 'heading' | 'body', styleKey: string, customStyle?: any) => {
+    // Add style to visibility
+    setTypographyVisibilityState(prev => ({
+      ...prev,
+      [category]: [...prev[category], styleKey]
+    }));
+
+    // If it's a custom style, add it to the typography
+    if (customStyle) {
+      setCurrentGuide(prev => ({
+        ...prev,
+        typography: {
+          ...prev.typography,
+          [category]: {
+            ...prev.typography[category],
+            [styleKey]: customStyle
+          }
         }
-      }
-      
-      return updatedGuides;
-    });
-  };
-
-  const createNewGuide = () => {
-    // Save current guide first if it has changes
-    saveCurrentGuide();
-    // Create new guide
-    setCurrentGuide(createDefaultBrandGuide());
-  };
-
-  const loadGuide = (guideId: string) => {
-    const guide = savedGuides.find(g => g.id === guideId);
-    if (guide) {
-      setCurrentGuide(guide);
+      }));
     }
   };
 
-  const duplicateGuide = (guideId: string) => {
-    const guide = savedGuides.find(g => g.id === guideId);
-    if (guide) {
-      // Create a deep copy to ensure all nested objects are new
-      const duplicatedGuide: BrandGuide = {
-        ...JSON.parse(JSON.stringify(guide)),
-        id: uuidv4(),
-        name: `${guide.name} (Copy)`,
-        createdAt: new Date(),
-        updatedAt: new Date()
+  const removeTypographyStyle = (category: 'display' | 'heading' | 'body', styleKey: string) => {
+    // Don't allow removal if it's the last style
+    if (typographyVisibility[category].length <= 1) return;
+
+    setTypographyVisibilityState(prev => ({
+      ...prev,
+      [category]: prev[category].filter(style => style !== styleKey)
+    }));
+
+    // Remove from typography names if exists
+    const nameKey = `${category}-${styleKey}`;
+    setTypographyNames(prev => {
+      const newNames = { ...prev };
+      delete newNames[nameKey];
+      return newNames;
+    });
+  };
+
+  const exportGuide = (format: 'json' | 'pdf') => {
+    if (format === 'json') {
+      const exportData = {
+        guide: currentGuide,
+        colorNames,
+        typographyVisibility,
+        typographyNames,
+        metadata: {
+          exportedAt: new Date().toISOString(),
+          version: '1.0'
+        }
       };
       
-      // Optimize the duplicated guide for storage
-      const optimizedDuplicate = optimizeGuideForStorage(duplicatedGuide);
-      
-      setSavedGuides(prev => {
-        // Check if we're at the limit
-        if (prev.length >= MAX_SAVED_GUIDES) {
-          const withoutOldest = [...prev]
-            .sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime())
-            .slice(1);
-          
-          const updatedGuides = [...withoutOldest, optimizedDuplicate];
-          saveGuidesToStorage(updatedGuides);
-          return updatedGuides;
-        } else {
-          const updatedGuides = [...prev, optimizedDuplicate];
-          saveGuidesToStorage(updatedGuides);
-          return updatedGuides;
-        }
-      });
-      
-      setCurrentGuide(duplicatedGuide);
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      saveAs(blob, `${currentGuide.name.replace(/\s+/g, '_')}_brand_guide.json`);
     }
-  };
-
-  const deleteGuide = (guideId: string) => {
-    setSavedGuides(prev => {
-      const updatedGuides = prev.filter(guide => guide.id !== guideId);
-      saveGuidesToStorage(updatedGuides);
-      return updatedGuides;
-    });
-    
-    // If the current guide is deleted, create a new one
-    if (currentGuide.id === guideId) {
-      setCurrentGuide(createDefaultBrandGuide());
-    }
-  };
-
-  const exportGuide = (format: 'pdf' | 'json' | 'css' | 'link') => {
-    // Implementation depends on the format
-    console.log(`Exporting guide in ${format} format`);
-    
-    // For now, we'll just handle JSON
-    if (format === 'json') {
-      const dataStr = JSON.stringify(currentGuide, null, 2);
-      const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
-      
-      const exportName = `${currentGuide.name.replace(/\s+/g, '-').toLowerCase()}_brand-guide.json`;
-      
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportName);
-      linkElement.click();
-    }
-    
-    // The PDF and link exports would require additional implementation
   };
 
   return (
     <BrandGuideContext.Provider
       value={{
         currentGuide,
-        savedGuides,
-        activeSection,
-        setActiveSection,
-        setGuideName,
-        setBrandName,
-        updateTypography,
-        updateColors,
-        updateLogos,
-        saveCurrentGuide,
-        createNewGuide,
-        loadGuide,
-        duplicateGuide,
-        deleteGuide,
-        exportGuide,
+        colorNames,
+        typographyVisibility,
+        typographyNames,
         previewText,
-        setPreviewText,
         activeTab,
+        activeSection,
+        setGuideName,
+        updateColors,
+        updateTypography,
+        updateLogos,
+        setPreviewText,
         setActiveTab,
+        setColorName,
+        setTypographyName,
+        setTypographyVisibility,
+        addTypographyStyle,
+        removeTypographyStyle,
+        exportGuide
       }}
     >
       {children}
     </BrandGuideContext.Provider>
   );
-};
+}
 
-export const useBrandGuide = (): BrandGuideContextType => {
+export function useBrandGuide() {
   const context = useContext(BrandGuideContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useBrandGuide must be used within a BrandGuideProvider');
   }
   return context;
-};
+}

@@ -1,11 +1,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { LogoVariation } from '@/types';
+import { Button } from '@/components/ui/button';
+import { RotateCcw } from 'lucide-react';
 
 interface Guideline {
   id: string;
   type: 'horizontal' | 'vertical';
   position: number;
+  name: string;
 }
 
 interface InteractiveLogoSpacingProps {
@@ -22,9 +25,11 @@ export function InteractiveLogoSpacing({
   const [isDragging, setIsDragging] = useState(false);
   const [dragGuideline, setDragGuideline] = useState<Guideline | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 400, height: 400 });
+  const [isCreatingGuideline, setIsCreatingGuideline] = useState(false);
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
   
-  const GRID_SIZE = 8; // Snap grid size in pixels
-  const SNAP_THRESHOLD = 5; // Snap to edges within 5px
+  const GRID_SIZE = 4; // Snap grid size in pixels  
+  const SNAP_THRESHOLD = 3; // Snap to edges within 3px
   const MAX_GUIDELINES = 20;
 
   const shapeClasses = {
@@ -57,32 +62,84 @@ export function InteractiveLogoSpacing({
     return gridSnapped;
   };
 
-  const handleRulerClick = (event: React.MouseEvent, type: 'horizontal' | 'vertical') => {
+  const generateGuidlineName = (type: 'horizontal' | 'vertical') => {
+    const existingNames = guidelines
+      .filter(g => g.type === type)
+      .map(g => g.name)
+      .sort();
+    
+    const prefix = type === 'horizontal' ? 'Y' : 'X';
+    let counter = 1;
+    
+    while (existingNames.includes(`${prefix}${counter}`)) {
+      counter++;
+    }
+    
+    return `${prefix}${counter}`;
+  };
+
+  const handleRulerMouseDown = (event: React.MouseEvent, type: 'horizontal' | 'vertical') => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
     const currentGuidelines = guidelines.filter(g => g.type === type);
     if (currentGuidelines.length >= MAX_GUIDELINES) return;
 
-    let position: number;
-    if (type === 'horizontal') {
-      position = event.clientY - rect.top;
-      position = snapToGrid(position, containerSize.height);
-    } else {
-      position = event.clientX - rect.left;
-      position = snapToGrid(position, containerSize.width);
-    }
+    setIsCreatingGuideline(true);
+    setDragStartPos({ x: event.clientX, y: event.clientY });
 
-    const newGuideline: Guideline = {
-      id: `${type}-${Date.now()}`,
-      type,
-      position
+    const handleMouseMove = (e: MouseEvent) => {
+      let position: number;
+      if (type === 'horizontal') {
+        position = e.clientY - rect.top;
+        position = snapToGrid(position, containerSize.height);
+        position = Math.max(0, Math.min(position, containerSize.height));
+      } else {
+        position = e.clientX - rect.left;
+        position = snapToGrid(position, containerSize.width);
+        position = Math.max(0, Math.min(position, containerSize.width));
+      }
+
+      // Only create guideline if mouse has moved enough
+      const dragDistance = Math.abs(e.clientX - dragStartPos.x) + Math.abs(e.clientY - dragStartPos.y);
+      if (dragDistance > 5) {
+        const tempGuideline: Guideline = {
+          id: `temp-${type}`,
+          type,
+          position,
+          name: generateGuidlineName(type)
+        };
+        
+        setGuidelines(prev => {
+          const filtered = prev.filter(g => g.id !== `temp-${type}`);
+          return [...filtered, tempGuideline];
+        });
+      }
     };
 
-    setGuidelines(prev => [...prev, newGuideline]);
+    const handleMouseUp = () => {
+      setIsCreatingGuideline(false);
+      
+      // Convert temp guideline to permanent
+      setGuidelines(prev => 
+        prev.map(g => 
+          g.id === `temp-${type}` 
+            ? { ...g, id: `${type}-${Date.now()}` }
+            : g
+        )
+      );
+      
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
 
   const handleGuidelineMouseDown = (guideline: Guideline, event: React.MouseEvent) => {
+    if (guideline.id.startsWith('temp-')) return;
+    
     event.preventDefault();
     setIsDragging(true);
     setDragGuideline(guideline);
@@ -122,7 +179,12 @@ export function InteractiveLogoSpacing({
   };
 
   const handleGuidelineDoubleClick = (guideline: Guideline) => {
+    if (guideline.id.startsWith('temp-')) return;
     setGuidelines(prev => prev.filter(g => g.id !== guideline.id));
+  };
+
+  const resetGuidelines = () => {
+    setGuidelines([]);
   };
 
   // Generate ruler tick marks
@@ -131,16 +193,17 @@ export function InteractiveLogoSpacing({
     const tickSpacing = 20; // Show tick every 20px
     
     for (let i = 0; i <= dimension; i += tickSpacing) {
+      const value = Math.round(i / 10); // Convert to more readable units (divide by 10)
       ticks.push(
         <div
           key={i}
-          className="absolute text-xs text-muted-foreground"
+          className="absolute text-xs text-muted-foreground pointer-events-none"
           style={{
             [isVertical ? 'top' : 'left']: `${i}px`,
             [isVertical ? 'left' : 'top']: '2px'
           }}
         >
-          {i}
+          {value}
         </div>
       );
     }
@@ -149,27 +212,41 @@ export function InteractiveLogoSpacing({
 
   return (
     <div className="relative">
-      <h3 className="text-lg font-medium mb-4">Logo Spacing Guidelines</h3>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-medium">Logo Spacing Guidelines</h3>
+        {guidelines.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={resetGuidelines}
+            className="flex items-center gap-2"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Reset Guidelines
+          </Button>
+        )}
+      </div>
+      
       <p className="text-sm text-muted-foreground mb-6">
-        Drag from the top or left ruler to create spacing guidelines for your Brand Logo. 
-        Lines will snap to the grid and edges of your logo.
+        Drag from the rulers to create spacing guidelines for your logo. 
+        Guidelines will snap to grid and display measurements.
       </p>
       
       <div className="relative inline-block">
         {/* Top Ruler */}
         <div 
-          className="absolute -top-6 left-6 bg-gray-100 border-b cursor-crosshair select-none"
+          className="absolute -top-6 left-6 bg-gray-100 border-b cursor-grab select-none hover:bg-gray-200"
           style={{ width: containerSize.width, height: '24px' }}
-          onClick={(e) => handleRulerClick(e, 'vertical')}
+          onMouseDown={(e) => handleRulerMouseDown(e, 'vertical')}
         >
           {generateTicks(containerSize.width)}
         </div>
 
         {/* Left Ruler */}
         <div 
-          className="absolute -left-6 top-6 bg-gray-100 border-r cursor-crosshair select-none"
+          className="absolute -left-6 top-6 bg-gray-100 border-r cursor-grab select-none hover:bg-gray-200"
           style={{ width: '24px', height: containerSize.height }}
-          onClick={(e) => handleRulerClick(e, 'horizontal')}
+          onMouseDown={(e) => handleRulerMouseDown(e, 'horizontal')}
         >
           {generateTicks(containerSize.height, true)}
         </div>
@@ -180,18 +257,6 @@ export function InteractiveLogoSpacing({
           className="relative border border-dashed border-gray-300 bg-white"
           style={{ width: '400px', height: '400px' }}
         >
-          {/* Grid overlay (invisible) */}
-          <div 
-            className="absolute inset-0 pointer-events-none opacity-0"
-            style={{
-              backgroundImage: `
-                linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px)
-              `,
-              backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`
-            }}
-          />
-          
           {/* Logo */}
           <div 
             className={`w-full h-full ${shapeClasses[shape]} flex items-center justify-center overflow-hidden`}
@@ -206,41 +271,74 @@ export function InteractiveLogoSpacing({
           
           {/* Guidelines */}
           {guidelines.map((guideline) => (
-            <div
-              key={guideline.id}
-              className="absolute cursor-move hover:opacity-75"
-              style={{
-                ...(guideline.type === 'horizontal' 
-                  ? {
-                      top: `${guideline.position}px`,
-                      left: 0,
-                      right: 0,
-                      height: '2px',
-                      borderTop: '2px dashed rgba(255, 0, 0, 0.6)'
-                    }
-                  : {
-                      left: `${guideline.position}px`,
-                      top: 0,
-                      bottom: 0,
-                      width: '2px',
-                      borderLeft: '2px dashed rgba(255, 0, 0, 0.6)'
-                    }
-                ),
-                zIndex: 10
-              }}
-              onMouseDown={(e) => handleGuidelineMouseDown(guideline, e)}
-              onDoubleClick={() => handleGuidelineDoubleClick(guideline)}
-              title="Drag to move, double-click to remove"
-            />
+            <div key={guideline.id}>
+              <div
+                className="absolute cursor-move hover:opacity-75"
+                style={{
+                  ...(guideline.type === 'horizontal' 
+                    ? {
+                        top: `${guideline.position}px`,
+                        left: 0,
+                        right: 0,
+                        height: '2px',
+                        borderTop: '2px dashed rgba(255, 0, 0, 0.8)'
+                      }
+                    : {
+                        left: `${guideline.position}px`,
+                        top: 0,
+                        bottom: 0,
+                        width: '2px',
+                        borderLeft: '2px dashed rgba(255, 0, 0, 0.8)'
+                      }
+                  ),
+                  zIndex: 10
+                }}
+                onMouseDown={(e) => handleGuidelineMouseDown(guideline, e)}
+                onDoubleClick={() => handleGuidelineDoubleClick(guideline)}
+                title="Drag to move, double-click to remove"
+              />
+              
+              {/* Guideline Label */}
+              <div
+                className="absolute bg-red-500 text-white text-xs px-1 py-0.5 rounded pointer-events-none"
+                style={{
+                  ...(guideline.type === 'horizontal'
+                    ? {
+                        top: `${guideline.position - 12}px`,
+                        left: '8px'
+                      }
+                    : {
+                        left: `${guideline.position + 8}px`,
+                        top: '8px'
+                      }
+                  ),
+                  zIndex: 11
+                }}
+              >
+                {guideline.name}: {Math.round(guideline.position / 10)}px
+              </div>
+            </div>
           ))}
         </div>
         
         {/* Instructions */}
         <div className="mt-4 text-sm text-muted-foreground">
-          <p>• Click on rulers to add guidelines</p>
-          <p>• Drag guidelines to reposition</p>
+          <p>• Drag from rulers to add guidelines</p>
+          <p>• Drag guidelines to reposition them</p>
           <p>• Double-click guidelines to remove</p>
-          <p>• Guidelines snap to {GRID_SIZE}px grid and edges</p>
+          <p>• Guidelines snap to {GRID_SIZE}px grid</p>
+          {guidelines.length > 0 && (
+            <div className="mt-2 p-2 bg-gray-50 rounded">
+              <strong>Active Guidelines:</strong>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                {guidelines.filter(g => !g.id.startsWith('temp-')).map(g => (
+                  <span key={g.id} className="text-xs">
+                    {g.name}: {Math.round(g.position / 10)}px
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

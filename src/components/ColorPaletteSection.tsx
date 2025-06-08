@@ -124,10 +124,8 @@ interface ColorCategoryProps {
   title: string;
   description: string;
   colors: ColorWithVariants[];
-  colorNames: { [key: string]: string };
   onAddColor: (color: string) => void;
   onRemoveColor: (index: number) => void;
-  onUpdateColorName: (index: number, name: string) => void;
   maxColors?: number;
   categoryType: 'primary' | 'secondary' | 'neutral';
 }
@@ -136,13 +134,12 @@ function ColorCategory({
   title,
   description,
   colors,
-  colorNames,
   onAddColor,
   onRemoveColor,
-  onUpdateColorName,
   maxColors = 3,
   categoryType
 }: ColorCategoryProps) {
+  const { colorNames, setColorName } = useBrandGuide();
   const [showColorForm, setShowColorForm] = useState(false);
   const [selectedColorIndex, setSelectedColorIndex] = useState<number | null>(null);
   
@@ -165,6 +162,11 @@ function ColorCategory({
     }
     onRemoveColor(index);
   };
+
+  const handleColorNameChange = (index: number, name: string) => {
+    const colorKey = `${categoryType}-${index}`;
+    setColorName(colorKey, name);
+  };
   
   return (
     <Card className="mb-8" id={`${categoryType}-colors`}>
@@ -174,31 +176,37 @@ function ColorCategory({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          {colors.map((color, index) => (
-            <div key={`${categoryType}-${index}`} className="relative group">
-              <ColorSwatch 
-                color={color} 
-                colorName={colorNames[`${categoryType}-${index}`]}
-                onNameChange={(name) => onUpdateColorName(index, name)}
-                showNameEditor={true}
-                className={`w-full cursor-pointer transition-all duration-300 ${
-                  selectedColorIndex === index ? 'ring-2 ring-primary' : ''
-                }`} 
-                onClick={() => handleColorClick(index)} 
-              />
-              <Button 
-                variant="destructive" 
-                size="icon" 
-                className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRemoveColor(index);
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          ))}
+          {colors.map((color, index) => {
+            const colorKey = `${categoryType}-${index}`;
+            const colorName = colorNames[colorKey];
+            
+            return (
+              <div key={`${categoryType}-${index}`} className="relative group">
+                <ColorSwatch 
+                  color={color} 
+                  colorKey={colorKey}
+                  colorName={colorName}
+                  onNameChange={(name) => handleColorNameChange(index, name)}
+                  showNameEditor={true}
+                  className={`w-full cursor-pointer transition-all duration-300 ${
+                    selectedColorIndex === index ? 'ring-2 ring-primary' : ''
+                  }`} 
+                  onClick={() => handleColorClick(index)} 
+                />
+                <Button 
+                  variant="destructive" 
+                  size="icon" 
+                  className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveColor(index);
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            );
+          })}
           
           {colors.length < maxColors && !showColorForm && (
             <button 
@@ -338,10 +346,8 @@ export function ColorPaletteSection() {
           title="Primary Colors" 
           description="The main brand colors that represent your identity. These colors should be used for main UI elements and branding." 
           colors={currentGuide.colors.primary} 
-          colorNames={colorNames}
           onAddColor={(color) => addColor('primary', color)} 
           onRemoveColor={(index) => removeColor('primary', index)}
-          onUpdateColorName={(index, name) => updateColorName('primary', index, name)}
           categoryType="primary"
         />
         
@@ -349,10 +355,8 @@ export function ColorPaletteSection() {
           title="Secondary Colors" 
           description="Complementary colors that support the primary palette. Use these for accents, highlights, and to add visual interest." 
           colors={currentGuide.colors.secondary} 
-          colorNames={colorNames}
           onAddColor={(color) => addColor('secondary', color)} 
           onRemoveColor={(index) => removeColor('secondary', index)}
-          onUpdateColorName={(index, name) => updateColorName('secondary', index, name)}
           categoryType="secondary"
         />
         
@@ -360,10 +364,8 @@ export function ColorPaletteSection() {
           title="Neutral Colors" 
           description="Grayscale and background tones for text, backgrounds, and UI elements. These provide balance to your color scheme." 
           colors={currentGuide.colors.neutral} 
-          colorNames={colorNames}
           onAddColor={(color) => addColor('neutral', color)} 
           onRemoveColor={(index) => removeColor('neutral', index)}
-          onUpdateColorName={(index, name) => updateColorName('neutral', index, name)}
           categoryType="neutral"
         />
       </div>

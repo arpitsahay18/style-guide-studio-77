@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 
 interface ColorSwatchProps {
   color: ColorWithVariants | string;
+  colorKey?: string;
   colorName?: string;
   onNameChange?: (name: string) => void;
   className?: string;
@@ -14,6 +15,7 @@ interface ColorSwatchProps {
 
 export function ColorSwatch({ 
   color, 
+  colorKey,
   colorName, 
   onNameChange, 
   className = '', 
@@ -44,7 +46,7 @@ export function ColorSwatch({
 
   const handleNameSave = () => {
     if (onNameChange) {
-      const finalName = tempName.trim().slice(0, 15) || colorValue;
+      const finalName = tempName.trim().slice(0, 20) || colorValue;
       onNameChange(finalName);
     }
     setIsEditing(false);
@@ -77,14 +79,14 @@ export function ColorSwatch({
             onBlur={handleNameSave}
             onKeyDown={handleKeyPress}
             className="font-medium text-sm h-6 px-1"
-            maxLength={15}
+            maxLength={20}
             autoFocus
           />
         ) : (
           <p 
-            className={`font-medium ${showNameEditor && onNameChange ? 'cursor-pointer hover:text-primary' : ''}`}
+            className={`font-medium text-sm ${showNameEditor && onNameChange ? 'cursor-pointer hover:text-primary' : ''}`}
             onClick={handleNameClick}
-            title={showNameEditor && onNameChange ? 'Click to edit name' : undefined}
+            title={showNameEditor && onNameChange ? 'Click to edit name (max 20 characters)' : undefined}
           >
             {colorName || colorValue}
           </p>

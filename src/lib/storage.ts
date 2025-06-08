@@ -1,48 +1,62 @@
 
-/**
- * Storage utility for persisting user preferences
- */
+import { BrandGuide } from '@/types';
 
-// Keys for local storage
-const KEYS = {
-  WELCOME_SEEN: 'brand-studio-welcome-seen',
-  TOOLTIPS_SEEN: 'brand-studio-tooltips-seen',
-};
+interface BrandGuideData {
+  guide: BrandGuide;
+  colorNames?: { [key: string]: string };
+  typographyVisibility?: {
+    display: string[];
+    heading: string[];
+    body: string[];
+  };
+  typographyNames?: { [key: string]: string };
+  previewText?: string;
+}
+
+const STORAGE_KEY = 'brand-guide-data';
+const WELCOME_SEEN_KEY = 'welcome-seen';
 
 export const storage = {
-  /**
-   * Check if user has seen the welcome message
-   */
-  hasSeenWelcome: (): boolean => {
-    return localStorage.getItem(KEYS.WELCOME_SEEN) === 'true';
-  },
-  
-  /**
-   * Mark welcome message as seen
-   */
-  markWelcomeSeen: (): void => {
-    localStorage.setItem(KEYS.WELCOME_SEEN, 'true');
-  },
-  
-  /**
-   * Check if user has completed the tooltips tour
-   */
-  hasSeenTooltips: (): boolean => {
-    return localStorage.getItem(KEYS.TOOLTIPS_SEEN) === 'true';
-  },
-  
-  /**
-   * Mark tooltips as seen
-   */
-  markTooltipsSeen: (): void => {
-    localStorage.setItem(KEYS.TOOLTIPS_SEEN, 'true');
+  saveBrandGuide: (data: BrandGuideData) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+      console.error('Failed to save brand guide to localStorage:', error);
+    }
   },
 
-  /**
-   * Reset all storage (for testing)
-   */
-  resetAll: (): void => {
-    localStorage.removeItem(KEYS.WELCOME_SEEN);
-    localStorage.removeItem(KEYS.TOOLTIPS_SEEN);
+  loadBrandGuide: (): BrandGuideData | null => {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Failed to load brand guide from localStorage:', error);
+      return null;
+    }
+  },
+
+  clearBrandGuide: () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      console.error('Failed to clear brand guide from localStorage:', error);
+    }
+  },
+
+  hasSeenWelcome: (): boolean => {
+    try {
+      return localStorage.getItem(WELCOME_SEEN_KEY) === 'true';
+    } catch (error) {
+      console.error('Failed to check welcome status:', error);
+      return false;
+    }
+  },
+
+  markWelcomeSeen: () => {
+    try {
+      localStorage.setItem(WELCOME_SEEN_KEY, 'true');
+    } catch (error) {
+      console.error('Failed to mark welcome as seen:', error);
+    }
   }
 };

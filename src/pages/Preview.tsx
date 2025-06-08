@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { MainLayout } from '@/components/MainLayout';
@@ -12,7 +11,13 @@ import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 
 const Preview = () => {
-  const { currentGuide, previewText } = useBrandGuide();
+  const { 
+    currentGuide, 
+    previewText, 
+    colorNames, 
+    typographyVisibility, 
+    typographyNames 
+  } = useBrandGuide();
   const contentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -35,6 +40,39 @@ const Preview = () => {
       </MainLayout>
     );
   }
+
+  const getColorDisplayName = (colorIndex: number, categoryType: 'primary' | 'secondary' | 'neutral') => {
+    const colorKey = `${categoryType}-${colorIndex}`;
+    const customName = colorNames[colorKey];
+    if (customName) return customName;
+    
+    const color = currentGuide.colors[categoryType][colorIndex];
+    return typeof color === 'string' ? color : color?.hex || 'Unknown Color';
+  };
+
+  const getTypographyDisplayName = (category: 'display' | 'heading' | 'body', styleKey: string) => {
+    const key = `${category}-${styleKey}`;
+    const customName = typographyNames[key];
+    if (customName) return customName;
+
+    const defaultNames: { [key: string]: string } = {
+      'display-large': 'Display Large',
+      'display-medium': 'Display Medium', 
+      'display-regular': 'Display Regular',
+      'display-thin': 'Display Thin',
+      'heading-h1': 'Heading H1',
+      'heading-h2': 'Heading H2',
+      'heading-h3': 'Heading H3',
+      'heading-h4': 'Heading H4',
+      'heading-h5': 'Heading H5',
+      'heading-h6': 'Heading H6',
+      'body-large': 'Body Large',
+      'body-medium': 'Body Medium',
+      'body-small': 'Body Small',
+    };
+
+    return defaultNames[key] || styleKey.charAt(0).toUpperCase() + styleKey.slice(1);
+  };
 
   const generatePDF = async () => {
     if (!contentRef.current) return;
@@ -140,42 +178,57 @@ const Preview = () => {
             <div>
               <h3 className="text-xl font-semibold mb-4">Display Typography</h3>
               <div className="grid gap-6">
-                {Object.entries(currentGuide.typography.display).map(([key, style]) => (
-                  <TypographyPreview 
-                    key={key}
-                    name={`Display ${key.charAt(0).toUpperCase() + key.slice(1)}`}
-                    style={style}
-                    previewText={previewText}
-                  />
-                ))}
+                {typographyVisibility.display.map((styleKey) => {
+                  const style = currentGuide.typography.display[styleKey];
+                  if (!style) return null;
+                  
+                  return (
+                    <TypographyPreview 
+                      key={styleKey}
+                      name={getTypographyDisplayName('display', styleKey)}
+                      style={style}
+                      previewText={previewText}
+                    />
+                  );
+                })}
               </div>
             </div>
             
             <div>
               <h3 className="text-xl font-semibold mb-4">Headings</h3>
               <div className="grid gap-6">
-                {Object.entries(currentGuide.typography.heading).map(([key, style]) => (
-                  <TypographyPreview 
-                    key={key}
-                    name={`Heading ${key.toUpperCase()}`}
-                    style={style}
-                    previewText={previewText}
-                  />
-                ))}
+                {typographyVisibility.heading.map((styleKey) => {
+                  const style = currentGuide.typography.heading[styleKey];
+                  if (!style) return null;
+                  
+                  return (
+                    <TypographyPreview 
+                      key={styleKey}
+                      name={getTypographyDisplayName('heading', styleKey)}
+                      style={style}
+                      previewText={previewText}
+                    />
+                  );
+                })}
               </div>
             </div>
             
             <div>
               <h3 className="text-xl font-semibold mb-4">Body Text</h3>
               <div className="grid gap-6">
-                {Object.entries(currentGuide.typography.body).map(([key, style]) => (
-                  <TypographyPreview 
-                    key={key}
-                    name={`Body ${key.charAt(0).toUpperCase() + key.slice(1)}`}
-                    style={style}
-                    previewText={previewText}
-                  />
-                ))}
+                {typographyVisibility.body.map((styleKey) => {
+                  const style = currentGuide.typography.body[styleKey];
+                  if (!style) return null;
+                  
+                  return (
+                    <TypographyPreview 
+                      key={styleKey}
+                      name={getTypographyDisplayName('body', styleKey)}
+                      style={style}
+                      previewText={previewText}
+                    />
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -190,7 +243,11 @@ const Preview = () => {
               <h3 className="text-xl font-semibold mb-4">Primary Colors</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {currentGuide.colors.primary.map((color, index) => (
-                  <ColorSwatch key={index} color={color} />
+                  <ColorSwatch 
+                    key={index} 
+                    color={color} 
+                    colorName={getColorDisplayName(index, 'primary')}
+                  />
                 ))}
               </div>
             </div>
@@ -199,7 +256,11 @@ const Preview = () => {
               <h3 className="text-xl font-semibold mb-4">Secondary Colors</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {currentGuide.colors.secondary.map((color, index) => (
-                  <ColorSwatch key={index} color={color} />
+                  <ColorSwatch 
+                    key={index} 
+                    color={color} 
+                    colorName={getColorDisplayName(index, 'secondary')}
+                  />
                 ))}
               </div>
             </div>
@@ -209,7 +270,11 @@ const Preview = () => {
                 <h3 className="text-xl font-semibold mb-4">Neutral Colors</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {currentGuide.colors.neutral.map((color, index) => (
-                    <ColorSwatch key={index} color={color} />
+                    <ColorSwatch 
+                      key={index} 
+                      color={color} 
+                      colorName={getColorDisplayName(index, 'neutral')}
+                    />
                   ))}
                 </div>
               </div>
@@ -284,4 +349,3 @@ const Preview = () => {
 };
 
 export default Preview;
-
