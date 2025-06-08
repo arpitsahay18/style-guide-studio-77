@@ -1,100 +1,13 @@
-
 import React, { useState } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { ColorWithVariants, ColorPalette } from '@/types';
 import { ColorSwatch } from '@/components/ui/ColorSwatch';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { EnhancedColorForm } from '@/components/EnhancedColorForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, X, AlertCircle, Copy, Check, Palette } from 'lucide-react';
-import { hexToRgb, formatRgb, rgbToCmyk, formatCmyk, generateTints, generateShades, calculateContrastRatio, getTriadicColors } from '@/utils/colorUtils';
+import { Plus, X, Copy, Check } from 'lucide-react';
+import { hexToRgb, formatRgb, rgbToCmyk, formatCmyk, generateTints, generateShades, calculateContrastRatio } from '@/utils/colorUtils';
 import { useToast } from "@/components/ui/use-toast";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { HexColorPicker } from "react-colorful";
-
-interface ColorFormProps {
-  onAdd: (color: string) => void;
-  onCancel: () => void;
-}
-function ColorForm({
-  onAdd,
-  onCancel
-}: ColorFormProps) {
-  const [colorValue, setColorValue] = useState('#000000');
-  const [error, setError] = useState('');
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validate hex color
-    const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-    if (!hexRegex.test(colorValue)) {
-      setError('Please enter a valid hex color (e.g., #FF5733)');
-      return;
-    }
-    onAdd(colorValue.toUpperCase());
-  };
-  const handleColorChange = (color: string) => {
-    setColorValue(color.toUpperCase());
-    setError(''); // Clear any previous errors
-  };
-  return <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="color-hex">Hex Color Code</Label>
-        <div className="flex gap-2 mt-1">
-          <Input 
-            id="color-hex" 
-            type="text" 
-            value={colorValue} 
-            onChange={e => setColorValue(e.target.value)} 
-            placeholder="#000000" 
-            className="font-mono" 
-          />
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="w-10 h-10 p-0" 
-                style={{backgroundColor: colorValue}}
-              >
-                <span className="sr-only">Pick a color</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="flex flex-col gap-4">
-                <h4 className="font-medium">Pick a color</h4>
-                <HexColorPicker color={colorValue} onChange={handleColorChange} />
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">
-                    Selected: {colorValue}
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="secondary"
-                    onClick={() => onAdd(colorValue.toUpperCase())}
-                  >
-                    <Palette className="h-4 w-4 mr-1" />
-                    Select
-                  </Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-        {error && <p className="text-destructive text-sm mt-1 flex items-center">
-            <AlertCircle className="h-3 w-3 mr-1" /> {error}
-          </p>}
-      </div>
-      
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" type="button" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit">Add Color</Button>
-      </div>
-    </form>;
-}
 
 interface ColorDetailProps {
   color: ColorWithVariants;
@@ -211,8 +124,10 @@ interface ColorCategoryProps {
   title: string;
   description: string;
   colors: ColorWithVariants[];
+  colorNames: { [key: string]: string };
   onAddColor: (color: string) => void;
   onRemoveColor: (index: number) => void;
+  onUpdateColorName: (index: number, name: string) => void;
   maxColors?: number;
   categoryType: 'primary' | 'secondary' | 'neutral';
 }
@@ -221,8 +136,10 @@ function ColorCategory({
   title,
   description,
   colors,
+  colorNames,
   onAddColor,
   onRemoveColor,
+  onUpdateColorName,
   maxColors = 3,
   categoryType
 }: ColorCategoryProps) {
@@ -261,6 +178,9 @@ function ColorCategory({
             <div key={`${categoryType}-${index}`} className="relative group">
               <ColorSwatch 
                 color={color} 
+                colorName={colorNames[`${categoryType}-${index}`]}
+                onNameChange={(name) => onUpdateColorName(index, name)}
+                showNameEditor={true}
                 className={`w-full cursor-pointer transition-all duration-300 ${
                   selectedColorIndex === index ? 'ring-2 ring-primary' : ''
                 }`} 
@@ -293,7 +213,10 @@ function ColorCategory({
         
         {showColorForm && (
           <div className="border border-border rounded-md p-4 bg-card animate-fade-in">
-            <ColorForm onAdd={handleAddColor} onCancel={() => setShowColorForm(false)} />
+            <EnhancedColorForm 
+              onAdd={handleAddColor} 
+              onCancel={() => setShowColorForm(false)} 
+            />
           </div>
         )}
         
@@ -308,6 +231,7 @@ function ColorCategory({
 export function ColorPaletteSection() {
   const { currentGuide, updateColors } = useBrandGuide();
   const { toast } = useToast();
+  const [colorNames, setColorNames] = useState<{ [key: string]: string }>({});
 
   // Helper function to process a color when added
   const processColor = (hex: string): ColorWithVariants | null => {
@@ -364,10 +288,43 @@ export function ColorPaletteSection() {
     
     updateColors(updatedColors);
     
+    // Remove color name
+    const colorKey = `${category}-${index}`;
+    setColorNames(prev => {
+      const newNames = { ...prev };
+      delete newNames[colorKey];
+      
+      // Adjust indices for remaining colors
+      const adjustedNames: { [key: string]: string } = {};
+      Object.entries(newNames).forEach(([key, value]) => {
+        if (key.startsWith(`${category}-`)) {
+          const keyIndex = parseInt(key.split('-')[1]);
+          if (keyIndex > index) {
+            adjustedNames[`${category}-${keyIndex - 1}`] = value;
+          } else {
+            adjustedNames[key] = value;
+          }
+        } else {
+          adjustedNames[key] = value;
+        }
+      });
+      
+      return adjustedNames;
+    });
+    
     toast({
       title: "Color removed",
       description: `Removed color from ${category} palette.`
     });
+  };
+
+  // Update color name
+  const updateColorName = (category: 'primary' | 'secondary' | 'neutral', index: number, name: string) => {
+    const colorKey = `${category}-${index}`;
+    setColorNames(prev => ({
+      ...prev,
+      [colorKey]: name
+    }));
   };
 
   return (
@@ -381,8 +338,10 @@ export function ColorPaletteSection() {
           title="Primary Colors" 
           description="The main brand colors that represent your identity. These colors should be used for main UI elements and branding." 
           colors={currentGuide.colors.primary} 
+          colorNames={colorNames}
           onAddColor={(color) => addColor('primary', color)} 
           onRemoveColor={(index) => removeColor('primary', index)}
+          onUpdateColorName={(index, name) => updateColorName('primary', index, name)}
           categoryType="primary"
         />
         
@@ -390,8 +349,10 @@ export function ColorPaletteSection() {
           title="Secondary Colors" 
           description="Complementary colors that support the primary palette. Use these for accents, highlights, and to add visual interest." 
           colors={currentGuide.colors.secondary} 
+          colorNames={colorNames}
           onAddColor={(color) => addColor('secondary', color)} 
           onRemoveColor={(index) => removeColor('secondary', index)}
+          onUpdateColorName={(index, name) => updateColorName('secondary', index, name)}
           categoryType="secondary"
         />
         
@@ -399,8 +360,10 @@ export function ColorPaletteSection() {
           title="Neutral Colors" 
           description="Grayscale and background tones for text, backgrounds, and UI elements. These provide balance to your color scheme." 
           colors={currentGuide.colors.neutral} 
+          colorNames={colorNames}
           onAddColor={(color) => addColor('neutral', color)} 
           onRemoveColor={(index) => removeColor('neutral', index)}
+          onUpdateColorName={(index, name) => updateColorName('neutral', index, name)}
           categoryType="neutral"
         />
       </div>
