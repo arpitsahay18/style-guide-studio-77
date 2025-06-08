@@ -13,86 +13,37 @@ import { useNavigate } from 'react-router-dom';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { useToast } from '@/hooks/use-toast';
 import { WelcomeDialog } from '@/components/WelcomeDialog';
+import { storage } from '@/lib/storage';
 
 const Index = () => {
   const navigate = useNavigate();
   const { currentGuide, setGuideName, activeTab, setActiveTab } = useBrandGuide();
   const { toast } = useToast();
-  const [brandName, setBrandName] = useState(currentGuide?.name || '');
+  const [brandName, setBrandName] = useState(currentGuide.name);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
-  const [hasError, setHasError] = useState(false);
 
-  // Error boundary-like behavior
+  // Initialize welcome dialog
   useEffect(() => {
-    const handleError = (event: ErrorEvent) => {
-      console.error('Application error:', event.error);
-      setHasError(true);
-    };
-
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, []);
-
-  // Initialize welcome dialog safely
-  useEffect(() => {
-    try {
-      const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
-      if (!hasSeenWelcome) {
-        setWelcomeOpen(true);
-      }
-    } catch (error) {
-      console.error('Error checking welcome status:', error);
+    // Check if user has seen the welcome dialog
+    if (!storage.hasSeenWelcome()) {
+      setWelcomeOpen(true);
     }
   }, []);
 
   // Handle welcome dialog completion
   const handleWelcomeComplete = () => {
-    try {
-      localStorage.setItem('hasSeenWelcome', 'true');
-      setWelcomeOpen(false);
-    } catch (error) {
-      console.error('Error saving welcome status:', error);
-      setWelcomeOpen(false);
-    }
+    storage.markWelcomeSeen();
+    setWelcomeOpen(false);
   };
 
   useEffect(() => {
-    if (currentGuide?.name) {
-      setBrandName(currentGuide.name);
-    }
-  }, [currentGuide?.name]);
-
-  // Safety check for currentGuide
-  if (!currentGuide) {
-    return (
-      <MainLayout>
-        <div className="container mx-auto px-4 py-8">
-          <p className="text-center text-muted-foreground">Loading brand guide...</p>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  if (hasError) {
-    return (
-      <MainLayout>
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center space-y-4">
-            <h1 className="text-2xl font-bold text-destructive">Something went wrong</h1>
-            <p className="text-muted-foreground">Please refresh the page to try again.</p>
-            <Button onClick={() => window.location.reload()}>
-              Refresh Page
-            </Button>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
+    setBrandName(currentGuide.name);
+  }, [currentGuide.name]);
 
   const isGuideComplete = 
-    currentGuide.colors?.primary?.length > 0 && 
-    currentGuide.colors?.secondary?.length > 0 && 
-    Boolean(currentGuide.logos?.original);
+    currentGuide.colors.primary.length > 0 && 
+    currentGuide.colors.secondary.length > 0 && 
+    Boolean(currentGuide.logos.original);
   
   const viewPreview = () => {
     if (!brandName.trim()) {

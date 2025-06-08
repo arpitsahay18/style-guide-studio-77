@@ -23,8 +23,8 @@ export function InteractiveLogoSpacing({
   const [dragGuideline, setDragGuideline] = useState<Guideline | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 400, height: 400 });
   
-  const GRID_SIZE = 8;
-  const SNAP_THRESHOLD = 5;
+  const GRID_SIZE = 8; // Snap grid size in pixels
+  const SNAP_THRESHOLD = 5; // Snap to edges within 5px
   const MAX_GUIDELINES = 20;
 
   const shapeClasses = {
@@ -32,15 +32,6 @@ export function InteractiveLogoSpacing({
     rounded: 'rounded-2xl',
     circle: 'rounded-full',
   };
-
-  // Safety check for logo
-  if (!logo || !logo.src) {
-    return (
-      <div className="p-4 border border-dashed border-gray-300 rounded-lg">
-        <p className="text-muted-foreground">No logo available for spacing guidelines</p>
-      </div>
-    );
-  }
 
   useEffect(() => {
     const updateSize = () => {
@@ -56,8 +47,10 @@ export function InteractiveLogoSpacing({
   }, []);
 
   const snapToGrid = (position: number, containerDimension: number) => {
+    // Snap to grid
     const gridSnapped = Math.round(position / GRID_SIZE) * GRID_SIZE;
     
+    // Snap to edges
     if (Math.abs(position) < SNAP_THRESHOLD) return 0;
     if (Math.abs(position - containerDimension) < SNAP_THRESHOLD) return containerDimension;
     
@@ -132,9 +125,10 @@ export function InteractiveLogoSpacing({
     setGuidelines(prev => prev.filter(g => g.id !== guideline.id));
   };
 
+  // Generate ruler tick marks
   const generateTicks = (dimension: number, isVertical: boolean = false) => {
     const ticks = [];
-    const tickSpacing = 20;
+    const tickSpacing = 20; // Show tick every 20px
     
     for (let i = 0; i <= dimension; i += tickSpacing) {
       ticks.push(
@@ -162,6 +156,7 @@ export function InteractiveLogoSpacing({
       </p>
       
       <div className="relative inline-block">
+        {/* Top Ruler */}
         <div 
           className="absolute -top-6 left-6 bg-gray-100 border-b cursor-crosshair select-none"
           style={{ width: containerSize.width, height: '24px' }}
@@ -170,6 +165,7 @@ export function InteractiveLogoSpacing({
           {generateTicks(containerSize.width)}
         </div>
 
+        {/* Left Ruler */}
         <div 
           className="absolute -left-6 top-6 bg-gray-100 border-r cursor-crosshair select-none"
           style={{ width: '24px', height: containerSize.height }}
@@ -178,26 +174,37 @@ export function InteractiveLogoSpacing({
           {generateTicks(containerSize.height, true)}
         </div>
 
+        {/* Logo Container */}
         <div 
           ref={containerRef}
           className="relative border border-dashed border-gray-300 bg-white"
           style={{ width: '400px', height: '400px' }}
         >
+          {/* Grid overlay (invisible) */}
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-0"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px)
+              `,
+              backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`
+            }}
+          />
+          
+          {/* Logo */}
           <div 
             className={`w-full h-full ${shapeClasses[shape]} flex items-center justify-center overflow-hidden`}
-            style={{ backgroundColor: logo.background || '#ffffff' }}
+            style={{ backgroundColor: logo.background }}
           >
             <img 
               src={logo.src} 
               alt="Logo with spacing guidelines" 
               className="max-w-[75%] max-h-[75%] object-contain"
-              onError={(e) => {
-                console.error('Logo failed to load:', logo.src);
-                e.currentTarget.style.display = 'none';
-              }}
             />
           </div>
           
+          {/* Guidelines */}
           {guidelines.map((guideline) => (
             <div
               key={guideline.id}
@@ -228,6 +235,7 @@ export function InteractiveLogoSpacing({
           ))}
         </div>
         
+        {/* Instructions */}
         <div className="mt-4 text-sm text-muted-foreground">
           <p>• Click on rulers to add guidelines</p>
           <p>• Drag guidelines to reposition</p>
