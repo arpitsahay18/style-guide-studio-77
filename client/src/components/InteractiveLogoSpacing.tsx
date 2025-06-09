@@ -249,23 +249,34 @@ export function InteractiveLogoSpacing({
       </p>
       
       <div className="relative inline-block">
-        <div className="relative">
-          {/* Top Ruler */}
+        {/* Main container with rulers properly positioned */}
+        <div className="relative" style={{ marginLeft: '30px', marginTop: '30px' }}>
+          {/* Top Ruler - positioned above the logo container */}
           <div 
-            className="absolute -top-6 left-0 bg-gray-100 border-b cursor-grab select-none hover:bg-gray-200 relative"
-            style={{ width: containerSize.width, height: '24px' }}
+            className="absolute bg-gray-100 border-b cursor-grab select-none hover:bg-gray-200 relative"
+            style={{ 
+              width: '400px', 
+              height: '24px',
+              top: '-30px',
+              left: '0px'
+            }}
             onMouseDown={(e) => handleRulerMouseDown(e, 'vertical')}
           >
-            {generateTicks(containerSize.width)}
+            {generateTicks(400)}
           </div>
 
-          {/* Left Ruler */}
+          {/* Left Ruler - positioned to the left of the logo container */}
           <div 
-            className="absolute -left-6 top-0 bg-gray-100 border-r cursor-grab select-none hover:bg-gray-200 relative"
-            style={{ width: '24px', height: containerSize.height }}
+            className="absolute bg-gray-100 border-r cursor-grab select-none hover:bg-gray-200 relative"
+            style={{ 
+              width: '24px', 
+              height: '400px',
+              top: '0px',
+              left: '-30px'
+            }}
             onMouseDown={(e) => handleRulerMouseDown(e, 'horizontal')}
           >
-            {generateTicks(containerSize.height, true)}
+            {generateTicks(400, true)}
           </div>
 
           {/* Logo Container */}
