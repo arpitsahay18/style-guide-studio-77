@@ -209,7 +209,8 @@ export function ExportSection() {
         const logoSize = 60;
         const logoSpacing = (pageWidth - margin * 2 - logoSize * logosPerRow) / (logosPerRow - 1);
 
-        shapeLogos.forEach((logo, index) => {
+        for (let index = 0; index < shapeLogos.length; index++) {
+          const logo = shapeLogos[index];
           const row = Math.floor(index / logosPerRow);
           const col = index % logosPerRow;
           
@@ -253,13 +254,13 @@ export function ExportSection() {
               const description = `${logo.type === 'color' ? 'Color' : logo.type === 'white' ? 'White' : 'Black'} on ${logo.background}`;
               doc.text(description, xPos + logoSize/2, yPos + logoSize + 5, { align: 'center' });
             };
-            logoImg.src = logo.src;
+            logoImg.src = currentGuide.logos.original;
           }
 
           if ((index + 1) % logosPerRow === 0) {
             yPosition += logoSize + 25;
           }
-        });
+        }
       }
 
       // Save the PDF

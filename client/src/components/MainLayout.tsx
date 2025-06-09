@@ -47,7 +47,7 @@ export function MainLayout({
         </div>
       </header>
       
-      <main className="flex-1 bg-background py-6 overflow-x-hidden overflow-y-auto">
+      <main className="flex-1 bg-background py-6 overflow-x-hidden">
         {children}
       </main>
       
