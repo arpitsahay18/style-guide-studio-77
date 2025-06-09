@@ -1,112 +1,128 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ChevronDown, Search } from 'lucide-react';
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from '@/components/ui/command';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { FontFamily } from '@/types';
 
 interface FontSelectorProps {
   value: string;
   onChange: (font: string) => void;
-  label: string;
-  availableFonts: { name: string; category: string }[];
+  availableFonts?: FontFamily[];
 }
 
-export function ImprovedFontSelector({ value, onChange, label, availableFonts }: FontSelectorProps) {
+export function ImprovedFontSelector({ value, onChange, availableFonts = [] }: FontSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Filter fonts based on search
-  const filteredFonts = availableFonts.filter(font =>
-    font.name.toLowerCase().includes(searchValue.toLowerCase())
+  // Ensure we have a valid array of fonts to work with
+  const fonts = Array.isArray(availableFonts) ? availableFonts : [];
+
+  // Filter fonts based on search term
+  const filteredFonts = fonts.filter(font =>
+    font.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Keep input focused when dropdown is open
-  useEffect(() => {
-    if (open && inputRef.current) {
-      // Small delay to ensure the input is rendered
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
+  // Group fonts by category
+  const groupedFonts = filteredFonts.reduce((acc, font) => {
+    const category = font.category || 'other';
+    if (!acc[category]) {
+      acc[category] = [];
     }
-  }, [open]);
+    acc[category].push(font);
+    return acc;
+  }, {} as Record<string, FontFamily[]>);
 
-  const handleFontSelect = (fontName: string) => {
-    onChange(fontName);
+  const handleSelect = (fontName: string) => {
+    onChange(`"${fontName}", ${getCategoryFallback(fontName)}`);
     setOpen(false);
-    setSearchValue('');
+  };
+
+  const getCategoryFallback = (fontName: string) => {
+    const font = fonts.find(f => f.name === fontName);
+    switch (font?.category) {
+      case 'serif':
+        return 'serif';
+      case 'monospace':
+        return 'monospace';
+      default:
+        return 'sans-serif';
+    }
+  };
+
+  const getDisplayValue = () => {
+    if (!value) return 'Select font...';
+    
+    // Extract font name from the value (remove quotes and fallback)
+    const match = value.match(/^"([^"]+)"/);
+    return match ? match[1] : value;
   };
 
   return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-          >
-            <span className="truncate">
-              {value || "Select font..."}
-            </span>
-            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
-          <Command shouldFilter={false}>
-            <div className="flex items-center border-b px-3">
-              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-              <input
-                ref={inputRef}
-                placeholder="Search fonts..."
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 caret-black"
-                style={{ caretColor: 'black' }}
-                autoFocus
-              />
-            </div>
-            <div className="max-h-60 overflow-auto">
-              {filteredFonts.length === 0 && (
-                <div className="py-6 text-center text-sm">No fonts found.</div>
-              )}
-              <CommandGroup>
-                {filteredFonts.map((font) => (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+          style={{ cursor: 'pointer' }}
+        >
+          <span className="truncate">{getDisplayValue()}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Search fonts..."
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+            className="h-9"
+            style={{ cursor: 'text' }}
+          />
+          <CommandList className="max-h-[300px]">
+            <CommandEmpty>
+              {fonts.length === 0 ? 'No fonts available.' : 'No fonts found.'}
+            </CommandEmpty>
+            {Object.entries(groupedFonts).map(([category, categoryFonts]) => (
+              <CommandGroup key={category} heading={category.charAt(0).toUpperCase() + category.slice(1)}>
+                {categoryFonts.map((font) => (
                   <CommandItem
                     key={font.name}
-                    onSelect={() => handleFontSelect(font.name)}
+                    value={font.name}
+                    onSelect={() => handleSelect(font.name)}
                     className="cursor-pointer"
                   >
-                    <div className="flex flex-col">
-                      <span style={{ fontFamily: font.name }}>
-                        {font.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {font.category}
-                      </span>
-                    </div>
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        getDisplayValue() === font.name ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <span style={{ fontFamily: `"${font.name}", ${getCategoryFallback(font.name)}` }}>
+                      {font.name}
+                    </span>
                   </CommandItem>
                 ))}
               </CommandGroup>
-            </div>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    </div>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

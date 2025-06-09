@@ -22,6 +22,7 @@ import {
 import { ImprovedFontSelector } from './ImprovedFontSelector';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { Plus } from 'lucide-react';
+import { FontFamily } from '@/types';
 
 interface AddTypographyStyleDialogProps {
   category: 'display' | 'heading' | 'body';
@@ -42,7 +43,7 @@ const predefinedStyles = {
 };
 
 // Available fonts for the selector
-const availableFonts = [
+const availableFonts: FontFamily[] = [
   { name: 'Inter', category: 'sans-serif' },
   { name: 'Roboto', category: 'sans-serif' },
   { name: 'Open Sans', category: 'sans-serif' },
@@ -166,10 +167,10 @@ export function AddTypographyStyleDialog({ category, hiddenStyles = [] }: AddTyp
           )}
 
           <div className="grid gap-2">
+            <Label>Font Family</Label>
             <ImprovedFontSelector
               value={customStyle.fontFamily}
               onChange={(font) => setCustomStyle(prev => ({ ...prev, fontFamily: font }))}
-              label="Font Family"
               availableFonts={availableFonts}
             />
           </div>
