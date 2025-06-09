@@ -8,14 +8,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { HexColorPicker } from "react-colorful";
 import { hexToRgb, formatRgb, rgbToCmyk, formatCmyk, generateTints, generateShades, calculateContrastRatio } from '@/utils/colorUtils';
 import { useToast } from "@/components/ui/use-toast";
+import { ColorInput } from '@/types';
 
 interface EnhancedColorFormProps {
-  onAdd: (color: string) => void;
+  onSubmit: (color: ColorInput) => void;
   onCancel: () => void;
+  title: string;
+  initialColor?: string;
 }
 
-export function EnhancedColorForm({ onAdd, onCancel }: EnhancedColorFormProps) {
-  const [colorValue, setColorValue] = useState('#FF4C4C');
+export function EnhancedColorForm({ onSubmit, onCancel, title, initialColor = '#FF4C4C' }: EnhancedColorFormProps) {
+  const [colorValue, setColorValue] = useState(initialColor);
   const [error, setError] = useState('');
   const [colorDetails, setColorDetails] = useState<any>(null);
   const [copied, setCopied] = useState(false);
@@ -54,7 +57,7 @@ export function EnhancedColorForm({ onAdd, onCancel }: EnhancedColorFormProps) {
       setError('Please enter a valid hex color (e.g., #FF5733)');
       return;
     }
-    onAdd(colorValue.toUpperCase());
+    onSubmit({ hex: colorValue.toUpperCase() });
   };
 
   const handleColorChange = (color: string) => {
@@ -80,148 +83,154 @@ export function EnhancedColorForm({ onAdd, onCancel }: EnhancedColorFormProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label htmlFor="color-hex">Hex Color Code</Label>
-          <div className="flex gap-2 mt-1">
-            <Input 
-              id="color-hex" 
-              type="text" 
-              value={colorValue} 
-              onChange={handleInputChange}
-              placeholder="#000000" 
-              className="font-mono" 
-            />
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="w-10 h-10 p-0" 
-                  style={{backgroundColor: colorValue}}
-                >
-                  <span className="sr-only">Pick a color</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80">
-                <div className="flex flex-col gap-4">
-                  <h4 className="font-medium">Pick a color</h4>
-                  <HexColorPicker color={colorValue} onChange={handleColorChange} />
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground">
-                      Selected: {colorValue}
-                    </div>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-semibold mb-4">{title}</h2>
+        
+        <div className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="color-hex">Hex Color Code</Label>
+              <div className="flex gap-2 mt-1">
+                <Input 
+                  id="color-hex" 
+                  type="text" 
+                  value={colorValue} 
+                  onChange={handleInputChange}
+                  placeholder="#000000" 
+                  className="font-mono" 
+                />
+                <Popover>
+                  <PopoverTrigger asChild>
                     <Button 
-                      size="sm" 
-                      variant="secondary"
-                      onClick={() => onAdd(colorValue.toUpperCase())}
+                      variant="outline" 
+                      className="w-10 h-10 p-0" 
+                      style={{backgroundColor: colorValue}}
                     >
-                      <Palette className="h-4 w-4 mr-1" />
-                      Select
+                      <span className="sr-only">Pick a color</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="flex flex-col gap-4">
+                      <h4 className="font-medium">Pick a color</h4>
+                      <HexColorPicker color={colorValue} onChange={handleColorChange} />
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-muted-foreground">
+                          Selected: {colorValue}
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="secondary"
+                          onClick={() => onSubmit({ hex: colorValue.toUpperCase() })}
+                        >
+                          <Palette className="h-4 w-4 mr-1" />
+                          Select
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              {error && (
+                <p className="text-destructive text-sm mt-1 flex items-center">
+                  <AlertCircle className="h-3 w-3 mr-1" /> {error}
+                </p>
+              )}
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" type="button" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button type="submit">Add Color</Button>
+            </div>
+          </form>
+
+          {/* Real-time Context Panel */}
+          {colorDetails && (
+            <div className="p-4 border border-border rounded-md bg-card animate-fade-in">
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium">{colorDetails.hex}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {colorDetails.rgb} · {colorDetails.cmyk}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <div 
+                      className="w-16 h-16 rounded-md border border-border shadow-sm" 
+                      style={{ backgroundColor: colorDetails.hex }} 
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => copyToClipboard(colorDetails.hex)} 
+                      className="h-8 w-8"
+                    >
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
                 </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-          {error && (
-            <p className="text-destructive text-sm mt-1 flex items-center">
-              <AlertCircle className="h-3 w-3 mr-1" /> {error}
-            </p>
+                
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Contrast Ratio</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-white border border-border"></div>
+                      <span className="text-sm">
+                        White: {colorDetails.whiteContrast?.toFixed(2) || 'N/A'}
+                        <span className={colorDetails.whiteContrast >= 4.5 ? "text-green-500 ml-1" : "text-destructive ml-1"}>
+                          {colorDetails.whiteContrast >= 4.5 ? "✓" : "✗"}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-black border border-border"></div>
+                      <span className="text-sm">
+                        Black: {colorDetails.blackContrast?.toFixed(2) || 'N/A'}
+                        <span className={colorDetails.blackContrast >= 4.5 ? "text-green-500 ml-1" : "text-destructive ml-1"}>
+                          {colorDetails.blackContrast >= 4.5 ? "✓" : "✗"}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Tints</h4>
+                  <div className="grid grid-cols-5 gap-1">
+                    {colorDetails.tints?.map((tint: string, index: number) => (
+                      <div 
+                        key={`tint-${index}`} 
+                        className="w-full aspect-square rounded-sm border border-border cursor-pointer" 
+                        style={{ backgroundColor: tint }} 
+                        title={tint} 
+                        onClick={() => copyToClipboard(tint)} 
+                      />
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Shades</h4>
+                  <div className="grid grid-cols-5 gap-1">
+                    {colorDetails.shades?.map((shade: string, index: number) => (
+                      <div 
+                        key={`shade-${index}`} 
+                        className="w-full aspect-square rounded-sm border border-border cursor-pointer" 
+                        style={{ backgroundColor: shade }} 
+                        title={shade} 
+                        onClick={() => copyToClipboard(shade)} 
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
-        
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" type="button" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit">Add Color</Button>
-        </div>
-      </form>
-
-      {/* Real-time Context Panel */}
-      {colorDetails && (
-        <div className="p-4 border border-border rounded-md bg-card animate-fade-in">
-          <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-medium">{colorDetails.hex}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {colorDetails.rgb} · {colorDetails.cmyk}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <div 
-                  className="w-16 h-16 rounded-md border border-border shadow-sm" 
-                  style={{ backgroundColor: colorDetails.hex }} 
-                />
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => copyToClipboard(colorDetails.hex)} 
-                  className="h-8 w-8"
-                >
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="text-sm font-medium mb-2">Contrast Ratio</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-white border border-border"></div>
-                  <span className="text-sm">
-                    White: {colorDetails.whiteContrast?.toFixed(2) || 'N/A'}
-                    <span className={colorDetails.whiteContrast >= 4.5 ? "text-green-500 ml-1" : "text-destructive ml-1"}>
-                      {colorDetails.whiteContrast >= 4.5 ? "✓" : "✗"}
-                    </span>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-black border border-border"></div>
-                  <span className="text-sm">
-                    Black: {colorDetails.blackContrast?.toFixed(2) || 'N/A'}
-                    <span className={colorDetails.blackContrast >= 4.5 ? "text-green-500 ml-1" : "text-destructive ml-1"}>
-                      {colorDetails.blackContrast >= 4.5 ? "✓" : "✗"}
-                    </span>
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="text-sm font-medium mb-2">Tints</h4>
-              <div className="grid grid-cols-5 gap-1">
-                {colorDetails.tints?.map((tint: string, index: number) => (
-                  <div 
-                    key={`tint-${index}`} 
-                    className="w-full aspect-square rounded-sm border border-border cursor-pointer" 
-                    style={{ backgroundColor: tint }} 
-                    title={tint} 
-                    onClick={() => copyToClipboard(tint)} 
-                  />
-                ))}
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="text-sm font-medium mb-2">Shades</h4>
-              <div className="grid grid-cols-5 gap-1">
-                {colorDetails.shades?.map((shade: string, index: number) => (
-                  <div 
-                    key={`shade-${index}`} 
-                    className="w-full aspect-square rounded-sm border border-border cursor-pointer" 
-                    style={{ backgroundColor: shade }} 
-                    title={shade} 
-                    onClick={() => copyToClipboard(shade)} 
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

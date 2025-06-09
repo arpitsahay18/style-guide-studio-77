@@ -19,12 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { FontSelector } from './FontSelector';
+import { ImprovedFontSelector } from './ImprovedFontSelector';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { Plus } from 'lucide-react';
 
 interface AddTypographyStyleDialogProps {
   category: 'display' | 'heading' | 'body';
+  hiddenStyles?: string[];
 }
 
 const predefinedStyles = {
@@ -40,7 +41,34 @@ const predefinedStyles = {
   ]
 };
 
-export function AddTypographyStyleDialog({ category }: AddTypographyStyleDialogProps) {
+// Available fonts for the selector
+const availableFonts = [
+  { name: 'Inter', category: 'sans-serif' },
+  { name: 'Roboto', category: 'sans-serif' },
+  { name: 'Open Sans', category: 'sans-serif' },
+  { name: 'Lato', category: 'sans-serif' },
+  { name: 'Montserrat', category: 'sans-serif' },
+  { name: 'Source Sans Pro', category: 'sans-serif' },
+  { name: 'Raleway', category: 'sans-serif' },
+  { name: 'Ubuntu', category: 'sans-serif' },
+  { name: 'Nunito', category: 'sans-serif' },
+  { name: 'PT Sans', category: 'sans-serif' },
+  { name: 'Playfair Display', category: 'serif' },
+  { name: 'Merriweather', category: 'serif' },
+  { name: 'Lora', category: 'serif' },
+  { name: 'Source Serif Pro', category: 'serif' },
+  { name: 'Crimson Text', category: 'serif' },
+  { name: 'Libre Baskerville', category: 'serif' },
+  { name: 'Cormorant Garamond', category: 'serif' },
+  { name: 'EB Garamond', category: 'serif' },
+  { name: 'Roboto Mono', category: 'monospace' },
+  { name: 'Source Code Pro', category: 'monospace' },
+  { name: 'JetBrains Mono', category: 'monospace' },
+  { name: 'Fira Code', category: 'monospace' },
+  { name: 'Space Mono', category: 'monospace' },
+];
+
+export function AddTypographyStyleDialog({ category, hiddenStyles = [] }: AddTypographyStyleDialogProps) {
   const { addTypographyStyle } = useBrandGuide();
   const [open, setOpen] = useState(false);
   const [styleType, setStyleType] = useState<'predefined' | 'custom'>('predefined');
@@ -138,10 +166,11 @@ export function AddTypographyStyleDialog({ category }: AddTypographyStyleDialogP
           )}
 
           <div className="grid gap-2">
-            <FontSelector
+            <ImprovedFontSelector
               value={customStyle.fontFamily}
               onChange={(font) => setCustomStyle(prev => ({ ...prev, fontFamily: font }))}
               label="Font Family"
+              availableFonts={availableFonts}
             />
           </div>
 

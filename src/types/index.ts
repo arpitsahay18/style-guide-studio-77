@@ -50,6 +50,17 @@ export interface ColorInfo {
   cmyk: string;
 }
 
+export interface ColorInput {
+  hex: string;
+}
+
+export interface ColorWithTintsShades extends ColorInfo {
+  tints: string[];
+  shades: string[];
+  blackContrast: number;
+  whiteContrast: number;
+}
+
 export interface ColorWithVariants extends ColorInfo {
   tints: string[];
   shades: string[];
