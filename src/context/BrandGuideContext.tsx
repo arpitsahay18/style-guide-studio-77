@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrandGuide, ColorPalette, TypographySet } from '@/types';
 import { storage } from '@/lib/storage';
@@ -88,26 +87,12 @@ const defaultBrandGuide: BrandGuide = {
         lineHeight: '1.2',
         letterSpacing: '-0.02em'
       },
-      medium: {
-        fontFamily: '"Bebas Neue", sans-serif',
-        fontSize: '40px',
-        fontWeight: '600',
-        lineHeight: '1.2',
-        letterSpacing: '-0.01em'
-      },
       regular: {
         fontFamily: '"Bebas Neue", sans-serif',
         fontSize: '32px',
         fontWeight: '400',
         lineHeight: '1.3',
         letterSpacing: '-0.01em'
-      },
-      thin: {
-        fontFamily: '"Bebas Neue", sans-serif',
-        fontSize: '28px',
-        fontWeight: '300',
-        lineHeight: '1.3',
-        letterSpacing: '0em'
       }
     },
     heading: {
@@ -128,27 +113,6 @@ const defaultBrandGuide: BrandGuide = {
       h3: {
         fontFamily: '"Inter", sans-serif',
         fontSize: '24px',
-        fontWeight: '500',
-        lineHeight: '1.4',
-        letterSpacing: '0em'
-      },
-      h4: {
-        fontFamily: '"Inter", sans-serif',
-        fontSize: '20px',
-        fontWeight: '500',
-        lineHeight: '1.4',
-        letterSpacing: '0em'
-      },
-      h5: {
-        fontFamily: '"Inter", sans-serif',
-        fontSize: '18px',
-        fontWeight: '500',
-        lineHeight: '1.4',
-        letterSpacing: '0em'
-      },
-      h6: {
-        fontFamily: '"Inter", sans-serif',
-        fontSize: '16px',
         fontWeight: '500',
         lineHeight: '1.4',
         letterSpacing: '0em'
@@ -173,48 +137,6 @@ const defaultBrandGuide: BrandGuide = {
         fontFamily: '"Inter", sans-serif',
         fontSize: '14px',
         fontWeight: '400',
-        lineHeight: '1.4',
-        letterSpacing: '0.02em'
-      },
-      largeLight: {
-        fontFamily: '"Inter", sans-serif',
-        fontSize: '18px',
-        fontWeight: '300',
-        lineHeight: '1.6',
-        letterSpacing: '0em'
-      },
-      largeMedium: {
-        fontFamily: '"Inter", sans-serif',
-        fontSize: '18px',
-        fontWeight: '500',
-        lineHeight: '1.6',
-        letterSpacing: '0em'
-      },
-      mediumLight: {
-        fontFamily: '"Inter", sans-serif',
-        fontSize: '16px',
-        fontWeight: '300',
-        lineHeight: '1.5',
-        letterSpacing: '0em'
-      },
-      mediumMedium: {
-        fontFamily: '"Inter", sans-serif',
-        fontSize: '16px',
-        fontWeight: '500',
-        lineHeight: '1.5',
-        letterSpacing: '0em'
-      },
-      smallLight: {
-        fontFamily: '"Inter", sans-serif',
-        fontSize: '14px',
-        fontWeight: '300',
-        lineHeight: '1.4',
-        letterSpacing: '0.02em'
-      },
-      smallMedium: {
-        fontFamily: '"Inter", sans-serif',
-        fontSize: '14px',
-        fontWeight: '500',
         lineHeight: '1.4',
         letterSpacing: '0.02em'
       }
@@ -242,6 +164,14 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
   const [previewText, setPreviewText] = useState('The quick brown fox jumps over the lazy dog');
   const [activeTab, setActiveTab] = useState('typography');
   const [activeSection, setActiveSection] = useState('');
+  const [logoGuidelines, setLogoGuidelines] = useState<{
+    [key: string]: Array<{
+      id: string;
+      type: 'horizontal' | 'vertical';
+      position: number;
+      name: string;
+    }>;
+  }>({});
 
   // Load saved data on mount
   useEffect(() => {
@@ -252,6 +182,7 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
       if (saved.typographyVisibility) setTypographyVisibilityState(saved.typographyVisibility);
       if (saved.typographyNames) setTypographyNames(saved.typographyNames);
       if (saved.previewText) setPreviewText(saved.previewText);
+      if (saved.logoGuidelines) setLogoGuidelines(saved.logoGuidelines);
     }
   }, []);
 
@@ -262,9 +193,10 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
       colorNames,
       typographyVisibility,
       typographyNames,
-      previewText
+      previewText,
+      logoGuidelines
     });
-  }, [currentGuide, colorNames, typographyVisibility, typographyNames, previewText]);
+  }, [currentGuide, colorNames, typographyVisibility, typographyNames, previewText, logoGuidelines]);
 
   const setGuideName = (name: string) => {
     setCurrentGuide(prev => ({ ...prev, name }));
@@ -341,6 +273,7 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
         colorNames,
         typographyVisibility,
         typographyNames,
+        logoGuidelines,
         metadata: {
           exportedAt: new Date().toISOString(),
           version: '1.0'
@@ -350,6 +283,10 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       saveAs(blob, `${currentGuide.name.replace(/\s+/g, '_')}_brand_guide.json`);
     }
+  };
+
+  const setLogoGuidelines = (guidelines: any) => {
+    setLogoGuidelines(guidelines);
   };
 
   return (
@@ -362,6 +299,7 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
         previewText,
         activeTab,
         activeSection,
+        logoGuidelines,
         setGuideName,
         updateColors,
         updateTypography,
@@ -373,7 +311,8 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
         setTypographyVisibility,
         addTypographyStyle,
         removeTypographyStyle,
-        exportGuide
+        exportGuide,
+        setLogoGuidelines
       }}
     >
       {children}
