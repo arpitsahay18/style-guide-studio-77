@@ -34,7 +34,7 @@ export function MainLayout({
   };
   
   const content = (
-    <div className="flex flex-col min-h-screen max-w-full overflow-x-hidden">
+    <div className="flex flex-col h-full max-w-full overflow-x-hidden">
       <header className="border-b bg-background flex-shrink-0">
         <div className="container mx-auto py-4 px-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
