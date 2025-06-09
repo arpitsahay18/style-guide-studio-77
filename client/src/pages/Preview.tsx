@@ -9,7 +9,7 @@ import { FileDown, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import { BrandStudioLogo } from '@/components/BrandStudioLogo';
 import { hexToRgb } from '@/utils/colorUtils';
 
@@ -41,7 +41,7 @@ const Preview = () => {
   } = useBrandGuide();
   const contentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   const isGuideComplete = 
     currentGuide.colors.primary.length > 0 && 
@@ -55,7 +55,7 @@ const Preview = () => {
           <div className="text-center space-y-4">
             <h1 className="text-2xl font-bold">Brand Guide Incomplete</h1>
             <p>Your brand guide is missing important elements. Please add at least one primary color, one secondary color, and upload a logo.</p>
-            <Button onClick={() => navigate('/')}>
+            <Button onClick={() => setLocation('/')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Go Back
             </Button>

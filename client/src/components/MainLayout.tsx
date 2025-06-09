@@ -20,7 +20,7 @@ export function MainLayout({
   const { toast } = useToast();
   
   const handleNavigation = (path: string) => {
-    if (navigate) {
+    if (!standalone) {
       if (!currentGuide.name.trim()) {
         toast({
           variant: "destructive",
@@ -29,7 +29,7 @@ export function MainLayout({
         });
         return;
       }
-      navigate(path);
+      setLocation(path);
     }
   };
   

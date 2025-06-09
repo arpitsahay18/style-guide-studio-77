@@ -4,10 +4,10 @@ import { MainLayout } from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 
 const Privacy = () => {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   return (
     <MainLayout>
@@ -15,7 +15,7 @@ const Privacy = () => {
         <div className="mb-6">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/')}
+            onClick={() => setLocation('/')}
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
