@@ -40,6 +40,19 @@ const Index = () => {
     setGuideName(newName);
   };
 
+  // Get border color based on primary colors
+  const getBorderColor = () => {
+    if (currentGuide.colors.primary.length === 0) {
+      return 'white';
+    } else if (currentGuide.colors.primary.length === 1) {
+      return currentGuide.colors.primary[0].hex;
+    } else {
+      // Create gradient with multiple primary colors
+      const colors = currentGuide.colors.primary.map(color => color.hex).join(', ');
+      return `linear-gradient(45deg, ${colors})`;
+    }
+  };
+
   // Add overlay class when welcome is open
   const overlayClass = welcomeOpen ? 'pointer-events-none blur-sm' : '';
 
@@ -57,17 +70,53 @@ const Index = () => {
             <h1 className="text-3xl font-bold">Brand Guideline Generator</h1>
           </div>
           
-          <div className="w-full max-w-md">
-            <label htmlFor="brandName" className="text-sm font-medium mb-2 block">
-              Brand Name
-            </label>
-            <Input
-              id="brandName"
-              placeholder="Enter brand name"
-              value={brandName}
-              onChange={handleNameChange}
-              className="w-full"
-            />
+          <div className="flex items-center gap-4 w-full max-w-md">
+            {/* Brand Logo Placeholder */}
+            {currentGuide.logos.original && (
+              <div 
+                className="w-12 h-12 rounded-full border-2 flex items-center justify-center overflow-hidden bg-white flex-shrink-0"
+                style={{
+                  borderColor: currentGuide.colors.primary.length === 1 
+                    ? currentGuide.colors.primary[0].hex 
+                    : currentGuide.colors.primary.length > 1 
+                      ? 'transparent'
+                      : 'white',
+                  background: currentGuide.colors.primary.length > 1 
+                    ? `linear-gradient(45deg, ${currentGuide.colors.primary.map(color => color.hex).join(', ')})` 
+                    : 'white'
+                }}
+              >
+                {currentGuide.colors.primary.length > 1 && (
+                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+                    <img 
+                      src={currentGuide.logos.original} 
+                      alt="Brand Logo" 
+                      className="w-8 h-8 object-contain"
+                    />
+                  </div>
+                )}
+                {currentGuide.colors.primary.length <= 1 && (
+                  <img 
+                    src={currentGuide.logos.original} 
+                    alt="Brand Logo" 
+                    className="w-10 h-10 object-contain"
+                  />
+                )}
+              </div>
+            )}
+            
+            <div className="flex-1">
+              <label htmlFor="brandName" className="text-sm font-medium mb-2 block">
+                Brand Name
+              </label>
+              <Input
+                id="brandName"
+                placeholder="Enter brand name"
+                value={brandName}
+                onChange={handleNameChange}
+                className="w-full"
+              />
+            </div>
           </div>
         </div>
         

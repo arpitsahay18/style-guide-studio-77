@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export function ExportSection() {
   const navigate = useNavigate();
-  const { currentGuide, exportGuide, activeSection } = useBrandGuide();
+  const { currentGuide, exportGuide, activeSection, logoGuidelines } = useBrandGuide();
   const { toast } = useToast();
   const [linkCopied, setLinkCopied] = useState(false);
   
@@ -69,94 +69,97 @@ export function ExportSection() {
         doc.addImage(currentGuide.logos.original, 'PNG', 50, 100, 150, 150);
       }
       
-      doc.setFontSize(18);
-      doc.setFont("helvetica", "bold");
-      doc.text("Logo Variations", 50, 280);
-      
-      const squareLogo = currentGuide.logos.square[0];
-      const roundedLogo = currentGuide.logos.rounded[0];
-      const circleLogo = currentGuide.logos.circle[0];
-      
-      let squareDataUrl = '';
-      let roundedDataUrl = '';
-      let circleDataUrl = '';
-      
-      try {
-        squareDataUrl = await getLogoDataUrl(squareLogo, 'square');
-        roundedDataUrl = await getLogoDataUrl(roundedLogo, 'rounded');
-        circleDataUrl = await getLogoDataUrl(circleLogo, 'circle');
-      } catch (error) {
-        console.error("Error generating logo variations:", error);
+      // Add logo guidelines if they exist
+      const squareGuidelines = logoGuidelines['square-logo'] || [];
+      if (squareGuidelines.length > 0) {
+        doc.setFontSize(18);
+        doc.setFont("helvetica", "bold");
+        doc.text("Logo Guidelines", 50, 280);
+        
+        // Create logo with guidelines
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 400;
+        const ctx = canvas.getContext('2d');
+        
+        if (ctx) {
+          // White background
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Load and draw logo
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            const maxDim = canvas.width * 0.75;
+            const scale = Math.min(maxDim / img.width, maxDim / img.height);
+            const width = img.width * scale;
+            const height = img.height * scale;
+            
+            const x = (canvas.width - width) / 2;
+            const y = (canvas.height - height) / 2;
+            
+            ctx.drawImage(img, x, y, width, height);
+            
+            // Draw guidelines
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+            ctx.lineWidth = 2;
+            
+            squareGuidelines.forEach(guideline => {
+              if (guideline.type === 'horizontal') {
+                ctx.beginPath();
+                ctx.moveTo(0, guideline.position);
+                ctx.lineTo(canvas.width, guideline.position);
+                ctx.stroke();
+              } else {
+                ctx.beginPath();
+                ctx.moveTo(guideline.position, 0);
+                ctx.lineTo(guideline.position, canvas.height);
+                ctx.stroke();
+              }
+            });
+            
+            const logoWithGuidelines = canvas.toDataURL('image/png');
+            doc.addImage(logoWithGuidelines, 'PNG', 50, 300, 200, 200);
+            
+            // Add guidelines list
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            doc.text("Guidelines:", 50, 520);
+            
+            squareGuidelines.forEach((guideline, index) => {
+              doc.text(`${guideline.name}: ${Math.round(guideline.position)}px`, 50, 540 + (index * 15));
+            });
+            
+            // Save the PDF
+            doc.save(`${currentGuide.name.replace(/\s+/g, '_')}_logo_pack.pdf`);
+            
+            toast({
+              title: "Logo pack exported",
+              description: "Your logo pack has been downloaded successfully."
+            });
+          };
+          
+          img.onerror = () => {
+            // Fallback without guidelines
+            doc.save(`${currentGuide.name.replace(/\s+/g, '_')}_logo_pack.pdf`);
+            toast({
+              title: "Logo pack exported",
+              description: "Your logo pack has been downloaded successfully."
+            });
+          };
+          
+          img.src = currentGuide.logos.original;
+        }
+      } else {
+        // No guidelines, just save
+        doc.save(`${currentGuide.name.replace(/\s+/g, '_')}_logo_pack.pdf`);
+        toast({
+          title: "Logo pack exported",
+          description: "Your logo pack has been downloaded successfully."
+        });
       }
-      
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
-      doc.text("Square", 50, 310);
-      if (squareDataUrl) {
-        doc.addImage(squareDataUrl, 'PNG', 50, 320, 100, 100);
-      }
-      
-      doc.text("Rounded", 200, 310);
-      if (roundedDataUrl) {
-        doc.addImage(roundedDataUrl, 'PNG', 200, 320, 100, 100);
-      }
-      
-      doc.text("Circular", 350, 310);
-      if (circleDataUrl) {
-        doc.addImage(circleDataUrl, 'PNG', 350, 320, 100, 100);
-      }
-      
-      doc.setFontSize(18);
-      doc.setFont("helvetica", "bold");
-      doc.text("Logo Spacing Guidelines", 50, 450);
-      
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
-      doc.text("Maintain clear space around the logo for maximum impact and legibility.", 50, 480);
-      
-      if (typeof currentGuide.logos.original === 'string') {
-        doc.addImage(currentGuide.logos.original, 'PNG', 50, 500, 200, 200);
-      }
-      
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.5);
-      
-      for (let i = 1; i < 4; i++) {
-        doc.line(50 + (i * 50), 500, 50 + (i * 50), 700);
-      }
-      
-      for (let i = 1; i < 4; i++) {
-        doc.line(50, 500 + (i * 50), 250, 500 + (i * 50));
-      }
-      
-      doc.setFontSize(18);
-      doc.setFont("helvetica", "bold");
-      doc.text("Logo Usage Guidelines", 50, 750);
-      
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
-      const guidelines = [
-        "• Maintain the logo's proportions when resizing",
-        "• Ensure adequate contrast between the logo and background",
-        "• Preserve clear space around the logo as shown in the spacing guide",
-        "• Do not distort, rotate, or alter the logo's colors",
-        "• For questions about logo usage, refer to your complete brand guide"
-      ];
-      
-      guidelines.forEach((line, index) => {
-        doc.text(line, 50, 780 + (index * 20));
-      });
-      
-      doc.setFontSize(10);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Generated with Brand Studio | ${new Date().toLocaleDateString()}`, 50, 1050);
-      
-      doc.save(`${currentGuide.name.replace(/\s+/g, '-').toLowerCase()}-logo-pack.pdf`);
-      
-      toast({
-        title: "Logo pack exported",
-        description: "Your logo pack has been downloaded successfully."
-      });
     } catch (error) {
       console.error("Error exporting logo pack:", error);
       toast({
@@ -165,97 +168,6 @@ export function ExportSection() {
         description: "There was an error exporting your logo pack. Please try again."
       });
     }
-  };
-
-  const getLogoDataUrl = async (logo, shape): Promise<string> => {
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 200;
-      canvas.height = 200;
-      const ctx = canvas.getContext('2d');
-      
-      if (!ctx) {
-        throw new Error("Could not get canvas context");
-      }
-      
-      ctx.fillStyle = logo.background;
-      ctx.beginPath();
-      
-      switch (shape) {
-        case 'square':
-          ctx.rect(0, 0, canvas.width, canvas.height);
-          break;
-        case 'rounded':
-          ctx.roundRect(0, 0, canvas.width, canvas.height, 30);
-          break;
-        case 'circle':
-          ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, 0, Math.PI * 2);
-          break;
-        default:
-          ctx.rect(0, 0, canvas.width, canvas.height);
-      }
-      
-      ctx.fill();
-      
-      return new Promise<string>((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          const maxDim = canvas.width * 0.75;
-          const scale = Math.min(maxDim / img.width, maxDim / img.height);
-          const width = img.width * scale;
-          const height = img.height * scale;
-          
-          const x = (canvas.width - width) / 2;
-          const y = (canvas.height - height) / 2;
-          
-          ctx.drawImage(img, x, y, width, height);
-          
-          resolve(canvas.toDataURL('image/png'));
-        };
-        
-        img.onerror = () => {
-          reject(new Error("Failed to load logo image"));
-        };
-        
-        img.src = logo.src;
-      });
-    } catch (error) {
-      console.error("Error generating logo data URL:", error);
-      return '';
-    }
-  };
-
-  const generateShareableLink = () => {
-    const brandGuideId = `brand-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    const expiryTime = Date.now() + (8 * 60 * 60 * 1000); // 8 hours
-    const shareData = {
-      guide: currentGuide,
-      expiryTime,
-      createdAt: Date.now()
-    };
-    
-    localStorage.setItem(`shared-brand-${brandGuideId}`, JSON.stringify(shareData));
-    
-    const baseUrl = window.location.origin;
-    const shareableUrl = `${baseUrl}/shared/${brandGuideId}`;
-    
-    navigator.clipboard.writeText(shareableUrl).then(() => {
-      setLinkCopied(true);
-      toast({
-        title: "Shareable link generated",
-        description: "Link copied to clipboard. Valid for 8 hours.",
-      });
-      
-      setTimeout(() => setLinkCopied(false), 2000);
-    }).catch(() => {
-      toast({
-        variant: "destructive",
-        title: "Failed to copy link",
-        description: "Please copy the link manually: " + shareableUrl,
-      });
-    });
   };
   
   const showWarning = activeSection === 'export' && !isGuideComplete;
@@ -334,23 +246,18 @@ export function ExportSection() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Generate a shareable link that allows others to view your brand guide. 
-            Links expire after 8 hours for security.
+            This feature is coming soon! You'll be able to generate shareable links 
+            that allow others to view your brand guide.
           </p>
         </CardContent>
         <CardFooter>
           <Button 
             variant="outline" 
-            onClick={generateShareableLink} 
+            disabled={true}
             className="w-full sm:w-auto"
-            disabled={!isGuideComplete}
           >
-            {linkCopied ? (
-              <Check className="mr-2 h-4 w-4" />
-            ) : (
-              <Share className="mr-2 h-4 w-4" />
-            )}
-            {linkCopied ? "Link Copied!" : "Generate Shareable Link"}
+            <Share className="mr-2 h-4 w-4" />
+            Coming Soon!
           </Button>
         </CardFooter>
       </Card>

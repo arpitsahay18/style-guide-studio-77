@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { LogoVariation } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -204,12 +205,10 @@ export function InteractiveLogoSpacing({
   // Generate ruler tick marks - just lines without numbers
   const generateTicks = (dimension: number, isVertical: boolean = false) => {
     const ticks = [];
-    const majorTickSpacing = 20; // Major ticks every 20px
-    const minorTickSpacing = 5;  // Minor ticks every 5px
+    const minorTickSpacing = 10;  // Tick every 10px
     
     for (let i = 0; i <= dimension; i += minorTickSpacing) {
-      const isMajorTick = i % majorTickSpacing === 0;
-      const tickLength = isMajorTick ? '8px' : '4px';
+      const tickLength = '4px';
       
       ticks.push(
         <div
@@ -250,90 +249,92 @@ export function InteractiveLogoSpacing({
       </p>
       
       <div className="relative inline-block">
-        {/* Top Ruler */}
-        <div 
-          className="absolute -top-6 left-6 bg-gray-100 border-b cursor-grab select-none hover:bg-gray-200 relative"
-          style={{ width: containerSize.width, height: '24px' }}
-          onMouseDown={(e) => handleRulerMouseDown(e, 'vertical')}
-        >
-          {generateTicks(containerSize.width)}
-        </div>
-
-        {/* Left Ruler */}
-        <div 
-          className="absolute -left-6 top-6 bg-gray-100 border-r cursor-grab select-none hover:bg-gray-200 relative"
-          style={{ width: '24px', height: containerSize.height }}
-          onMouseDown={(e) => handleRulerMouseDown(e, 'horizontal')}
-        >
-          {generateTicks(containerSize.height, true)}
-        </div>
-
-        {/* Logo Container */}
-        <div 
-          ref={containerRef}
-          className="relative border border-dashed border-gray-300 bg-white"
-          style={{ width: '400px', height: '400px' }}
-        >
+        <div className="relative">
+          {/* Top Ruler */}
           <div 
-            className={`w-full h-full ${shapeClasses[shape]} flex items-center justify-center overflow-hidden`}
-            style={{ backgroundColor: logo.background }}
+            className="absolute -top-6 left-0 bg-gray-100 border-b cursor-grab select-none hover:bg-gray-200 relative"
+            style={{ width: containerSize.width, height: '24px' }}
+            onMouseDown={(e) => handleRulerMouseDown(e, 'vertical')}
           >
-            <img 
-              src={logo.src} 
-              alt="Logo with spacing guidelines" 
-              className="max-w-[75%] max-h-[75%] object-contain"
-            />
+            {generateTicks(containerSize.width)}
           </div>
-          
-          {/* Guidelines */}
-          {guidelines.map((guideline) => (
-            <div key={guideline.id}>
-              <div
-                className="absolute cursor-move hover:opacity-75"
-                style={{
-                  ...(guideline.type === 'horizontal' 
-                    ? {
-                        top: `${guideline.position}px`,
-                        left: 0,
-                        right: 0,
-                        height: '2px',
-                        borderTop: '2px dashed rgba(255, 0, 0, 0.8)'
-                      }
-                    : {
-                        left: `${guideline.position}px`,
-                        top: 0,
-                        bottom: 0,
-                        width: '2px',
-                        borderLeft: '2px dashed rgba(255, 0, 0, 0.8)'
-                      }
-                  ),
-                  zIndex: 10
-                }}
-                onMouseDown={(e) => handleGuidelineMouseDown(guideline, e)}
-                onDoubleClick={() => handleGuidelineDoubleClick(guideline)}
-                title="Drag to move, double-click to remove"
+
+          {/* Left Ruler */}
+          <div 
+            className="absolute -left-6 top-0 bg-gray-100 border-r cursor-grab select-none hover:bg-gray-200 relative"
+            style={{ width: '24px', height: containerSize.height }}
+            onMouseDown={(e) => handleRulerMouseDown(e, 'horizontal')}
+          >
+            {generateTicks(containerSize.height, true)}
+          </div>
+
+          {/* Logo Container */}
+          <div 
+            ref={containerRef}
+            className="relative border border-dashed border-gray-300 bg-white"
+            style={{ width: '400px', height: '400px' }}
+          >
+            <div 
+              className={`w-full h-full ${shapeClasses[shape]} flex items-center justify-center overflow-hidden`}
+              style={{ backgroundColor: logo.background }}
+            >
+              <img 
+                src={logo.src} 
+                alt="Logo with spacing guidelines" 
+                className="max-w-[75%] max-h-[75%] object-contain"
               />
-              
-              <div
-                className="absolute bg-red-500 text-white text-xs px-1 py-0.5 rounded pointer-events-none"
-                style={{
-                  ...(guideline.type === 'horizontal'
-                    ? {
-                        top: `${guideline.position - 12}px`,
-                        left: '8px'
-                      }
-                    : {
-                        left: `${guideline.position + 8}px`,
-                        top: '8px'
-                      }
-                  ),
-                  zIndex: 11
-                }}
-              >
-                {guideline.name}: {Math.round(guideline.position / 20)}px
-              </div>
             </div>
-          ))}
+            
+            {/* Guidelines */}
+            {guidelines.map((guideline) => (
+              <div key={guideline.id}>
+                <div
+                  className="absolute cursor-move hover:opacity-75"
+                  style={{
+                    ...(guideline.type === 'horizontal' 
+                      ? {
+                          top: `${guideline.position}px`,
+                          left: 0,
+                          right: 0,
+                          height: '2px',
+                          borderTop: '2px dashed rgba(255, 0, 0, 0.8)'
+                        }
+                      : {
+                          left: `${guideline.position}px`,
+                          top: 0,
+                          bottom: 0,
+                          width: '2px',
+                          borderLeft: '2px dashed rgba(255, 0, 0, 0.8)'
+                        }
+                    ),
+                    zIndex: 10
+                  }}
+                  onMouseDown={(e) => handleGuidelineMouseDown(guideline, e)}
+                  onDoubleClick={() => handleGuidelineDoubleClick(guideline)}
+                  title="Drag to move, double-click to remove"
+                />
+                
+                <div
+                  className="absolute bg-red-500 text-white text-xs px-1 py-0.5 rounded pointer-events-none"
+                  style={{
+                    ...(guideline.type === 'horizontal'
+                      ? {
+                          top: `${guideline.position - 12}px`,
+                          left: '8px'
+                        }
+                      : {
+                          left: `${guideline.position + 8}px`,
+                          top: '8px'
+                        }
+                    ),
+                    zIndex: 11
+                  }}
+                >
+                  {guideline.name}: {Math.round(guideline.position)}px
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         
         <div className="mt-4 text-sm text-muted-foreground">
@@ -347,7 +348,7 @@ export function InteractiveLogoSpacing({
               <div className="grid grid-cols-2 gap-2 mt-1">
                 {guidelines.filter(g => !g.id.startsWith('temp-')).map(g => (
                   <span key={g.id} className="text-xs">
-                    {g.name}: {Math.round(g.position / 20)}px
+                    {g.name}: {Math.round(g.position)}px
                   </span>
                 ))}
               </div>

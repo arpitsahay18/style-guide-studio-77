@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { MainLayout } from '@/components/MainLayout';
@@ -107,7 +106,7 @@ const Preview = () => {
 
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 30; // Increased left padding
+      const margin = 20;
       
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -115,24 +114,21 @@ const Preview = () => {
         format: 'a4'
       });
 
-      const addFooter = (pageNumber?: number) => {
-        // Add stylized footer with gradient pill
-        const footerY = pageHeight - 15;
-        const footerX = pageWidth / 2;
-        const pillWidth = 40;
-        const pillHeight = 6;
-        
-        // Create gradient effect with rounded rectangle
-        pdf.setFillColor(0, 0, 0);
-        pdf.roundedRect(footerX - pillWidth/2, footerY - pillHeight/2, pillWidth, pillHeight, 3, 3, 'F');
-        
-        pdf.setFontSize(8);
-        pdf.setTextColor(255, 255, 255);
-        pdf.text("Made with Brand Studio", footerX, footerY + 1, { align: 'center' });
-        
-        if (pageNumber) {
-          pdf.setTextColor(100, 100, 100);
-          pdf.text(`${pageNumber}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+      const addFooter = (isFirstOrLast: boolean = false) => {
+        if (isFirstOrLast) {
+          // Add gradient pill footer for first and last page
+          const footerY = pageHeight - 15;
+          const footerX = pageWidth / 2;
+          const pillWidth = 50;
+          const pillHeight = 8;
+          
+          // Create gradient effect with rounded rectangle
+          pdf.setFillColor(60, 60, 60);
+          pdf.roundedRect(footerX - pillWidth/2, footerY - pillHeight/2, pillWidth, pillHeight, 4, 4, 'F');
+          
+          pdf.setFontSize(8);
+          pdf.setTextColor(255, 255, 255);
+          pdf.text("Made with Brand Studio", footerX, footerY + 1, { align: 'center' });
         }
       };
 
@@ -143,7 +139,7 @@ const Preview = () => {
       // Add page border
       pdf.setDrawColor(0, 0, 0);
       pdf.setLineWidth(0.5);
-      pdf.rect(5, 5, pageWidth - 10, pageHeight - 10);
+      pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
       
       // Brand name centered
       pdf.setFontSize(42);
@@ -151,62 +147,57 @@ const Preview = () => {
       pdf.setTextColor(0, 0, 0);
       pdf.text(currentGuide.name, pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
       
-      // Subtitle with 1.5 line spacing (18pt spacing)
+      // Subtitle
       pdf.setFontSize(24);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 100, 100);
       pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 18, { align: 'center' });
       
-      addFooter();
+      addFooter(true);
 
-      // Capture the entire content as HTML and convert to PDF by sections
-      if (contentRef.current) {
-        // Get all sections
-        const sections = contentRef.current.querySelectorAll('section');
+      // Capture sections individually for better quality
+      const sections = contentRef.current.querySelectorAll('section');
+      
+      for (let i = 0; i < sections.length; i++) {
+        pdf.addPage();
         
-        for (let i = 0; i < sections.length; i++) {
-          pdf.addPage();
-          const pageNumber = i + 2;
+        try {
+          const canvas = await html2canvas(sections[i] as HTMLElement, {
+            scale: 1.5,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            width: 800,
+            height: 1000
+          });
           
-          try {
-            const canvas = await html2canvas(sections[i] as HTMLElement, {
-              scale: 2,
-              useCORS: true,
-              allowTaint: true,
-              backgroundColor: '#ffffff'
-            });
-            
-            const imgData = canvas.toDataURL('image/png');
-            const imgWidth = pageWidth - (margin * 2);
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            
-            // If image is too tall, scale it down
-            const maxHeight = pageHeight - (margin * 2) - 20; // Leave space for footer
-            const finalHeight = Math.min(imgHeight, maxHeight);
-            const finalWidth = (canvas.width * finalHeight) / canvas.height;
-            
-            pdf.addImage(imgData, 'PNG', margin, margin, finalWidth, finalHeight);
-            
-          } catch (error) {
-            console.error('Error capturing section:', error);
-            // Fallback: just add section title
-            pdf.setFontSize(18);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(sections[i].querySelector('h2')?.textContent || 'Section', margin, margin + 20);
-          }
+          const imgData = canvas.toDataURL('image/jpeg', 0.8);
+          const imgWidth = pageWidth - (margin * 2);
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
           
-          addFooter(pageNumber);
+          // Scale down if too tall
+          const maxHeight = pageHeight - (margin * 2) - 10;
+          const finalHeight = Math.min(imgHeight, maxHeight);
+          const finalWidth = (canvas.width * finalHeight) / canvas.height;
+          
+          pdf.addImage(imgData, 'JPEG', margin, margin, finalWidth, finalHeight);
+          
+        } catch (error) {
+          console.error('Error capturing section:', error);
+          // Fallback: just add section title
+          pdf.setFontSize(18);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(sections[i].querySelector('h2')?.textContent || 'Section', margin, margin + 20);
         }
       }
 
       // FINAL PAGE: Closing with border
       pdf.addPage();
-      const finalPageNumber = pdf.getNumberOfPages();
       
       // Add page border
       pdf.setDrawColor(0, 0, 0);
       pdf.setLineWidth(0.5);
-      pdf.rect(5, 5, pageWidth - 10, pageHeight - 10);
+      pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
       
       // Centered brand name and date
       pdf.setFontSize(20);
@@ -218,7 +209,7 @@ const Preview = () => {
       pdf.setFont('helvetica', 'normal');
       pdf.text(new Date().toLocaleDateString(), pageWidth / 2, pageHeight - 45, { align: 'center' });
       
-      addFooter();
+      addFooter(true);
 
       // Save the PDF
       pdf.save(`${currentGuide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
@@ -254,8 +245,8 @@ const Preview = () => {
         </div>
       </div>
       
-      <div ref={contentRef} className="container mx-auto px-4 py-8">
-        <header className="mb-12 text-center">
+      <div ref={contentRef} className="container mx-auto px-6 py-12 space-y-16">
+        <header className="mb-16 text-center">
           <h1 className="text-4xl font-bold mb-4">{currentGuide.name}</h1>
           <p className="text-lg text-muted-foreground">
             Complete brand guidelines and style specifications
@@ -263,13 +254,15 @@ const Preview = () => {
         </header>
         
         {/* Typography Section */}
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold mb-6 pb-2 border-b">Typography</h2>
+        <section className="space-y-12">
+          <div className="border-b pb-4">
+            <h2 className="text-3xl font-bold">Typography</h2>
+          </div>
           
-          <div className="space-y-10">
+          <div className="space-y-12">
             <div>
-              <h3 className="text-xl font-semibold mb-4">Display Typography</h3>
-              <div className="grid gap-6">
+              <h3 className="text-2xl font-semibold mb-6">Display Typography</h3>
+              <div className="grid gap-8">
                 {typographyVisibility.display.map(styleKey => {
                   const style = currentGuide.typography.display[styleKey];
                   if (!style) return null;
@@ -286,8 +279,8 @@ const Preview = () => {
             </div>
             
             <div>
-              <h3 className="text-xl font-semibold mb-4">Headings</h3>
-              <div className="grid gap-6">
+              <h3 className="text-2xl font-semibold mb-6">Headings</h3>
+              <div className="grid gap-8">
                 {typographyVisibility.heading.map(styleKey => {
                   const style = currentGuide.typography.heading[styleKey];
                   if (!style) return null;
@@ -304,8 +297,8 @@ const Preview = () => {
             </div>
             
             <div>
-              <h3 className="text-xl font-semibold mb-4">Body Text</h3>
-              <div className="grid gap-6">
+              <h3 className="text-2xl font-semibold mb-6">Body Text</h3>
+              <div className="grid gap-8">
                 {typographyVisibility.body.map(styleKey => {
                   const style = currentGuide.typography.body[styleKey];
                   if (!style) return null;
@@ -324,17 +317,21 @@ const Preview = () => {
         </section>
         
         {/* Color Section */}
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold mb-6 pb-2 border-b">Color Palette</h2>
+        <section className="space-y-12">
+          <div className="border-b pb-4">
+            <h2 className="text-3xl font-bold">Color Palette</h2>
+          </div>
           
-          <div className="space-y-10">
+          <div className="space-y-12">
             <div>
-              <h3 className="text-xl font-semibold mb-4">Primary Colors</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <h3 className="text-2xl font-semibold mb-6">Primary Colors</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                 {currentGuide.colors.primary.map((color, index) => (
-                  <div key={index} className="space-y-3">
-                    <ColorSwatch color={color} colorName={getColorDisplayName(index, 'primary')} />
-                    <div className="text-sm space-y-1">
+                  <div key={index} className="space-y-4">
+                    <div className="flex flex-col items-center">
+                      <ColorSwatch color={color} colorName={getColorDisplayName(index, 'primary')} />
+                    </div>
+                    <div className="text-sm space-y-2 text-center">
                       <p><strong>HEX:</strong> {color.hex}</p>
                       <p><strong>RGB:</strong> {color.rgb}</p>
                       <p><strong>CMYK:</strong> {color.cmyk}</p>
@@ -343,9 +340,9 @@ const Preview = () => {
                     
                     {/* Tints and Shades */}
                     {color.tints && color.tints.length > 0 && (
-                      <div>
+                      <div className="text-center">
                         <p className="text-sm font-semibold mb-2">Tints:</p>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 justify-center">
                           {color.tints.map((tint, tintIndex) => (
                             <div key={tintIndex} className="w-6 h-6 rounded border" style={{ backgroundColor: tint }} title={tint} />
                           ))}
@@ -354,9 +351,9 @@ const Preview = () => {
                     )}
                     
                     {color.shades && color.shades.length > 0 && (
-                      <div>
+                      <div className="text-center">
                         <p className="text-sm font-semibold mb-2">Shades:</p>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 justify-center">
                           {color.shades.map((shade, shadeIndex) => (
                             <div key={shadeIndex} className="w-6 h-6 rounded border" style={{ backgroundColor: shade }} title={shade} />
                           ))}
@@ -369,12 +366,14 @@ const Preview = () => {
             </div>
             
             <div>
-              <h3 className="text-xl font-semibold mb-4">Secondary Colors</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <h3 className="text-2xl font-semibold mb-6">Secondary Colors</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                 {currentGuide.colors.secondary.map((color, index) => (
-                  <div key={index} className="space-y-3">
-                    <ColorSwatch color={color} colorName={getColorDisplayName(index, 'secondary')} />
-                    <div className="text-sm space-y-1">
+                  <div key={index} className="space-y-4">
+                    <div className="flex flex-col items-center">
+                      <ColorSwatch color={color} colorName={getColorDisplayName(index, 'secondary')} />
+                    </div>
+                    <div className="text-sm space-y-2 text-center">
                       <p><strong>HEX:</strong> {color.hex}</p>
                       <p><strong>RGB:</strong> {color.rgb}</p>
                       <p><strong>CMYK:</strong> {color.cmyk}</p>
@@ -382,9 +381,9 @@ const Preview = () => {
                     </div>
                     
                     {color.tints && color.tints.length > 0 && (
-                      <div>
+                      <div className="text-center">
                         <p className="text-sm font-semibold mb-2">Tints:</p>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 justify-center">
                           {color.tints.map((tint, tintIndex) => (
                             <div key={tintIndex} className="w-6 h-6 rounded border" style={{ backgroundColor: tint }} title={tint} />
                           ))}
@@ -393,9 +392,9 @@ const Preview = () => {
                     )}
                     
                     {color.shades && color.shades.length > 0 && (
-                      <div>
+                      <div className="text-center">
                         <p className="text-sm font-semibold mb-2">Shades:</p>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 justify-center">
                           {color.shades.map((shade, shadeIndex) => (
                             <div key={shadeIndex} className="w-6 h-6 rounded border" style={{ backgroundColor: shade }} title={shade} />
                           ))}
@@ -409,12 +408,14 @@ const Preview = () => {
             
             {currentGuide.colors.neutral.length > 0 && (
               <div>
-                <h3 className="text-xl font-semibold mb-4">Neutral Colors</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <h3 className="text-2xl font-semibold mb-6">Neutral Colors</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                   {currentGuide.colors.neutral.map((color, index) => (
-                    <div key={index} className="space-y-3">
-                      <ColorSwatch color={color} colorName={getColorDisplayName(index, 'neutral')} />
-                      <div className="text-sm space-y-1">
+                    <div key={index} className="space-y-4">
+                      <div className="flex flex-col items-center">
+                        <ColorSwatch color={color} colorName={getColorDisplayName(index, 'neutral')} />
+                      </div>
+                      <div className="text-sm space-y-2 text-center">
                         <p><strong>HEX:</strong> {color.hex}</p>
                         <p><strong>RGB:</strong> {color.rgb}</p>
                         <p><strong>CMYK:</strong> {color.cmyk}</p>
@@ -429,84 +430,88 @@ const Preview = () => {
         </section>
         
         {/* Logo Section */}
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold mb-6 pb-2 border-b">Logo</h2>
+        <section className="space-y-12">
+          <div className="border-b pb-4">
+            <h2 className="text-3xl font-bold">Logo</h2>
+          </div>
           
-          <div className="space-y-10">
+          <div className="space-y-12">
             {/* Logo Guidelines */}
             {Object.keys(logoGuidelines).some(key => logoGuidelines[key].length > 0) && (
               <div>
-                <h3 className="text-xl font-semibold mb-4">Logo Guidelines</h3>
-                <div className="space-y-6">
+                <h3 className="text-2xl font-semibold mb-6">Logo Guidelines</h3>
+                <div className="space-y-8">
                   {Object.entries(logoGuidelines).map(([shapeKey, guidelines]) => {
                     if (guidelines.length === 0) return null;
                     const shapeName = shapeKey.replace('-logo', '').charAt(0).toUpperCase() + shapeKey.replace('-logo', '').slice(1);
                     return (
-                      <div key={shapeKey} className="space-y-4">
-                        <h4 className="font-medium">{shapeName} Logo Guidelines:</h4>
+                      <div key={shapeKey} className="space-y-6">
+                        <h4 className="text-lg font-medium">{shapeName} Logo Guidelines:</h4>
                         
                         {/* Logo with Guidelines Visualization */}
-                        <div className="relative inline-block border border-gray-200 bg-white p-8">
-                          <div className="relative w-80 h-80">
-                            <img 
-                              src={currentGuide.logos.original} 
-                              alt={`${shapeName} Logo with Guidelines`} 
-                              className="w-full h-full object-contain"
-                            />
-                            
-                            {/* Render guidelines as dashed lines */}
-                            {guidelines.map(guideline => (
-                              <div key={guideline.id}>
-                                <div
-                                  className="absolute"
-                                  style={{
-                                    ...(guideline.type === 'horizontal' 
-                                      ? {
-                                          top: `${(guideline.position / 400) * 100}%`,
-                                          left: 0,
-                                          right: 0,
-                                          height: '2px',
-                                          borderTop: '2px dashed rgba(255, 0, 0, 0.8)'
-                                        }
-                                      : {
-                                          left: `${(guideline.position / 400) * 100}%`,
-                                          top: 0,
-                                          bottom: 0,
-                                          width: '2px',
-                                          borderLeft: '2px dashed rgba(255, 0, 0, 0.8)'
-                                        }
-                                    )
-                                  }}
-                                />
-                                
-                                {/* Guideline Label */}
-                                <div
-                                  className="absolute bg-red-500 text-white text-xs px-1 py-0.5 rounded"
-                                  style={{
-                                    ...(guideline.type === 'horizontal'
-                                      ? {
-                                          top: `calc(${(guideline.position / 400) * 100}% - 12px)`,
-                                          left: '8px'
-                                        }
-                                      : {
-                                          left: `calc(${(guideline.position / 400) * 100}% + 8px)`,
-                                          top: '8px'
-                                        }
-                                    )
-                                  }}
-                                >
-                                  {guideline.name}: {Math.round(guideline.position / 20)}px
+                        <div className="flex justify-center">
+                          <div className="relative inline-block border border-gray-200 bg-white p-8">
+                            <div className="relative w-80 h-80">
+                              <img 
+                                src={currentGuide.logos.original} 
+                                alt={`${shapeName} Logo with Guidelines`} 
+                                className="w-full h-full object-contain"
+                              />
+                              
+                              {/* Render guidelines as dashed lines */}
+                              {guidelines.map(guideline => (
+                                <div key={guideline.id}>
+                                  <div
+                                    className="absolute"
+                                    style={{
+                                      ...(guideline.type === 'horizontal' 
+                                        ? {
+                                            top: `${(guideline.position / 400) * 100}%`,
+                                            left: 0,
+                                            right: 0,
+                                            height: '2px',
+                                            borderTop: '2px dashed rgba(255, 0, 0, 0.8)'
+                                          }
+                                        : {
+                                            left: `${(guideline.position / 400) * 100}%`,
+                                            top: 0,
+                                            bottom: 0,
+                                            width: '2px',
+                                            borderLeft: '2px dashed rgba(255, 0, 0, 0.8)'
+                                          }
+                                      )
+                                    }}
+                                  />
+                                  
+                                  {/* Guideline Label */}
+                                  <div
+                                    className="absolute bg-red-500 text-white text-xs px-1 py-0.5 rounded"
+                                    style={{
+                                      ...(guideline.type === 'horizontal'
+                                        ? {
+                                            top: `calc(${(guideline.position / 400) * 100}% - 12px)`,
+                                            left: '8px'
+                                          }
+                                        : {
+                                            left: `calc(${(guideline.position / 400) * 100}% + 8px)`,
+                                            top: '8px'
+                                          }
+                                      )
+                                    }}
+                                  >
+                                    {guideline.name}: {Math.round(guideline.position)}px
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         </div>
                         
                         {/* Guidelines List */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                           {guidelines.map(guideline => (
-                            <div key={guideline.id} className="bg-gray-50 p-2 rounded">
-                              <span className="font-medium">{guideline.name}:</span> {Math.round(guideline.position / 20)}px
+                            <div key={guideline.id} className="bg-gray-50 p-2 rounded text-center">
+                              <span className="font-medium">{guideline.name}:</span> {Math.round(guideline.position)}px
                             </div>
                           ))}
                         </div>
@@ -517,20 +522,22 @@ const Preview = () => {
               </div>
             )}
             
-            <div className="flex justify-center mb-8">
+            <div className="flex justify-center mb-12">
               <div className="w-64 h-64 flex items-center justify-center p-4 border rounded-md">
                 <img src={currentGuide.logos.original} alt="Original Logo" className="max-w-full max-h-full object-contain" />
               </div>
             </div>
             
             <div>
-              <h3 className="text-xl font-semibold mb-4">Logo Variations</h3>
+              <h3 className="text-2xl font-semibold mb-6">Logo Variations</h3>
               
-              <h4 className="text-lg font-medium mb-3 mt-6">Square</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+              <h4 className="text-lg font-medium mb-4 mt-8">Square</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-12">
                 {currentGuide.logos.square.slice(0, 4).map((logo, index) => (
-                  <div key={index} className="flex flex-col items-center space-y-2">
-                    <LogoPreview logo={logo} shape="square" />
+                  <div key={index} className="flex flex-col items-center space-y-3">
+                    <div className="flex justify-center">
+                      <LogoPreview logo={logo} shape="square" />
+                    </div>
                     <p className="text-sm text-center text-muted-foreground">
                       {logo.type === 'color' ? 'Color' : logo.type === 'white' ? 'White' : 'Black'} on {logo.background}
                     </p>
@@ -538,11 +545,13 @@ const Preview = () => {
                 ))}
               </div>
               
-              <h4 className="text-lg font-medium mb-3 mt-6">Rounded</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+              <h4 className="text-lg font-medium mb-4 mt-8">Rounded</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-12">
                 {currentGuide.logos.rounded.slice(0, 4).map((logo, index) => (
-                  <div key={index} className="flex flex-col items-center space-y-2">
-                    <LogoPreview logo={logo} shape="rounded" />
+                  <div key={index} className="flex flex-col items-center space-y-3">
+                    <div className="flex justify-center">
+                      <LogoPreview logo={logo} shape="rounded" />
+                    </div>
                     <p className="text-sm text-center text-muted-foreground">
                       {logo.type === 'color' ? 'Color' : logo.type === 'white' ? 'White' : 'Black'} on {logo.background}
                     </p>
@@ -550,11 +559,13 @@ const Preview = () => {
                 ))}
               </div>
               
-              <h4 className="text-lg font-medium mb-3 mt-6">Circle</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+              <h4 className="text-lg font-medium mb-4 mt-8">Circle</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
                 {currentGuide.logos.circle.slice(0, 4).map((logo, index) => (
-                  <div key={index} className="flex flex-col items-center space-y-2">
-                    <LogoPreview logo={logo} shape="circle" />
+                  <div key={index} className="flex flex-col items-center space-y-3">
+                    <div className="flex justify-center">
+                      <LogoPreview logo={logo} shape="circle" />
+                    </div>
                     <p className="text-sm text-center text-muted-foreground">
                       {logo.type === 'color' ? 'Color' : logo.type === 'white' ? 'White' : 'Black'} on {logo.background}
                     </p>
