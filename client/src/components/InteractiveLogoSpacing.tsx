@@ -85,7 +85,7 @@ export function InteractiveLogoSpacing({
       .map(g => g.name)
       .sort();
     
-    const prefix = type === 'horizontal' ? 'Y' : 'X';
+    const prefix = type === 'horizontal' ? 'X' : 'Y';
     let counter = 1;
     
     while (existingNames.includes(`${prefix}${counter}`)) {

@@ -311,12 +311,7 @@ const Preview = () => {
   return (
     <MainLayout>
       <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setLocation('/')} className="hover:opacity-75 transition-opacity">
-              <BrandStudioLogo size="sm" />
-            </button>
-          </div>
+        <div className="container mx-auto px-4 py-3 flex justify-end items-center">
           <Button onClick={generateAdvancedPDF}>
             <FileDown className="h-4 w-4 mr-2" />
             Download Professional PDF

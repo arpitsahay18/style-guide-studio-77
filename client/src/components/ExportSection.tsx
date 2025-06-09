@@ -176,7 +176,7 @@ export function ExportSection() {
           );
 
           if (logoWithGuidelines) {
-            const logoSize = 80;
+            const logoSize = 120;
             doc.addImage(logoWithGuidelines, 'PNG', margin, yPosition, logoSize, logoSize);
             yPosition += logoSize + 10;
 

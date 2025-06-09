@@ -34,7 +34,7 @@ export function MainLayout({
   };
   
   const content = (
-    <div className="flex flex-col min-h-screen max-w-full overflow-x-hidden">
+    <div className="flex flex-col h-full max-w-full overflow-x-hidden">
       <header className="border-b bg-background flex-shrink-0">
         <div className="container mx-auto py-4 px-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -47,7 +47,7 @@ export function MainLayout({
         </div>
       </header>
       
-      <main className="flex-1 bg-background py-6 overflow-x-hidden">
+      <main className="flex-1 bg-background py-6 overflow-x-hidden overflow-y-auto">
         {children}
       </main>
       
