@@ -15,7 +15,7 @@ interface ColorDetailProps {
 
 function ColorDetail({ color }: ColorDetailProps) {
   const { toast } = useToast();
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<string>('');
   
   // Add safety check for color object
   if (!color || !color.hex) {
@@ -28,12 +28,12 @@ function ColorDetail({ color }: ColorDetailProps) {
   
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    setCopied(true);
+    setCopied(text);
     toast({
       title: "Color code copied!",
       description: `${text} has been copied to your clipboard.`
     });
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(''), 2000);
   };
   
   return (
@@ -57,7 +57,7 @@ function ColorDetail({ color }: ColorDetailProps) {
               onClick={() => copyToClipboard(color.hex)} 
               className="h-8 w-8"
             >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied === color.hex ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
         </div>
@@ -92,11 +92,19 @@ function ColorDetail({ color }: ColorDetailProps) {
             {color.tints?.map((tint, index) => (
               <div 
                 key={`tint-${index}`} 
-                className="w-full aspect-square rounded-sm border border-border cursor-pointer" 
+                className="w-full aspect-square rounded-sm border border-border cursor-pointer relative group" 
                 style={{ backgroundColor: tint }} 
-                title={tint} 
-                onClick={() => copyToClipboard(tint)} 
-              />
+                onClick={() => copyToClipboard(tint)}
+              >
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-sm flex items-center justify-center">
+                  <span className="text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-medium">
+                    {copied === tint ? 'Copied!' : 'Copy'}
+                  </span>
+                </div>
+                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                  {tint}
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -107,11 +115,19 @@ function ColorDetail({ color }: ColorDetailProps) {
             {color.shades?.map((shade, index) => (
               <div 
                 key={`shade-${index}`} 
-                className="w-full aspect-square rounded-sm border border-border cursor-pointer" 
+                className="w-full aspect-square rounded-sm border border-border cursor-pointer relative group" 
                 style={{ backgroundColor: shade }} 
-                title={shade} 
-                onClick={() => copyToClipboard(shade)} 
-              />
+                onClick={() => copyToClipboard(shade)}
+              >
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-sm flex items-center justify-center">
+                  <span className="text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-medium">
+                    {copied === shade ? 'Copied!' : 'Copy'}
+                  </span>
+                </div>
+                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                  {shade}
+                </div>
+              </div>
             ))}
           </div>
         </div>

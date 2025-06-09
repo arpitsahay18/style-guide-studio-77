@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { MainLayout } from '@/components/MainLayout';
@@ -11,13 +12,11 @@ import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { BrandStudioLogo } from '@/components/BrandStudioLogo';
+import { hexToRgb, rgbToCmyk } from '@/utils/colorUtils';
 
 // Helper function to convert hex to Pantone (simplified approximation)
 const getClosestPantone = (hex: string): string => {
-  // This is a simplified mapping - in reality, you'd need a comprehensive color matching system
-  const pantoneMap: {
-    [key: string]: string;
-  } = {
+  const pantoneMap: { [key: string]: string } = {
     '#FF0000': 'Pantone Red 032 C',
     '#00FF00': 'Pantone Green C',
     '#0000FF': 'Pantone Blue 072 C',
@@ -30,27 +29,31 @@ const getClosestPantone = (hex: string): string => {
     '#6C757D': 'Pantone Cool Gray 8 C'
   };
 
-  // Find closest match or return a generic approximation
   return pantoneMap[hex.toUpperCase()] || `Pantone ${hex.substring(1).toUpperCase()}`;
 };
+
 const Preview = () => {
   const {
     currentGuide,
     previewText,
     colorNames,
     typographyVisibility,
-    typographyNames
+    typographyNames,
+    logoGuidelines
   } = useBrandGuide();
   const contentRef = useRef<HTMLDivElement>(null);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   // Check if guide is complete
-  const isGuideComplete = currentGuide.colors.primary.length > 0 && currentGuide.colors.secondary.length > 0 && Boolean(currentGuide.logos.original);
+  const isGuideComplete = 
+    currentGuide.colors.primary.length > 0 && 
+    currentGuide.colors.secondary.length > 0 && 
+    Boolean(currentGuide.logos.original);
+
   if (!isGuideComplete) {
-    return <MainLayout>
+    return (
+      <MainLayout>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-4">
             <h1 className="text-2xl font-bold">Brand Guide Incomplete</h1>
@@ -61,8 +64,10 @@ const Preview = () => {
             </Button>
           </div>
         </div>
-      </MainLayout>;
+      </MainLayout>
+    );
   }
+
   const getColorDisplayName = (colorIndex: number, categoryType: 'primary' | 'secondary' | 'neutral') => {
     const colorKey = `${categoryType}-${colorIndex}`;
     const customName = colorNames[colorKey];
@@ -70,13 +75,12 @@ const Preview = () => {
     const color = currentGuide.colors[categoryType][colorIndex];
     return typeof color === 'string' ? color : color?.hex || 'Unknown Color';
   };
+
   const getTypographyDisplayName = (category: 'display' | 'heading' | 'body', styleKey: string) => {
     const key = `${category}-${styleKey}`;
     const customName = typographyNames[key];
     if (customName) return customName;
-    const defaultNames: {
-      [key: string]: string;
-    } = {
+    const defaultNames: { [key: string]: string } = {
       'display-large': 'Display Large',
       'display-medium': 'Display Medium',
       'display-regular': 'Display Regular',
@@ -93,69 +97,433 @@ const Preview = () => {
     };
     return defaultNames[key] || styleKey.charAt(0).toUpperCase() + styleKey.slice(1);
   };
-  const generatePDF = async () => {
+
+  const generateAdvancedPDF = async () => {
     if (!contentRef.current) return;
+
     try {
       toast({
-        title: "Generating PDF",
-        description: "Please wait while we generate your PDF..."
-      });
-      const content = contentRef.current;
-
-      // Improved PDF generation with better quality/size balance
-      const canvas = await html2canvas(content, {
-        scale: 1,
-        // Lower scale for better file size
-        useCORS: true,
-        logging: false,
-        imageTimeout: 0,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
+        title: "Generating Professional PDF",
+        description: "Creating your comprehensive brand guide..."
       });
 
-      // Optimize image quality vs file size
-      const imgData = canvas.toDataURL('image/jpeg', 0.7); // Use JPEG with 70% quality
-
+      // A4 dimensions in mm
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+      
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
 
-      // Calculate aspect ratio
-      const imgWidth = 210; // A4 width in mm
-      const imgHeight = canvas.height * imgWidth / canvas.width;
+      // Helper function to add footer with clickable link
+      const addFooter = (pageNumber?: number) => {
+        pdf.setFontSize(9);
+        pdf.setTextColor(100, 100, 100);
+        
+        // Add page number if provided
+        if (pageNumber) {
+          pdf.text(`${pageNumber}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+        }
+        
+        // Add "Made with Brand Studio" as clickable link
+        const linkText = "Made with Brand Studio";
+        const linkWidth = pdf.getTextWidth(linkText);
+        pdf.textWithLink(linkText, pageWidth - margin - linkWidth, pageHeight - 5, {
+          url: 'https://your-website.com'
+        });
+      };
 
-      // Split into pages if content is too long
-      const pageHeight = 297; // A4 height in mm
-      let heightLeft = imgHeight;
-      let position = 0;
-      let page = 1;
+      // PAGE 1: Title Page
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+      
+      // Brand name centered
+      pdf.setFontSize(42);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(currentGuide.name, pageWidth / 2, pageHeight / 2 - 20, { align: 'center' });
+      
+      // Subtitle
+      pdf.setFontSize(24);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(100, 100, 100);
+      pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 10, { align: 'center' });
+      
+      addFooter();
 
-      // Add first page
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      // PAGE 2: Typography Section
+      pdf.addPage();
+      let currentY = margin + 10;
+      
+      // Typography title
+      pdf.setFontSize(28);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Typography', margin, currentY);
+      currentY += 20;
 
-      // Add subsequent pages if needed
-      while (heightLeft > 0) {
-        position = -pageHeight * page;
+      // Display Typography
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Display Typography', margin, currentY);
+      currentY += 15;
+
+      typographyVisibility.display.forEach(styleKey => {
+        const style = currentGuide.typography.display[styleKey];
+        if (!style) return;
+        
+        const displayName = getTypographyDisplayName('display', styleKey);
+        
+        if (currentY > pageHeight - 60) {
+          pdf.addPage();
+          currentY = margin + 10;
+        }
+        
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(displayName, margin, currentY);
+        currentY += 8;
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Font: ${style.fontFamily.replace(/"/g, '')}`, margin, currentY);
+        currentY += 6;
+        pdf.text(`Size: ${style.fontSize} | Weight: ${style.fontWeight} | Line Height: ${style.lineHeight}`, margin, currentY);
+        currentY += 15;
+      });
+
+      // Headings
+      if (currentY > pageHeight - 80) {
         pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-        page++;
+        currentY = margin + 10;
+      }
+      
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Headings', margin, currentY);
+      currentY += 15;
+
+      typographyVisibility.heading.forEach(styleKey => {
+        const style = currentGuide.typography.heading[styleKey];
+        if (!style) return;
+        
+        const displayName = getTypographyDisplayName('heading', styleKey);
+        
+        if (currentY > pageHeight - 40) {
+          pdf.addPage();
+          currentY = margin + 10;
+        }
+        
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(displayName, margin, currentY);
+        currentY += 8;
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Font: ${style.fontFamily.replace(/"/g, '')}`, margin, currentY);
+        currentY += 6;
+        pdf.text(`Size: ${style.fontSize} | Weight: ${style.fontWeight}`, margin, currentY);
+        currentY += 12;
+      });
+
+      // Body Text
+      if (currentY > pageHeight - 80) {
+        pdf.addPage();
+        currentY = margin + 10;
+      }
+      
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Body Text', margin, currentY);
+      currentY += 15;
+
+      typographyVisibility.body.forEach(styleKey => {
+        const style = currentGuide.typography.body[styleKey];
+        if (!style) return;
+        
+        const displayName = getTypographyDisplayName('body', styleKey);
+        
+        if (currentY > pageHeight - 40) {
+          pdf.addPage();
+          currentY = margin + 10;
+        }
+        
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(displayName, margin, currentY);
+        currentY += 8;
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Font: ${style.fontFamily.replace(/"/g, '')}`, margin, currentY);
+        currentY += 6;
+        pdf.text(`Size: ${style.fontSize} | Weight: ${style.fontWeight}`, margin, currentY);
+        currentY += 12;
+      });
+
+      addFooter(2);
+
+      // PAGE 3+: Color Palette Section
+      pdf.addPage();
+      let pageNumber = 3;
+      currentY = margin + 10;
+      
+      pdf.setFontSize(28);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Color Palette', margin, currentY);
+      currentY += 20;
+
+      // Helper function to add color section
+      const addColorSection = (title: string, colors: any[], categoryType: 'primary' | 'secondary' | 'neutral') => {
+        if (colors.length === 0) return;
+        
+        if (currentY > pageHeight - 100) {
+          pdf.addPage();
+          pageNumber++;
+          currentY = margin + 10;
+        }
+        
+        pdf.setFontSize(18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(title, margin, currentY);
+        currentY += 15;
+        
+        colors.forEach((color, index) => {
+          if (currentY > pageHeight - 80) {
+            pdf.addPage();
+            pageNumber++;
+            currentY = margin + 10;
+          }
+          
+          const colorName = getColorDisplayName(index, categoryType);
+          
+          // Color rectangle (full width)
+          const hexColor = color.hex;
+          const rgb = hexToRgb(hexColor);
+          pdf.setFillColor(rgb.r, rgb.g, rgb.b);
+          pdf.rect(margin, currentY, contentWidth, 15, 'F');
+          
+          // Color details
+          currentY += 20;
+          pdf.setFontSize(14);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(colorName, margin, currentY);
+          currentY += 8;
+          
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`HEX: ${color.hex}`, margin, currentY);
+          currentY += 5;
+          pdf.text(`RGB: ${color.rgb}`, margin, currentY);
+          currentY += 5;
+          pdf.text(`CMYK: ${color.cmyk}`, margin, currentY);
+          currentY += 5;
+          pdf.text(`Pantone: ${getClosestPantone(color.hex)}`, margin, currentY);
+          currentY += 10;
+          
+          // Tints and Shades
+          if (color.tints && color.tints.length > 0) {
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Tints:', margin, currentY);
+            currentY += 6;
+            
+            const swatchSize = 8;
+            let swatchX = margin;
+            color.tints.forEach((tint: string, i: number) => {
+              if (swatchX + swatchSize > pageWidth - margin) {
+                swatchX = margin;
+                currentY += swatchSize + 2;
+              }
+              const tintRgb = hexToRgb(tint);
+              pdf.setFillColor(tintRgb.r, tintRgb.g, tintRgb.b);
+              pdf.rect(swatchX, currentY, swatchSize, swatchSize, 'F');
+              pdf.setFontSize(8);
+              pdf.text(tint, swatchX, currentY + swatchSize + 4);
+              swatchX += swatchSize + 15;
+            });
+            currentY += swatchSize + 8;
+          }
+          
+          if (color.shades && color.shades.length > 0) {
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Shades:', margin, currentY);
+            currentY += 6;
+            
+            const swatchSize = 8;
+            let swatchX = margin;
+            color.shades.forEach((shade: string, i: number) => {
+              if (swatchX + swatchSize > pageWidth - margin) {
+                swatchX = margin;
+                currentY += swatchSize + 2;
+              }
+              const shadeRgb = hexToRgb(shade);
+              pdf.setFillColor(shadeRgb.r, shadeRgb.g, shadeRgb.b);
+              pdf.rect(swatchX, currentY, swatchSize, swatchSize, 'F');
+              pdf.setFontSize(8);
+              pdf.text(shade, swatchX, currentY + swatchSize + 4);
+              swatchX += swatchSize + 15;
+            });
+            currentY += swatchSize + 8;
+          }
+          
+          currentY += 10;
+        });
+      };
+
+      addColorSection('Primary Colors', currentGuide.colors.primary, 'primary');
+      addColorSection('Secondary Colors', currentGuide.colors.secondary, 'secondary');
+      if (currentGuide.colors.neutral.length > 0) {
+        addColorSection('Neutral Colors', currentGuide.colors.neutral, 'neutral');
       }
 
-      // Add watermark
+      addFooter(pageNumber);
+
+      // PAGE: Logo Section
+      pdf.addPage();
+      pageNumber++;
+      currentY = margin + 10;
+      
+      pdf.setFontSize(28);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Logo', margin, currentY);
+      currentY += 20;
+
+      // Logo Guidelines (if any)
+      const hasGuidelines = Object.keys(logoGuidelines).some(key => logoGuidelines[key].length > 0);
+      if (hasGuidelines) {
+        pdf.setFontSize(18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Logo Guidelines', margin, currentY);
+        currentY += 15;
+        
+        Object.entries(logoGuidelines).forEach(([shapeKey, guidelines]) => {
+          if (guidelines.length > 0) {
+            pdf.setFontSize(14);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`${shapeKey.replace('-logo', '').charAt(0).toUpperCase() + shapeKey.replace('-logo', '').slice(1)} Logo Guidelines:`, margin, currentY);
+            currentY += 8;
+            
+            guidelines.forEach(guideline => {
+              pdf.setFontSize(10);
+              pdf.setFont('helvetica', 'normal');
+              pdf.text(`• ${guideline.name}: ${Math.round(guideline.position / 20)}px spacing`, margin + 5, currentY);
+              currentY += 5;
+            });
+            currentY += 8;
+          }
+        });
+        currentY += 10;
+      }
+
+      // Original Logo
+      if (currentGuide.logos.original) {
+        try {
+          pdf.text('Original Logo', margin, currentY);
+          currentY += 10;
+          pdf.addImage(currentGuide.logos.original, 'PNG', margin, currentY, 50, 50);
+          currentY += 60;
+        } catch (error) {
+          console.error('Error adding logo to PDF:', error);
+        }
+      }
+
+      // Logo Variations
+      pdf.setFontSize(18);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Logo Variations', margin, currentY);
+      currentY += 15;
+
+      const logoSets = [
+        { title: 'Square', logos: currentGuide.logos.square },
+        { title: 'Rounded', logos: currentGuide.logos.rounded },
+        { title: 'Circle', logos: currentGuide.logos.circle }
+      ];
+
+      for (const set of logoSets) {
+        if (set.logos.length > 0 && currentY < pageHeight - 80) {
+          pdf.setFontSize(14);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(set.title, margin, currentY);
+          currentY += 10;
+          
+          // Show first 2 variations
+          const logosToShow = set.logos.slice(0, 2);
+          let logoX = margin;
+          
+          logosToShow.forEach((logo, i) => {
+            try {
+              // Create canvas for logo with background
+              const canvas = document.createElement('canvas');
+              canvas.width = 100;
+              canvas.height = 100;
+              const ctx = canvas.getContext('2d');
+              
+              if (ctx) {
+                ctx.fillStyle = logo.background;
+                ctx.fillRect(0, 0, 100, 100);
+                
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                  const maxDim = 75;
+                  const scale = Math.min(maxDim / img.width, maxDim / img.height);
+                  const width = img.width * scale;
+                  const height = img.height * scale;
+                  const x = (100 - width) / 2;
+                  const y = (100 - height) / 2;
+                  
+                  ctx.drawImage(img, x, y, width, height);
+                  
+                  const logoDataUrl = canvas.toDataURL('image/png');
+                  pdf.addImage(logoDataUrl, 'PNG', logoX, currentY, 25, 25);
+                };
+                img.src = logo.src;
+              }
+            } catch (error) {
+              console.error('Error processing logo variation:', error);
+            }
+            
+            logoX += 35;
+          });
+          
+          currentY += 35;
+        }
+      }
+
+      addFooter(pageNumber);
+
+      // FINAL PAGE: Closing
+      pdf.addPage();
+      pageNumber++;
+      
+      // Centered brand name and date at bottom
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Brand Guidelines of ${currentGuide.name}`, pageWidth / 2, pageHeight - 60, { align: 'center' });
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(new Date().toLocaleDateString(), pageWidth / 2, pageHeight - 45, { align: 'center' });
+      
+      // Footer link
+      const linkText = "Made with Brand Studio";
+      const linkWidth = pdf.getTextWidth(linkText);
       pdf.setFontSize(10);
-      pdf.setTextColor(150, 150, 150);
-      pdf.text('Made with ❤️ by Arpit Sahay', 105, 290, {
-        align: 'center'
+      pdf.textWithLink(linkText, pageWidth / 2 - (linkWidth / 2), pageHeight - 15, {
+        url: 'https://your-website.com'
       });
+
+      // Save the PDF
       pdf.save(`${currentGuide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
+      
       toast({
-        title: "PDF Generated Successfully",
-        description: "Your brand guide has been downloaded."
+        title: "Professional PDF Generated",
+        description: "Your comprehensive brand guide has been downloaded successfully."
       });
+
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast({
@@ -165,7 +533,9 @@ const Preview = () => {
       });
     }
   };
-  return <MainLayout>
+
+  return (
+    <MainLayout>
       {/* Fixed Header */}
       <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
@@ -173,11 +543,10 @@ const Preview = () => {
             <button onClick={() => navigate('/')} className="hover:opacity-75 transition-opacity">
               <BrandStudioLogo size="sm" />
             </button>
-            
           </div>
-          <Button onClick={generatePDF}>
+          <Button onClick={generateAdvancedPDF}>
             <FileDown className="h-4 w-4 mr-2" />
-            Download as PDF
+            Download Professional PDF
           </Button>
         </div>
       </div>
@@ -199,10 +568,17 @@ const Preview = () => {
               <h3 className="text-xl font-semibold mb-4">Display Typography</h3>
               <div className="grid gap-6">
                 {typographyVisibility.display.map(styleKey => {
-                const style = currentGuide.typography.display[styleKey];
-                if (!style) return null;
-                return <TypographyPreview key={styleKey} name={getTypographyDisplayName('display', styleKey)} style={style} previewText={previewText} />;
-              })}
+                  const style = currentGuide.typography.display[styleKey];
+                  if (!style) return null;
+                  return (
+                    <TypographyPreview 
+                      key={styleKey} 
+                      name={getTypographyDisplayName('display', styleKey)} 
+                      style={style} 
+                      previewText={previewText} 
+                    />
+                  );
+                })}
               </div>
             </div>
             
@@ -210,10 +586,17 @@ const Preview = () => {
               <h3 className="text-xl font-semibold mb-4">Headings</h3>
               <div className="grid gap-6">
                 {typographyVisibility.heading.map(styleKey => {
-                const style = currentGuide.typography.heading[styleKey];
-                if (!style) return null;
-                return <TypographyPreview key={styleKey} name={getTypographyDisplayName('heading', styleKey)} style={style} previewText={previewText} />;
-              })}
+                  const style = currentGuide.typography.heading[styleKey];
+                  if (!style) return null;
+                  return (
+                    <TypographyPreview 
+                      key={styleKey} 
+                      name={getTypographyDisplayName('heading', styleKey)} 
+                      style={style} 
+                      previewText={previewText} 
+                    />
+                  );
+                })}
               </div>
             </div>
             
@@ -221,10 +604,17 @@ const Preview = () => {
               <h3 className="text-xl font-semibold mb-4">Body Text</h3>
               <div className="grid gap-6">
                 {typographyVisibility.body.map(styleKey => {
-                const style = currentGuide.typography.body[styleKey];
-                if (!style) return null;
-                return <TypographyPreview key={styleKey} name={getTypographyDisplayName('body', styleKey)} style={style} previewText={previewText} />;
-              })}
+                  const style = currentGuide.typography.body[styleKey];
+                  if (!style) return null;
+                  return (
+                    <TypographyPreview 
+                      key={styleKey} 
+                      name={getTypographyDisplayName('body', styleKey)} 
+                      style={style} 
+                      previewText={previewText} 
+                    />
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -238,44 +628,52 @@ const Preview = () => {
             <div>
               <h3 className="text-xl font-semibold mb-4">Primary Colors</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {currentGuide.colors.primary.map((color, index) => <div key={index} className="space-y-3">
+                {currentGuide.colors.primary.map((color, index) => (
+                  <div key={index} className="space-y-3">
                     <ColorSwatch color={color} colorName={getColorDisplayName(index, 'primary')} />
                     <div className="text-sm space-y-1">
                       <p><strong>RGB:</strong> {color.rgb}</p>
                       <p><strong>CMYK:</strong> {color.cmyk}</p>
                       <p><strong>Pantone:</strong> {getClosestPantone(color.hex)}</p>
                     </div>
-                  </div>)}
+                  </div>
+                ))}
               </div>
             </div>
             
             <div>
               <h3 className="text-xl font-semibold mb-4">Secondary Colors</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {currentGuide.colors.secondary.map((color, index) => <div key={index} className="space-y-3">
+                {currentGuide.colors.secondary.map((color, index) => (
+                  <div key={index} className="space-y-3">
                     <ColorSwatch color={color} colorName={getColorDisplayName(index, 'secondary')} />
                     <div className="text-sm space-y-1">
                       <p><strong>RGB:</strong> {color.rgb}</p>
                       <p><strong>CMYK:</strong> {color.cmyk}</p>
                       <p><strong>Pantone:</strong> {getClosestPantone(color.hex)}</p>
                     </div>
-                  </div>)}
+                  </div>
+                ))}
               </div>
             </div>
             
-            {currentGuide.colors.neutral.length > 0 && <div>
+            {currentGuide.colors.neutral.length > 0 && (
+              <div>
                 <h3 className="text-xl font-semibold mb-4">Neutral Colors</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {currentGuide.colors.neutral.map((color, index) => <div key={index} className="space-y-3">
+                  {currentGuide.colors.neutral.map((color, index) => (
+                    <div key={index} className="space-y-3">
                       <ColorSwatch color={color} colorName={getColorDisplayName(index, 'neutral')} />
                       <div className="text-sm space-y-1">
                         <p><strong>RGB:</strong> {color.rgb}</p>
                         <p><strong>CMYK:</strong> {color.cmyk}</p>
                         <p><strong>Pantone:</strong> {getClosestPantone(color.hex)}</p>
                       </div>
-                    </div>)}
+                    </div>
+                  ))}
                 </div>
-              </div>}
+              </div>
+            )}
           </div>
         </section>
         
@@ -296,19 +694,25 @@ const Preview = () => {
               {/* Square Logo Variations */}
               <h4 className="text-lg font-medium mb-3 mt-6">Square</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                {currentGuide.logos.square.slice(0, 4).map((logo, index) => <LogoPreview key={index} logo={logo} shape="square" />)}
+                {currentGuide.logos.square.slice(0, 4).map((logo, index) => (
+                  <LogoPreview key={index} logo={logo} shape="square" />
+                ))}
               </div>
               
               {/* Rounded Logo Variations */}
               <h4 className="text-lg font-medium mb-3 mt-6">Rounded</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                {currentGuide.logos.rounded.slice(0, 4).map((logo, index) => <LogoPreview key={index} logo={logo} shape="rounded" />)}
+                {currentGuide.logos.rounded.slice(0, 4).map((logo, index) => (
+                  <LogoPreview key={index} logo={logo} shape="rounded" />
+                ))}
               </div>
               
               {/* Circle Logo Variations */}
               <h4 className="text-lg font-medium mb-3 mt-6">Circle</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                {currentGuide.logos.circle.slice(0, 4).map((logo, index) => <LogoPreview key={index} logo={logo} shape="circle" />)}
+                {currentGuide.logos.circle.slice(0, 4).map((logo, index) => (
+                  <LogoPreview key={index} logo={logo} shape="circle" />
+                ))}
               </div>
             </div>
           </div>
@@ -316,9 +720,11 @@ const Preview = () => {
         
         {/* Hidden watermark for PDF - only visible when exported */}
         <div className="hidden print:block text-center text-gray-400 mt-8 pt-8 border-t">
-          <p>Made with ❤️ by Arpit Sahay</p>
+          <p>Made with ❤️ by Brand Studio</p>
         </div>
       </div>
-    </MainLayout>;
+    </MainLayout>
+  );
 };
+
 export default Preview;

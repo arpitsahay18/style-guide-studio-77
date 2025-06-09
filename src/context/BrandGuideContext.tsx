@@ -215,7 +215,7 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
-  // Save data whenever it changes
+  // Save data whenever it changes - include logoGuidelines
   useEffect(() => {
     storage.saveBrandGuide({
       guide: currentGuide,

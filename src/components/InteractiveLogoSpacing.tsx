@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { LogoVariation } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,14 @@ export function InteractiveLogoSpacing({
   shape = 'square'
 }: InteractiveLogoSpacingProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [guidelines, setGuidelines] = useState<Guideline[]>([]);
+  const { logoGuidelines, setLogoGuidelines } = useBrandGuide();
+  
+  // Get guidelines for this logo shape, or initialize empty array
+  const shapeKey = `${shape}-logo`;
+  const [guidelines, setGuidelines] = useState<Guideline[]>(
+    logoGuidelines[shapeKey] || []
+  );
+  
   const [isDragging, setIsDragging] = useState(false);
   const [dragGuideline, setDragGuideline] = useState<Guideline | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 400, height: 400 });
@@ -38,6 +44,20 @@ export function InteractiveLogoSpacing({
     rounded: 'rounded-2xl',
     circle: 'rounded-full',
   };
+
+  // Save guidelines to context whenever they change
+  useEffect(() => {
+    const updatedLogoGuidelines = {
+      ...logoGuidelines,
+      [shapeKey]: guidelines
+    };
+    setLogoGuidelines(updatedLogoGuidelines);
+  }, [guidelines, shapeKey]);
+
+  // Load guidelines when shape changes
+  useEffect(() => {
+    setGuidelines(logoGuidelines[shapeKey] || []);
+  }, [shapeKey, logoGuidelines]);
 
   useEffect(() => {
     const updateSize = () => {
