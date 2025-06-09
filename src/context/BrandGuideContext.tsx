@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrandGuide, ColorPalette, TypographySet } from '@/types';
 import { storage } from '@/lib/storage';
@@ -87,6 +88,13 @@ const defaultBrandGuide: BrandGuide = {
         lineHeight: '1.2',
         letterSpacing: '-0.02em'
       },
+      medium: {
+        fontFamily: '"Bebas Neue", sans-serif',
+        fontSize: '40px',
+        fontWeight: '600',
+        lineHeight: '1.2',
+        letterSpacing: '-0.01em'
+      },
       regular: {
         fontFamily: '"Bebas Neue", sans-serif',
         fontSize: '32px',
@@ -115,6 +123,27 @@ const defaultBrandGuide: BrandGuide = {
         fontSize: '24px',
         fontWeight: '500',
         lineHeight: '1.4',
+        letterSpacing: '0em'
+      },
+      h4: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '20px',
+        fontWeight: '500',
+        lineHeight: '1.4',
+        letterSpacing: '0em'
+      },
+      h5: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '18px',
+        fontWeight: '500',
+        lineHeight: '1.5',
+        letterSpacing: '0em'
+      },
+      h6: {
+        fontFamily: '"Inter", sans-serif',
+        fontSize: '16px',
+        fontWeight: '500',
+        lineHeight: '1.5',
         letterSpacing: '0em'
       }
     },
@@ -164,7 +193,7 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
   const [previewText, setPreviewText] = useState('The quick brown fox jumps over the lazy dog');
   const [activeTab, setActiveTab] = useState('typography');
   const [activeSection, setActiveSection] = useState('');
-  const [logoGuidelines, setLogoGuidelines] = useState<{
+  const [logoGuidelines, setLogoGuidelinesState] = useState<{
     [key: string]: Array<{
       id: string;
       type: 'horizontal' | 'vertical';
@@ -182,7 +211,7 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
       if (saved.typographyVisibility) setTypographyVisibilityState(saved.typographyVisibility);
       if (saved.typographyNames) setTypographyNames(saved.typographyNames);
       if (saved.previewText) setPreviewText(saved.previewText);
-      if (saved.logoGuidelines) setLogoGuidelines(saved.logoGuidelines);
+      if (saved.logoGuidelines) setLogoGuidelinesState(saved.logoGuidelines);
     }
   }, []);
 
@@ -286,7 +315,7 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
   };
 
   const setLogoGuidelines = (guidelines: any) => {
-    setLogoGuidelines(guidelines);
+    setLogoGuidelinesState(guidelines);
   };
 
   return (
