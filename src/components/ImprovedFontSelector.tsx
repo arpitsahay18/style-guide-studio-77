@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,7 +76,8 @@ export function ImprovedFontSelector({ value, onChange, label, availableFonts }:
                 placeholder="Search fonts..."
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 caret-black"
+                style={{ caretColor: 'black' }}
                 autoFocus
               />
             </div>

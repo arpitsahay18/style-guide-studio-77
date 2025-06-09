@@ -6,13 +6,13 @@ import { TypographyPreview } from '@/components/ui/TypographyPreview';
 import { ColorSwatch } from '@/components/ui/ColorSwatch';
 import { LogoPreview } from '@/components/ui/LogoPreview';
 import { Button } from '@/components/ui/button';
-import { Download, FileDown, ArrowLeft } from 'lucide-react';
+import { FileDown, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { BrandStudioLogo } from '@/components/BrandStudioLogo';
-import { hexToRgb, rgbToCmyk } from '@/utils/colorUtils';
+import { hexToRgb } from '@/utils/colorUtils';
 
 // Helper function to convert hex to Pantone (simplified approximation)
 const getClosestPantone = (hex: string): string => {
@@ -110,7 +110,7 @@ const Preview = () => {
       // A4 dimensions in mm
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 20;
+      const margin = 25; // Increased left padding
       const contentWidth = pageWidth - (margin * 2);
       
       const pdf = new jsPDF({
@@ -137,21 +137,26 @@ const Preview = () => {
         });
       };
 
-      // PAGE 1: Title Page
+      // PAGE 1: Title Page with border
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+      
+      // Add single line border
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.rect(5, 5, pageWidth - 10, pageHeight - 10);
       
       // Brand name centered
       pdf.setFontSize(42);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
-      pdf.text(currentGuide.name, pageWidth / 2, pageHeight / 2 - 20, { align: 'center' });
+      pdf.text(currentGuide.name, pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
       
-      // Subtitle
+      // Subtitle with 1.5 line spacing
       pdf.setFontSize(24);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 100, 100);
-      pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 10, { align: 'center' });
+      pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 18, { align: 'center' });
       
       addFooter();
 
@@ -167,105 +172,122 @@ const Preview = () => {
       currentY += 20;
 
       // Display Typography
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Display Typography', margin, currentY);
-      currentY += 15;
-
-      typographyVisibility.display.forEach(styleKey => {
-        const style = currentGuide.typography.display[styleKey];
-        if (!style) return;
-        
-        const displayName = getTypographyDisplayName('display', styleKey);
-        
-        if (currentY > pageHeight - 60) {
-          pdf.addPage();
-          currentY = margin + 10;
-        }
-        
-        pdf.setFontSize(12);
+      if (typographyVisibility.display.length > 0) {
+        pdf.setFontSize(18);
         pdf.setFont('helvetica', 'bold');
-        pdf.text(displayName, margin, currentY);
-        currentY += 8;
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`Font: ${style.fontFamily.replace(/"/g, '')}`, margin, currentY);
-        currentY += 6;
-        pdf.text(`Size: ${style.fontSize} | Weight: ${style.fontWeight} | Line Height: ${style.lineHeight}`, margin, currentY);
+        pdf.text('Display Typography', margin, currentY);
         currentY += 15;
-      });
+
+        typographyVisibility.display.forEach(styleKey => {
+          const style = currentGuide.typography.display[styleKey];
+          if (!style) return;
+          
+          const displayName = getTypographyDisplayName('display', styleKey);
+          
+          if (currentY > pageHeight - 60) {
+            pdf.addPage();
+            currentY = margin + 10;
+          }
+          
+          // Style name
+          pdf.setFontSize(14);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(displayName, margin, currentY);
+          currentY += 8;
+          
+          // Font details
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`Font: ${style.fontFamily.replace(/"/g, '')}`, margin, currentY);
+          currentY += 5;
+          pdf.text(`Size: ${style.fontSize}`, margin, currentY);
+          currentY += 5;
+          pdf.text(`Weight: ${style.fontWeight}`, margin, currentY);
+          currentY += 5;
+          pdf.text(`Line Height: ${style.lineHeight}`, margin, currentY);
+          currentY += 5;
+          pdf.text(`Letter Spacing: ${style.letterSpacing}`, margin, currentY);
+          currentY += 15;
+        });
+      }
 
       // Headings
-      if (currentY > pageHeight - 80) {
-        pdf.addPage();
-        currentY = margin + 10;
-      }
-      
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Headings', margin, currentY);
-      currentY += 15;
-
-      typographyVisibility.heading.forEach(styleKey => {
-        const style = currentGuide.typography.heading[styleKey];
-        if (!style) return;
-        
-        const displayName = getTypographyDisplayName('heading', styleKey);
-        
-        if (currentY > pageHeight - 40) {
+      if (typographyVisibility.heading.length > 0) {
+        if (currentY > pageHeight - 80) {
           pdf.addPage();
           currentY = margin + 10;
         }
         
-        pdf.setFontSize(12);
+        pdf.setFontSize(18);
         pdf.setFont('helvetica', 'bold');
-        pdf.text(displayName, margin, currentY);
-        currentY += 8;
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`Font: ${style.fontFamily.replace(/"/g, '')}`, margin, currentY);
-        currentY += 6;
-        pdf.text(`Size: ${style.fontSize} | Weight: ${style.fontWeight}`, margin, currentY);
-        currentY += 12;
-      });
+        pdf.text('Headings', margin, currentY);
+        currentY += 15;
+
+        typographyVisibility.heading.forEach(styleKey => {
+          const style = currentGuide.typography.heading[styleKey];
+          if (!style) return;
+          
+          const displayName = getTypographyDisplayName('heading', styleKey);
+          
+          if (currentY > pageHeight - 40) {
+            pdf.addPage();
+            currentY = margin + 10;
+          }
+          
+          pdf.setFontSize(14);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(displayName, margin, currentY);
+          currentY += 8;
+          
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`Font: ${style.fontFamily.replace(/"/g, '')}`, margin, currentY);
+          currentY += 5;
+          pdf.text(`Size: ${style.fontSize} | Weight: ${style.fontWeight}`, margin, currentY);
+          currentY += 12;
+        });
+      }
 
       // Body Text
-      if (currentY > pageHeight - 80) {
-        pdf.addPage();
-        currentY = margin + 10;
-      }
-      
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Body Text', margin, currentY);
-      currentY += 15;
-
-      typographyVisibility.body.forEach(styleKey => {
-        const style = currentGuide.typography.body[styleKey];
-        if (!style) return;
-        
-        const displayName = getTypographyDisplayName('body', styleKey);
-        
-        if (currentY > pageHeight - 40) {
+      if (typographyVisibility.body.length > 0) {
+        if (currentY > pageHeight - 80) {
           pdf.addPage();
           currentY = margin + 10;
         }
         
-        pdf.setFontSize(12);
+        pdf.setFontSize(18);
         pdf.setFont('helvetica', 'bold');
-        pdf.text(displayName, margin, currentY);
-        currentY += 8;
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`Font: ${style.fontFamily.replace(/"/g, '')}`, margin, currentY);
-        currentY += 6;
-        pdf.text(`Size: ${style.fontSize} | Weight: ${style.fontWeight}`, margin, currentY);
-        currentY += 12;
-      });
+        pdf.text('Body Text', margin, currentY);
+        currentY += 15;
+
+        typographyVisibility.body.forEach(styleKey => {
+          const style = currentGuide.typography.body[styleKey];
+          if (!style) return;
+          
+          const displayName = getTypographyDisplayName('body', styleKey);
+          
+          if (currentY > pageHeight - 40) {
+            pdf.addPage();
+            currentY = margin + 10;
+          }
+          
+          pdf.setFontSize(14);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(displayName, margin, currentY);
+          currentY += 8;
+          
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`Font: ${style.fontFamily.replace(/"/g, '')}`, margin, currentY);
+          currentY += 5;
+          pdf.text(`Size: ${style.fontSize} | Weight: ${style.fontWeight}`, margin, currentY);
+          currentY += 12;
+        });
+      }
 
       addFooter(2);
 
-      // PAGE 3+: Color Palette Section
+      // PAGE 3+: Color Palette Section (fresh page)
       pdf.addPage();
       let pageNumber = 3;
       currentY = margin + 10;
@@ -275,7 +297,7 @@ const Preview = () => {
       pdf.text('Color Palette', margin, currentY);
       currentY += 20;
 
-      // Helper function to add color section
+      // Helper function to add color section exactly like export page
       const addColorSection = (title: string, colors: any[], categoryType: 'primary' | 'secondary' | 'neutral') => {
         if (colors.length === 0) return;
         
@@ -291,7 +313,7 @@ const Preview = () => {
         currentY += 15;
         
         colors.forEach((color, index) => {
-          if (currentY > pageHeight - 80) {
+          if (currentY > pageHeight - 120) {
             pdf.addPage();
             pageNumber++;
             currentY = margin + 10;
@@ -299,74 +321,78 @@ const Preview = () => {
           
           const colorName = getColorDisplayName(index, categoryType);
           
-          // Color rectangle (full width)
+          // Color swatch (same size as export page)
+          const swatchSize = 40;
           const hexColor = color.hex;
           const rgb = hexToRgb(hexColor);
           pdf.setFillColor(rgb.r, rgb.g, rgb.b);
-          pdf.rect(margin, currentY, contentWidth, 15, 'F');
+          pdf.rect(margin, currentY, swatchSize, swatchSize, 'F');
           
-          // Color details
-          currentY += 20;
+          // Color details next to swatch
+          const detailsX = margin + swatchSize + 10;
           pdf.setFontSize(14);
           pdf.setFont('helvetica', 'bold');
           pdf.setTextColor(0, 0, 0);
-          pdf.text(colorName, margin, currentY);
-          currentY += 8;
+          pdf.text(colorName, detailsX, currentY + 8);
           
           pdf.setFontSize(10);
           pdf.setFont('helvetica', 'normal');
-          pdf.text(`HEX: ${color.hex}`, margin, currentY);
-          currentY += 5;
-          pdf.text(`RGB: ${color.rgb}`, margin, currentY);
-          currentY += 5;
-          pdf.text(`CMYK: ${color.cmyk}`, margin, currentY);
-          currentY += 5;
-          pdf.text(`Pantone: ${getClosestPantone(color.hex)}`, margin, currentY);
-          currentY += 10;
+          pdf.text(`HEX: ${color.hex}`, detailsX, currentY + 18);
+          pdf.text(`RGB: ${color.rgb}`, detailsX, currentY + 26);
+          pdf.text(`CMYK: ${color.cmyk}`, detailsX, currentY + 34);
+          pdf.text(`Pantone: ${getClosestPantone(color.hex)}`, detailsX, currentY + 42);
           
-          // Tints and Shades
+          currentY += swatchSize + 15;
+          
+          // Add tints and shades if available
           if (color.tints && color.tints.length > 0) {
+            pdf.setFontSize(10);
             pdf.setFont('helvetica', 'bold');
             pdf.text('Tints:', margin, currentY);
-            currentY += 6;
+            currentY += 8;
             
-            const swatchSize = 8;
+            const smallSwatchSize = 15;
             let swatchX = margin;
             color.tints.forEach((tint: string, i: number) => {
-              if (swatchX + swatchSize > pageWidth - margin) {
+              if (swatchX + smallSwatchSize > pageWidth - margin) {
                 swatchX = margin;
-                currentY += swatchSize + 2;
+                currentY += smallSwatchSize + 5;
               }
               const tintRgb = hexToRgb(tint);
               pdf.setFillColor(tintRgb.r, tintRgb.g, tintRgb.b);
-              pdf.rect(swatchX, currentY, swatchSize, swatchSize, 'F');
+              pdf.rect(swatchX, currentY, smallSwatchSize, smallSwatchSize, 'F');
+              
               pdf.setFontSize(8);
-              pdf.text(tint, swatchX, currentY + swatchSize + 4);
-              swatchX += swatchSize + 15;
+              pdf.setTextColor(0, 0, 0);
+              pdf.text(tint, swatchX, currentY + smallSwatchSize + 3);
+              swatchX += smallSwatchSize + 20;
             });
-            currentY += swatchSize + 8;
+            currentY += smallSwatchSize + 10;
           }
           
           if (color.shades && color.shades.length > 0) {
+            pdf.setFontSize(10);
             pdf.setFont('helvetica', 'bold');
             pdf.text('Shades:', margin, currentY);
-            currentY += 6;
+            currentY += 8;
             
-            const swatchSize = 8;
+            const smallSwatchSize = 15;
             let swatchX = margin;
             color.shades.forEach((shade: string, i: number) => {
-              if (swatchX + swatchSize > pageWidth - margin) {
+              if (swatchX + smallSwatchSize > pageWidth - margin) {
                 swatchX = margin;
-                currentY += swatchSize + 2;
+                currentY += smallSwatchSize + 5;
               }
               const shadeRgb = hexToRgb(shade);
               pdf.setFillColor(shadeRgb.r, shadeRgb.g, shadeRgb.b);
-              pdf.rect(swatchX, currentY, swatchSize, swatchSize, 'F');
+              pdf.rect(swatchX, currentY, smallSwatchSize, smallSwatchSize, 'F');
+              
               pdf.setFontSize(8);
-              pdf.text(shade, swatchX, currentY + swatchSize + 4);
-              swatchX += swatchSize + 15;
+              pdf.setTextColor(0, 0, 0);
+              pdf.text(shade, swatchX, currentY + smallSwatchSize + 3);
+              swatchX += smallSwatchSize + 20;
             });
-            currentY += swatchSize + 8;
+            currentY += smallSwatchSize + 10;
           }
           
           currentY += 10;
@@ -381,7 +407,7 @@ const Preview = () => {
 
       addFooter(pageNumber);
 
-      // PAGE: Logo Section
+      // PAGE: Logo Section (fresh page)
       pdf.addPage();
       pageNumber++;
       currentY = margin + 10;
@@ -391,7 +417,7 @@ const Preview = () => {
       pdf.text('Logo', margin, currentY);
       currentY += 20;
 
-      // Logo Guidelines (if any)
+      // Logo Guidelines (if any) - show first
       const hasGuidelines = Object.keys(logoGuidelines).some(key => logoGuidelines[key].length > 0);
       if (hasGuidelines) {
         pdf.setFontSize(18);
@@ -421,16 +447,18 @@ const Preview = () => {
       // Original Logo
       if (currentGuide.logos.original) {
         try {
+          pdf.setFontSize(16);
+          pdf.setFont('helvetica', 'bold');
           pdf.text('Original Logo', margin, currentY);
           currentY += 10;
-          pdf.addImage(currentGuide.logos.original, 'PNG', margin, currentY, 50, 50);
-          currentY += 60;
+          pdf.addImage(currentGuide.logos.original, 'PNG', margin, currentY, 60, 60);
+          currentY += 70;
         } catch (error) {
           console.error('Error adding logo to PDF:', error);
         }
       }
 
-      // Logo Variations
+      // Logo Variations - properly aligned like export page
       pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Logo Variations', margin, currentY);
@@ -449,11 +477,14 @@ const Preview = () => {
           pdf.text(set.title, margin, currentY);
           currentY += 10;
           
-          // Show first 2 variations
-          const logosToShow = set.logos.slice(0, 2);
+          // Show first 3 variations in a row
+          const logosToShow = set.logos.slice(0, 3);
           let logoX = margin;
+          const logoSize = 25;
+          const logoSpacing = 35;
           
-          logosToShow.forEach((logo, i) => {
+          for (let i = 0; i < logosToShow.length; i++) {
+            const logo = logosToShow[i];
             try {
               // Create canvas for logo with background
               const canvas = document.createElement('canvas');
@@ -467,29 +498,33 @@ const Preview = () => {
                 
                 const img = new Image();
                 img.crossOrigin = "anonymous";
-                img.onload = () => {
-                  const maxDim = 75;
-                  const scale = Math.min(maxDim / img.width, maxDim / img.height);
-                  const width = img.width * scale;
-                  const height = img.height * scale;
-                  const x = (100 - width) / 2;
-                  const y = (100 - height) / 2;
-                  
-                  ctx.drawImage(img, x, y, width, height);
-                  
-                  const logoDataUrl = canvas.toDataURL('image/png');
-                  pdf.addImage(logoDataUrl, 'PNG', logoX, currentY, 25, 25);
-                };
-                img.src = logo.src;
+                
+                await new Promise<void>((resolve) => {
+                  img.onload = () => {
+                    const maxDim = 75;
+                    const scale = Math.min(maxDim / img.width, maxDim / img.height);
+                    const width = img.width * scale;
+                    const height = img.height * scale;
+                    const x = (100 - width) / 2;
+                    const y = (100 - height) / 2;
+                    
+                    ctx.drawImage(img, x, y, width, height);
+                    
+                    const logoDataUrl = canvas.toDataURL('image/png');
+                    pdf.addImage(logoDataUrl, 'PNG', logoX, currentY, logoSize, logoSize);
+                    resolve();
+                  };
+                  img.src = logo.src;
+                });
               }
             } catch (error) {
               console.error('Error processing logo variation:', error);
             }
             
-            logoX += 35;
-          });
+            logoX += logoSpacing;
+          }
           
-          currentY += 35;
+          currentY += logoSize + 15;
         }
       }
 
@@ -682,6 +717,30 @@ const Preview = () => {
           <h2 className="text-2xl font-bold mb-6 pb-2 border-b">Logo</h2>
           
           <div className="space-y-10">
+            {/* Logo Guidelines */}
+            {Object.keys(logoGuidelines).some(key => logoGuidelines[key].length > 0) && (
+              <div>
+                <h3 className="text-xl font-semibold mb-4">Logo Guidelines</h3>
+                <div className="space-y-4">
+                  {Object.entries(logoGuidelines).map(([shapeKey, guidelines]) => {
+                    if (guidelines.length === 0) return null;
+                    return (
+                      <div key={shapeKey} className="space-y-2">
+                        <h4 className="font-medium">{shapeKey.replace('-logo', '').charAt(0).toUpperCase() + shapeKey.replace('-logo', '').slice(1)} Logo Guidelines:</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                          {guidelines.map(guideline => (
+                            <div key={guideline.id} className="bg-gray-50 p-2 rounded">
+                              <span className="font-medium">{guideline.name}:</span> {Math.round(guideline.position / 20)}px
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            
             <div className="flex justify-center mb-8">
               <div className="w-64 h-64 flex items-center justify-center p-4 border rounded-md">
                 <img src={currentGuide.logos.original} alt="Original Logo" className="max-w-full max-h-full object-contain" />

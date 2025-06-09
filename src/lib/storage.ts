@@ -28,6 +28,7 @@ export const storage = {
   saveBrandGuide: (data: BrandGuideData) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      console.log('Brand guide saved with logo guidelines:', data.logoGuidelines);
     } catch (error) {
       console.error('Failed to save brand guide to localStorage:', error);
     }
@@ -36,7 +37,11 @@ export const storage = {
   loadBrandGuide: (): BrandGuideData | null => {
     try {
       const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : null;
+      const parsed = data ? JSON.parse(data) : null;
+      if (parsed) {
+        console.log('Brand guide loaded with logo guidelines:', parsed.logoGuidelines);
+      }
+      return parsed;
     } catch (error) {
       console.error('Failed to load brand guide from localStorage:', error);
       return null;

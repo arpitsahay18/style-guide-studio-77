@@ -1,171 +1,213 @@
 
 import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Plus } from 'lucide-react';
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { FontSelector } from './FontSelector';
 import { useBrandGuide } from '@/context/BrandGuideContext';
+import { Plus } from 'lucide-react';
 
 interface AddTypographyStyleDialogProps {
   category: 'display' | 'heading' | 'body';
-  hiddenStyles: string[];
 }
 
-export function AddTypographyStyleDialog({ category, hiddenStyles }: AddTypographyStyleDialogProps) {
-  const { currentGuide, addTypographyStyle } = useBrandGuide();
-  const [isOpen, setIsOpen] = useState(false);
-  const [customStyleName, setCustomStyleName] = useState('');
+const predefinedStyles = {
+  display: [
+    { key: 'thin', name: 'Display Thin', style: { fontWeight: '100' } },
+    { key: 'italics', name: 'Display Italics', style: { fontStyle: 'italic' } },
+    { key: 'condensed', name: 'Display Condensed', style: { fontStretch: 'condensed' } }
+  ],
+  heading: [],
+  body: [
+    { key: 'caption', name: 'Captions/Footnote', style: { fontSize: '12px', fontWeight: '400' } },
+    { key: 'button', name: 'Buttons', style: { fontSize: '14px', fontWeight: '500', textTransform: 'uppercase' } }
+  ]
+};
 
-  const getStyleDisplayName = (styleKey: string) => {
-    const displayNames: { [key: string]: string } = {
-      // Display styles
-      medium: 'Display Medium',
-      thin: 'Display Thin',
-      // Heading styles
-      h4: 'Heading H4',
-      h5: 'Heading H5',
-      h6: 'Heading H6',
-      // Body styles
-      largeLight: 'Body Alternative Weights',
-      largeMedium: 'Body Alternative Weights',
-      mediumLight: 'Body Alternative Weights',
-      mediumMedium: 'Body Alternative Weights',
-      smallLight: 'Body Alternative Weights',
-      smallMedium: 'Body Alternative Weights',
-    };
-    return displayNames[styleKey] || styleKey;
-  };
+export function AddTypographyStyleDialog({ category }: AddTypographyStyleDialogProps) {
+  const { addTypographyStyle } = useBrandGuide();
+  const [open, setOpen] = useState(false);
+  const [styleType, setStyleType] = useState<'predefined' | 'custom'>('predefined');
+  const [selectedPredefined, setSelectedPredefined] = useState('');
+  const [customName, setCustomName] = useState('');
+  const [customStyle, setCustomStyle] = useState({
+    fontFamily: '"Inter", sans-serif',
+    fontSize: '16px',
+    fontWeight: '400',
+    lineHeight: '1.5',
+    letterSpacing: '0em'
+  });
 
-  const handleAddExistingStyle = (styleKey: string) => {
-    addTypographyStyle(category, styleKey);
-    setIsOpen(false);
-  };
+  const availablePredefined = predefinedStyles[category];
 
-  const handleAddCustomStyle = () => {
-    if (!customStyleName.trim()) return;
-
-    const styleKey = customStyleName.toLowerCase().replace(/\s+/g, '');
-    let baseFontFamily = '"Inter", sans-serif';
-
-    // Get base font family from the category
-    if (category === 'display') {
-      baseFontFamily = currentGuide.typography.display.large?.fontFamily || '"Bebas Neue", sans-serif';
-    } else if (category === 'heading') {
-      baseFontFamily = currentGuide.typography.heading.h1?.fontFamily || '"Inter", sans-serif';
-    } else if (category === 'body') {
-      baseFontFamily = currentGuide.typography.body.medium?.fontFamily || '"Inter", sans-serif';
-    }
-
-    const customStyle = {
-      fontFamily: baseFontFamily,
-      fontSize: '16px',
-      fontWeight: '400',
-      lineHeight: '1.5',
-      letterSpacing: '0em'
-    };
-
-    addTypographyStyle(category, styleKey, customStyle);
-    setCustomStyleName('');
-    setIsOpen(false);
-  };
-
-  // Group body alternative styles under one option
-  const getAvailableStyles = () => {
-    if (category === 'body') {
-      const bodyAlternatives = ['largeLight', 'largeMedium', 'mediumLight', 'mediumMedium', 'smallLight', 'smallMedium'];
-      const hasAnyBodyAlternative = bodyAlternatives.some(style => hiddenStyles.includes(style));
-      
-      if (hasAnyBodyAlternative) {
-        return [{ key: 'bodyAlternatives', label: 'Body Alternative Weights' }];
+  const handleAddStyle = () => {
+    if (styleType === 'predefined' && selectedPredefined) {
+      const predefined = availablePredefined.find(p => p.key === selectedPredefined);
+      if (predefined) {
+        const fullStyle = {
+          ...customStyle,
+          ...predefined.style
+        };
+        addTypographyStyle(category, predefined.key, fullStyle);
       }
-      return [];
+    } else if (styleType === 'custom' && customName) {
+      const styleKey = customName.toLowerCase().replace(/\s+/g, '-');
+      addTypographyStyle(category, styleKey, customStyle);
     }
     
-    return hiddenStyles.map(styleKey => ({
-      key: styleKey,
-      label: getStyleDisplayName(styleKey)
-    }));
+    setOpen(false);
+    setSelectedPredefined('');
+    setCustomName('');
+    setStyleType('predefined');
   };
-
-  const handleAddBodyAlternatives = () => {
-    const bodyAlternatives = ['largeLight', 'largeMedium', 'mediumLight', 'mediumMedium', 'smallLight', 'smallMedium'];
-    bodyAlternatives.forEach(styleKey => {
-      if (hiddenStyles.includes(styleKey)) {
-        addTypographyStyle(category, styleKey);
-      }
-    });
-    setIsOpen(false);
-  };
-
-  const availableStyles = getAvailableStyles();
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="w-full">
+        <Button variant="outline" size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Add Style
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add {category.charAt(0).toUpperCase() + category.slice(1)} Style</DialogTitle>
+          <DialogTitle>Add {category} Style</DialogTitle>
           <DialogDescription>
-            Choose from predefined styles or create a custom one.
+            Add a new typography style to your {category} collection.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4">
-          {availableStyles.length > 0 && (
-            <div>
-              <Label className="text-sm font-medium">Predefined Styles</Label>
-              <div className="grid gap-2 mt-2">
-                {availableStyles.map((style) => (
-                  <Button
-                    key={style.key}
-                    variant="outline"
-                    onClick={() => {
-                      if (style.key === 'bodyAlternatives') {
-                        handleAddBodyAlternatives();
-                      } else {
-                        handleAddExistingStyle(style.key);
-                      }
-                    }}
-                    className="justify-start"
-                  >
-                    {style.label}
-                  </Button>
-                ))}
-              </div>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label>Style Type</Label>
+            <Select value={styleType} onValueChange={(value: 'predefined' | 'custom') => setStyleType(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="predefined">Predefined</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {styleType === 'predefined' && availablePredefined.length > 0 && (
+            <div className="grid gap-2">
+              <Label>Predefined Style</Label>
+              <Select value={selectedPredefined} onValueChange={setSelectedPredefined}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a predefined style" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availablePredefined.map((style) => (
+                    <SelectItem key={style.key} value={style.key}>
+                      {style.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
-          
-          <div className="border-t pt-4">
-            <Label htmlFor="custom-style" className="text-sm font-medium">
-              Custom Style Name
-            </Label>
-            <div className="flex gap-2 mt-2">
+
+          {styleType === 'custom' && (
+            <div className="grid gap-2">
+              <Label htmlFor="name">Style Name</Label>
               <Input
-                id="custom-style"
-                value={customStyleName}
-                onChange={(e) => setCustomStyleName(e.target.value)}
-                placeholder="Enter custom style name"
-                maxLength={20}
+                id="name"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder="e.g., Large Bold"
               />
-              <Button onClick={handleAddCustomStyle} disabled={!customStyleName.trim()}>
-                Add
-              </Button>
+            </div>
+          )}
+
+          <div className="grid gap-2">
+            <FontSelector
+              value={customStyle.fontFamily}
+              onChange={(font) => setCustomStyle(prev => ({ ...prev, fontFamily: font }))}
+              label="Font Family"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="fontSize">Font Size</Label>
+              <Input
+                id="fontSize"
+                value={customStyle.fontSize}
+                onChange={(e) => setCustomStyle(prev => ({ ...prev, fontSize: e.target.value }))}
+                placeholder="16px"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="fontWeight">Font Weight</Label>
+              <Select 
+                value={customStyle.fontWeight} 
+                onValueChange={(value) => setCustomStyle(prev => ({ ...prev, fontWeight: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="100">100 - Thin</SelectItem>
+                  <SelectItem value="300">300 - Light</SelectItem>
+                  <SelectItem value="400">400 - Regular</SelectItem>
+                  <SelectItem value="500">500 - Medium</SelectItem>
+                  <SelectItem value="600">600 - Semibold</SelectItem>
+                  <SelectItem value="700">700 - Bold</SelectItem>
+                  <SelectItem value="800">800 - Extra Bold</SelectItem>
+                  <SelectItem value="900">900 - Black</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="lineHeight">Line Height</Label>
+              <Input
+                id="lineHeight"
+                value={customStyle.lineHeight}
+                onChange={(e) => setCustomStyle(prev => ({ ...prev, lineHeight: e.target.value }))}
+                placeholder="1.5"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="letterSpacing">Letter Spacing</Label>
+              <Input
+                id="letterSpacing"
+                value={customStyle.letterSpacing}
+                onChange={(e) => setCustomStyle(prev => ({ ...prev, letterSpacing: e.target.value }))}
+                placeholder="0em"
+              />
             </div>
           </div>
         </div>
+
+        <DialogFooter>
+          <Button 
+            onClick={handleAddStyle} 
+            disabled={(styleType === 'predefined' && !selectedPredefined) || (styleType === 'custom' && !customName)}
+          >
+            Add Style
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
