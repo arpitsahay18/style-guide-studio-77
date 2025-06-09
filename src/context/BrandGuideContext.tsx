@@ -25,6 +25,14 @@ interface BrandGuideContextType {
   typographyNames: TypographyNames;
   previewText: string;
   activeTab: string;
+  logoGuidelines: {
+    [key: string]: Array<{
+      id: string;
+      type: 'horizontal' | 'vertical';
+      position: number;
+      name: string;
+    }>;
+  };
   setGuideName: (name: string) => void;
   updateColors: (colors: ColorPalette) => void;
   updateTypography: (typography: TypographySet) => void;
@@ -38,10 +46,14 @@ interface BrandGuideContextType {
   removeTypographyStyle: (category: 'display' | 'heading' | 'body', styleKey: string) => void;
   exportGuide: (format: 'json' | 'pdf') => void;
   activeSection: string;
+  setLogoGuidelines: (guidelines: any) => void;
 }
 
 const defaultBrandGuide: BrandGuide = {
+  id: 'default-guide',
   name: 'My Brand',
+  createdAt: new Date(),
+  updatedAt: new Date(),
   colors: {
     primary: [
       {
