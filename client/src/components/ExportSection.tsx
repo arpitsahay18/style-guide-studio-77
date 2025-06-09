@@ -13,12 +13,12 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileDown, Eye, PackageIcon, Share, Copy, Check } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import { BrandGuideWarning } from './BrandGuideWarning';
 import { useToast } from '@/hooks/use-toast';
 
 export function ExportSection() {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const { currentGuide, exportGuide, activeSection, logoGuidelines } = useBrandGuide();
   const { toast } = useToast();
   const [linkCopied, setLinkCopied] = useState(false);
@@ -31,7 +31,7 @@ export function ExportSection() {
   const hasLogo = Boolean(currentGuide.logos.original);
   
   const handleViewGuide = () => {
-    navigate('/preview');
+    setLocation('/preview');
   };
   
   const handleExportLogoPack = async () => {
