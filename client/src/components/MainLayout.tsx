@@ -34,8 +34,8 @@ export function MainLayout({
   };
   
   const content = (
-    <div className="flex flex-col min-h-screen">
-      <header className="border-b bg-background">
+    <div className="flex flex-col min-h-screen max-w-full overflow-x-hidden">
+      <header className="border-b bg-background flex-shrink-0">
         <div className="container mx-auto py-4 px-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BrandStudioLogo />
@@ -47,17 +47,11 @@ export function MainLayout({
         </div>
       </header>
       
-      <nav className="bg-muted/50 border-b">
-        <div className="container mx-auto px-4">
-          
-        </div>
-      </nav>
-      
-      <main className="flex-1 bg-background py-6">
+      <main className="flex-1 bg-background py-6 overflow-x-hidden">
         {children}
       </main>
       
-      <footer className="bg-muted py-6 border-t">
+      <footer className="bg-muted py-6 border-t flex-shrink-0">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-center md:text-left">
@@ -66,8 +60,18 @@ export function MainLayout({
               </p>
             </div>
             <div className="flex gap-4">
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Help</a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Privacy</a>
+              <button 
+                onClick={() => handleNavigation('/help')} 
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Help
+              </button>
+              <button 
+                onClick={() => handleNavigation('/privacy')} 
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Privacy
+              </button>
               <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Terms</a>
             </div>
           </div>

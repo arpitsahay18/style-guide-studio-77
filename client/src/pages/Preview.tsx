@@ -529,24 +529,24 @@ const Preview = () => {
                         
                         {/* Logo with Guidelines Visualization */}
                         <div className="flex justify-center">
-                          <div className="relative inline-block bg-white p-8" style={{ marginLeft: '30px', marginTop: '30px' }}>
+                          <div className="relative inline-block bg-white" style={{ paddingLeft: '30px', paddingTop: '30px' }}>
                             {/* Top Ruler */}
                             <div 
-                              className="absolute bg-gray-100 border-b"
+                              className="absolute bg-gray-100 border-b border-gray-300"
                               style={{ 
-                                width: '320px', 
+                                width: '400px', 
                                 height: '24px',
-                                top: '-30px',
-                                left: '32px'
+                                top: '0px',
+                                left: '30px'
                               }}
                             >
                               {/* Ruler ticks */}
-                              {Array.from({ length: 33 }, (_, i) => i * 10).map(pos => (
+                              {Array.from({ length: 41 }, (_, i) => i * 10).map(pos => (
                                 <div
                                   key={pos}
                                   className="absolute bg-gray-400"
                                   style={{
-                                    left: `${pos * 0.8}px`,
+                                    left: `${pos}px`,
                                     top: '0px',
                                     width: '1px',
                                     height: '4px'
@@ -557,21 +557,21 @@ const Preview = () => {
 
                             {/* Left Ruler */}
                             <div 
-                              className="absolute bg-gray-100 border-r"
+                              className="absolute bg-gray-100 border-r border-gray-300"
                               style={{ 
                                 width: '24px', 
-                                height: '320px',
-                                top: '32px',
-                                left: '-30px'
+                                height: '400px',
+                                top: '30px',
+                                left: '0px'
                               }}
                             >
                               {/* Ruler ticks */}
-                              {Array.from({ length: 33 }, (_, i) => i * 10).map(pos => (
+                              {Array.from({ length: 41 }, (_, i) => i * 10).map(pos => (
                                 <div
                                   key={pos}
                                   className="absolute bg-gray-400"
                                   style={{
-                                    top: `${pos * 0.8}px`,
+                                    top: `${pos}px`,
                                     left: '0px',
                                     height: '1px',
                                     width: '4px'
@@ -581,16 +581,16 @@ const Preview = () => {
                             </div>
 
                             {/* Logo Container */}
-                            <div className="relative border border-dashed border-gray-300 bg-white" style={{ width: '320px', height: '320px' }}>
-                              <div className="w-full h-full flex items-center justify-center p-6">
+                            <div className="relative border border-dashed border-gray-300 bg-white" style={{ width: '400px', height: '400px' }}>
+                              <div className="w-full h-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: currentGuide.logos.square?.[0]?.background || '#ffffff' }}>
                                 <img 
                                   src={currentGuide.logos.original} 
                                   alt={`${shapeName} Logo with Guidelines`} 
-                                  className="max-w-full max-h-full object-contain"
+                                  className="max-w-[75%] max-h-[75%] object-contain"
                                 />
                               </div>
                               
-                              {/* Render guidelines as dashed lines */}
+                              {/* Render guidelines as dashed lines - exact same positioning as interactive */}
                               {guidelines.map(guideline => (
                                 <div key={guideline.id}>
                                   <div
@@ -598,14 +598,14 @@ const Preview = () => {
                                     style={{
                                       ...(guideline.type === 'horizontal' 
                                         ? {
-                                            top: `${(guideline.position / 400) * 320}px`,
+                                            top: `${guideline.position}px`,
                                             left: 0,
                                             right: 0,
                                             height: '2px',
                                             borderTop: '2px dashed rgba(255, 0, 0, 0.8)'
                                           }
                                         : {
-                                            left: `${(guideline.position / 400) * 320}px`,
+                                            left: `${guideline.position}px`,
                                             top: 0,
                                             bottom: 0,
                                             width: '2px',
@@ -622,11 +622,11 @@ const Preview = () => {
                                     style={{
                                       ...(guideline.type === 'horizontal'
                                         ? {
-                                            top: `${(guideline.position / 400) * 320 - 12}px`,
+                                            top: `${guideline.position - 12}px`,
                                             left: '8px'
                                           }
                                         : {
-                                            left: `${(guideline.position / 400) * 320 + 8}px`,
+                                            left: `${guideline.position + 8}px`,
                                             top: '8px'
                                           }
                                       ),

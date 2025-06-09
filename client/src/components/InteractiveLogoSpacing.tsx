@@ -248,17 +248,17 @@ export function InteractiveLogoSpacing({
         Guidelines will snap to grid and display measurements.
       </p>
       
-      <div className="relative inline-block">
-        {/* Main container with rulers properly positioned */}
-        <div className="relative" style={{ marginLeft: '30px', marginTop: '30px' }}>
+      <div className="relative inline-block bg-white">
+        {/* Main wrapper with proper spacing for rulers */}
+        <div className="relative" style={{ paddingLeft: '30px', paddingTop: '30px' }}>
           {/* Top Ruler - positioned above the logo container */}
           <div 
-            className="absolute bg-gray-100 border-b cursor-grab select-none hover:bg-gray-200 relative"
+            className="absolute bg-gray-100 border-b border-gray-300 cursor-grab select-none hover:bg-gray-200"
             style={{ 
               width: '400px', 
               height: '24px',
-              top: '-30px',
-              left: '0px'
+              top: '0px',
+              left: '30px'
             }}
             onMouseDown={(e) => handleRulerMouseDown(e, 'vertical')}
           >
@@ -267,12 +267,12 @@ export function InteractiveLogoSpacing({
 
           {/* Left Ruler - positioned to the left of the logo container */}
           <div 
-            className="absolute bg-gray-100 border-r cursor-grab select-none hover:bg-gray-200 relative"
+            className="absolute bg-gray-100 border-r border-gray-300 cursor-grab select-none hover:bg-gray-200"
             style={{ 
               width: '24px', 
               height: '400px',
-              top: '0px',
-              left: '-30px'
+              top: '30px',
+              left: '0px'
             }}
             onMouseDown={(e) => handleRulerMouseDown(e, 'horizontal')}
           >
@@ -283,7 +283,7 @@ export function InteractiveLogoSpacing({
           <div 
             ref={containerRef}
             className="relative border border-dashed border-gray-300 bg-white"
-            style={{ width: '400px', height: '400px' }}
+            style={{ width: '400px', height: '400px', marginLeft: '0px', marginTop: '0px' }}
           >
             <div 
               className={`w-full h-full ${shapeClasses[shape]} flex items-center justify-center overflow-hidden`}
