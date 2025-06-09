@@ -107,6 +107,7 @@ const Preview = () => {
       const pageWidth = 210;
       const pageHeight = 297;
       const margin = 20;
+      const maxContentHeight = pageHeight - (margin * 2);
       
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -116,13 +117,11 @@ const Preview = () => {
 
       const addFooter = (isFirstOrLast: boolean = false) => {
         if (isFirstOrLast) {
-          // Add gradient pill footer for first and last page
           const footerY = pageHeight - 15;
           const footerX = pageWidth / 2;
           const pillWidth = 50;
           const pillHeight = 8;
           
-          // Create gradient effect with rounded rectangle
           pdf.setFillColor(60, 60, 60);
           pdf.roundedRect(footerX - pillWidth/2, footerY - pillHeight/2, pillWidth, pillHeight, 4, 4, 'F');
           
@@ -132,22 +131,18 @@ const Preview = () => {
         }
       };
 
-      // PAGE 1: Title Page with border
+      // PAGE 1: Title Page
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-      
-      // Add page border
       pdf.setDrawColor(0, 0, 0);
       pdf.setLineWidth(0.5);
       pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
       
-      // Brand name centered
       pdf.setFontSize(42);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
       pdf.text(currentGuide.name, pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
       
-      // Subtitle
       pdf.setFontSize(24);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 100, 100);
@@ -155,51 +150,135 @@ const Preview = () => {
       
       addFooter(true);
 
-      // Capture sections individually for better quality
+      // Helper function to split content across multiple pages
+      const addContentToPages = async (element: HTMLElement, sectionTitle: string) => {
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          width: 800
+        });
+        
+        const imgData = canvas.toDataURL('image/png', 0.9);
+        const imgWidth = pageWidth - (margin * 2);
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        // If content fits on one page
+        if (imgHeight <= maxContentHeight) {
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
+          return;
+        }
+        
+        // Split content across multiple pages
+        const pagesNeeded = Math.ceil(imgHeight / maxContentHeight);
+        const pageChunkHeight = canvas.height / pagesNeeded;
+        
+        for (let pageIndex = 0; pageIndex < pagesNeeded; pageIndex++) {
+          pdf.addPage();
+          
+          // Add section title on first page
+          if (pageIndex === 0) {
+            pdf.setFontSize(18);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(0, 0, 0);
+            pdf.text(sectionTitle, margin, margin + 10);
+          }
+          
+          // Create a canvas for this page chunk
+          const chunkCanvas = document.createElement('canvas');
+          chunkCanvas.width = canvas.width;
+          chunkCanvas.height = pageChunkHeight;
+          const chunkCtx = chunkCanvas.getContext('2d');
+          
+          if (chunkCtx) {
+            chunkCtx.drawImage(
+              canvas,
+              0, pageIndex * pageChunkHeight,
+              canvas.width, pageChunkHeight,
+              0, 0,
+              canvas.width, pageChunkHeight
+            );
+            
+            const chunkImgData = chunkCanvas.toDataURL('image/png', 0.9);
+            const chunkHeight = (pageChunkHeight * imgWidth) / canvas.width;
+            const yPosition = pageIndex === 0 ? margin + 15 : margin;
+            
+            pdf.addImage(chunkImgData, 'PNG', margin, yPosition, imgWidth, chunkHeight);
+          }
+        }
+      };
+
+      // Process each section
       const sections = contentRef.current.querySelectorAll('section');
       
       for (let i = 0; i < sections.length; i++) {
-        pdf.addPage();
+        const section = sections[i] as HTMLElement;
+        const sectionTitle = section.querySelector('h2')?.textContent || `Section ${i + 1}`;
         
         try {
-          const canvas = await html2canvas(sections[i] as HTMLElement, {
-            scale: 1.5,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: '#ffffff',
-            width: 800,
-            height: 1000
-          });
-          
-          const imgData = canvas.toDataURL('image/jpeg', 0.8);
-          const imgWidth = pageWidth - (margin * 2);
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
-          
-          // Scale down if too tall
-          const maxHeight = pageHeight - (margin * 2) - 10;
-          const finalHeight = Math.min(imgHeight, maxHeight);
-          const finalWidth = (canvas.width * finalHeight) / canvas.height;
-          
-          pdf.addImage(imgData, 'JPEG', margin, margin, finalWidth, finalHeight);
-          
+          await addContentToPages(section, sectionTitle);
         } catch (error) {
-          console.error('Error capturing section:', error);
-          // Fallback: just add section title
+          console.error('Error processing section:', error);
+          // Fallback: add a simple text page
+          pdf.addPage();
           pdf.setFontSize(18);
           pdf.setFont('helvetica', 'bold');
-          pdf.text(sections[i].querySelector('h2')?.textContent || 'Section', margin, margin + 20);
+          pdf.text(sectionTitle, margin, margin + 20);
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text('Content could not be rendered properly.', margin, margin + 40);
         }
       }
 
-      // FINAL PAGE: Closing with border
+      // Add special handling for logo guidelines if they exist
+      const logoGuidelinesExist = Object.keys(logoGuidelines).some(key => logoGuidelines[key].length > 0);
+      if (logoGuidelinesExist) {
+        pdf.addPage();
+        pdf.setFontSize(18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Logo Spacing Guidelines', margin, margin + 10);
+        
+        let yPos = margin + 25;
+        
+        Object.entries(logoGuidelines).forEach(([shapeKey, guidelines]) => {
+          if (guidelines.length === 0) return;
+          
+          const shapeName = shapeKey.replace('-logo', '').charAt(0).toUpperCase() + shapeKey.replace('-logo', '').slice(1);
+          
+          if (yPos > pageHeight - 80) {
+            pdf.addPage();
+            yPos = margin + 10;
+          }
+          
+          pdf.setFontSize(14);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(`${shapeName} Logo Guidelines:`, margin, yPos);
+          yPos += 8;
+          
+          guidelines.forEach((guideline) => {
+            if (yPos > pageHeight - 30) {
+              pdf.addPage();
+              yPos = margin + 10;
+            }
+            
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(`• ${guideline.name}: ${Math.round(guideline.position)}px (${guideline.type})`, margin + 5, yPos);
+            yPos += 5;
+          });
+          
+          yPos += 10;
+        });
+      }
+
+      // FINAL PAGE
       pdf.addPage();
-      
-      // Add page border
       pdf.setDrawColor(0, 0, 0);
       pdf.setLineWidth(0.5);
       pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
       
-      // Centered brand name and date
       pdf.setFontSize(20);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
@@ -264,7 +343,7 @@ const Preview = () => {
               <h3 className="text-2xl font-semibold mb-6">Display Typography</h3>
               <div className="grid gap-8">
                 {typographyVisibility.display.map(styleKey => {
-                  const style = currentGuide.typography.display[styleKey];
+                  const style = (currentGuide.typography.display as any)[styleKey];
                   if (!style) return null;
                   return (
                     <TypographyPreview 
@@ -282,7 +361,7 @@ const Preview = () => {
               <h3 className="text-2xl font-semibold mb-6">Headings</h3>
               <div className="grid gap-8">
                 {typographyVisibility.heading.map(styleKey => {
-                  const style = currentGuide.typography.heading[styleKey];
+                  const style = (currentGuide.typography.heading as any)[styleKey];
                   if (!style) return null;
                   return (
                     <TypographyPreview 
@@ -300,7 +379,7 @@ const Preview = () => {
               <h3 className="text-2xl font-semibold mb-6">Body Text</h3>
               <div className="grid gap-8">
                 {typographyVisibility.body.map(styleKey => {
-                  const style = currentGuide.typography.body[styleKey];
+                  const style = (currentGuide.typography.body as any)[styleKey];
                   if (!style) return null;
                   return (
                     <TypographyPreview 
@@ -450,13 +529,66 @@ const Preview = () => {
                         
                         {/* Logo with Guidelines Visualization */}
                         <div className="flex justify-center">
-                          <div className="relative inline-block border border-gray-200 bg-white p-8">
-                            <div className="relative w-80 h-80">
-                              <img 
-                                src={currentGuide.logos.original} 
-                                alt={`${shapeName} Logo with Guidelines`} 
-                                className="w-full h-full object-contain"
-                              />
+                          <div className="relative inline-block bg-white p-8" style={{ marginLeft: '30px', marginTop: '30px' }}>
+                            {/* Top Ruler */}
+                            <div 
+                              className="absolute bg-gray-100 border-b"
+                              style={{ 
+                                width: '320px', 
+                                height: '24px',
+                                top: '-30px',
+                                left: '32px'
+                              }}
+                            >
+                              {/* Ruler ticks */}
+                              {Array.from({ length: 33 }, (_, i) => i * 10).map(pos => (
+                                <div
+                                  key={pos}
+                                  className="absolute bg-gray-400"
+                                  style={{
+                                    left: `${pos * 0.8}px`,
+                                    top: '0px',
+                                    width: '1px',
+                                    height: '4px'
+                                  }}
+                                />
+                              ))}
+                            </div>
+
+                            {/* Left Ruler */}
+                            <div 
+                              className="absolute bg-gray-100 border-r"
+                              style={{ 
+                                width: '24px', 
+                                height: '320px',
+                                top: '32px',
+                                left: '-30px'
+                              }}
+                            >
+                              {/* Ruler ticks */}
+                              {Array.from({ length: 33 }, (_, i) => i * 10).map(pos => (
+                                <div
+                                  key={pos}
+                                  className="absolute bg-gray-400"
+                                  style={{
+                                    top: `${pos * 0.8}px`,
+                                    left: '0px',
+                                    height: '1px',
+                                    width: '4px'
+                                  }}
+                                />
+                              ))}
+                            </div>
+
+                            {/* Logo Container */}
+                            <div className="relative border border-dashed border-gray-300 bg-white" style={{ width: '320px', height: '320px' }}>
+                              <div className="w-full h-full flex items-center justify-center p-6">
+                                <img 
+                                  src={currentGuide.logos.original} 
+                                  alt={`${shapeName} Logo with Guidelines`} 
+                                  className="max-w-full max-h-full object-contain"
+                                />
+                              </div>
                               
                               {/* Render guidelines as dashed lines */}
                               {guidelines.map(guideline => (
@@ -466,37 +598,39 @@ const Preview = () => {
                                     style={{
                                       ...(guideline.type === 'horizontal' 
                                         ? {
-                                            top: `${(guideline.position / 400) * 100}%`,
+                                            top: `${(guideline.position / 400) * 320}px`,
                                             left: 0,
                                             right: 0,
                                             height: '2px',
                                             borderTop: '2px dashed rgba(255, 0, 0, 0.8)'
                                           }
                                         : {
-                                            left: `${(guideline.position / 400) * 100}%`,
+                                            left: `${(guideline.position / 400) * 320}px`,
                                             top: 0,
                                             bottom: 0,
                                             width: '2px',
                                             borderLeft: '2px dashed rgba(255, 0, 0, 0.8)'
                                           }
-                                      )
+                                      ),
+                                      zIndex: 10
                                     }}
                                   />
                                   
                                   {/* Guideline Label */}
                                   <div
-                                    className="absolute bg-red-500 text-white text-xs px-1 py-0.5 rounded"
+                                    className="absolute bg-red-500 text-white text-xs px-1 py-0.5 rounded pointer-events-none"
                                     style={{
                                       ...(guideline.type === 'horizontal'
                                         ? {
-                                            top: `calc(${(guideline.position / 400) * 100}% - 12px)`,
+                                            top: `${(guideline.position / 400) * 320 - 12}px`,
                                             left: '8px'
                                           }
                                         : {
-                                            left: `calc(${(guideline.position / 400) * 100}% + 8px)`,
+                                            left: `${(guideline.position / 400) * 320 + 8}px`,
                                             top: '8px'
                                           }
-                                      )
+                                      ),
+                                      zIndex: 11
                                     }}
                                   >
                                     {guideline.name}: {Math.round(guideline.position)}px
