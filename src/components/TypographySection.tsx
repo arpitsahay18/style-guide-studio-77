@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { TypographySet, TypographyStyle } from '@/types';
@@ -329,8 +328,7 @@ export function TypographySection() {
         
         <div className="mt-4">
           <AddTypographyStyleDialog 
-            category={category} 
-            hiddenStyles={getHiddenStyles(category)} 
+            category={category}
           />
         </div>
       </Accordion>
