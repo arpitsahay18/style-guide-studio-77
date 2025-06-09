@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MainLayout } from '@/components/MainLayout';
@@ -10,9 +9,13 @@ import { Input } from '@/components/ui/input';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { WelcomeDialog } from '@/components/WelcomeDialog';
 import { storage } from '@/lib/storage';
-
 const Index = () => {
-  const { currentGuide, setGuideName, activeTab, setActiveTab } = useBrandGuide();
+  const {
+    currentGuide,
+    setGuideName,
+    activeTab,
+    setActiveTab
+  } = useBrandGuide();
   const [brandName, setBrandName] = useState(currentGuide.name);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
 
@@ -29,11 +32,9 @@ const Index = () => {
     storage.markWelcomeSeen();
     setWelcomeOpen(false);
   };
-
   useEffect(() => {
     setBrandName(currentGuide.name);
   }, [currentGuide.name]);
-
   const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     setBrandName(newName);
@@ -55,14 +56,8 @@ const Index = () => {
 
   // Add overlay class when welcome is open
   const overlayClass = welcomeOpen ? 'pointer-events-none blur-sm' : '';
-
-  return (
-    <MainLayout>
-      <WelcomeDialog 
-        open={welcomeOpen} 
-        onOpenChange={setWelcomeOpen} 
-        onGetStarted={handleWelcomeComplete} 
-      />
+  return <MainLayout>
+      <WelcomeDialog open={welcomeOpen} onOpenChange={setWelcomeOpen} onGetStarted={handleWelcomeComplete} />
       
       <div className={`container mx-auto px-4 transition-all duration-300 ${overlayClass}`}>
         <div className="flex flex-col gap-6 mb-6">
@@ -72,50 +67,19 @@ const Index = () => {
           
           <div className="flex items-center gap-4 w-full max-w-md">
             {/* Brand Logo Placeholder */}
-            {currentGuide.logos.original && (
-              <div 
-                className="w-12 h-12 rounded-full border-2 flex items-center justify-center overflow-hidden bg-white flex-shrink-0"
-                style={{
-                  borderColor: currentGuide.colors.primary.length === 1 
-                    ? currentGuide.colors.primary[0].hex 
-                    : currentGuide.colors.primary.length > 1 
-                      ? 'transparent'
-                      : 'white',
-                  background: currentGuide.colors.primary.length > 1 
-                    ? `linear-gradient(45deg, ${currentGuide.colors.primary.map(color => color.hex).join(', ')})` 
-                    : 'white'
-                }}
-              >
-                {currentGuide.colors.primary.length > 1 && (
-                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-                    <img 
-                      src={currentGuide.logos.original} 
-                      alt="Brand Logo" 
-                      className="w-8 h-8 object-contain"
-                    />
-                  </div>
-                )}
-                {currentGuide.colors.primary.length <= 1 && (
-                  <img 
-                    src={currentGuide.logos.original} 
-                    alt="Brand Logo" 
-                    className="w-10 h-10 object-contain"
-                  />
-                )}
-              </div>
-            )}
+            {currentGuide.logos.original && <div className="w-12 h-12 rounded-full border-2 flex items-center justify-center overflow-hidden bg-white flex-shrink-0" style={{
+            borderColor: currentGuide.colors.primary.length === 1 ? currentGuide.colors.primary[0].hex : currentGuide.colors.primary.length > 1 ? 'transparent' : 'white',
+            background: currentGuide.colors.primary.length > 1 ? `linear-gradient(45deg, ${currentGuide.colors.primary.map(color => color.hex).join(', ')})` : 'white'
+          }}>
+                {currentGuide.colors.primary.length > 1}
+                {currentGuide.colors.primary.length <= 1 && <img src={currentGuide.logos.original} alt="Brand Logo" className="w-10 h-10 object-contain" />}
+              </div>}
             
             <div className="flex-1">
               <label htmlFor="brandName" className="text-sm font-medium mb-2 block">
                 Brand Name
               </label>
-              <Input
-                id="brandName"
-                placeholder="Enter brand name"
-                value={brandName}
-                onChange={handleNameChange}
-                className="w-full"
-              />
+              <Input id="brandName" placeholder="Enter brand name" value={brandName} onChange={handleNameChange} className="w-full" />
             </div>
           </div>
         </div>
@@ -147,8 +111,6 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </MainLayout>
-  );
+    </MainLayout>;
 };
-
 export default Index;
