@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import { BrandStudioLogo } from '@/components/BrandStudioLogo';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { useToast } from '@/hooks/use-toast';
@@ -15,7 +15,7 @@ export function MainLayout({
   children,
   standalone = false
 }: MainLayoutProps) {
-  const navigate = !standalone ? useNavigate() : null;
+  const [, setLocation] = useLocation();
   const { currentGuide } = useBrandGuide();
   const { toast } = useToast();
   
