@@ -23,7 +23,6 @@ export function InteractiveLogoSpacing({
   const containerRef = useRef<HTMLDivElement>(null);
   const { logoGuidelines, setLogoGuidelines } = useBrandGuide();
   
-  // Get guidelines for this logo shape, or initialize empty array
   const shapeKey = `${shape}-logo`;
   const [guidelines, setGuidelines] = useState<Guideline[]>(
     logoGuidelines[shapeKey] || []
@@ -35,8 +34,8 @@ export function InteractiveLogoSpacing({
   const [isCreatingGuideline, setIsCreatingGuideline] = useState(false);
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
   
-  const GRID_SIZE = 4; // Snap grid size in pixels  
-  const SNAP_THRESHOLD = 3; // Snap to edges within 3px
+  const GRID_SIZE = 4;
+  const SNAP_THRESHOLD = 3;
   const MAX_GUIDELINES = 20;
 
   const shapeClasses = {
@@ -45,7 +44,6 @@ export function InteractiveLogoSpacing({
     circle: 'rounded-full',
   };
 
-  // Save guidelines to context whenever they change
   useEffect(() => {
     const updatedLogoGuidelines = {
       ...logoGuidelines,
@@ -54,7 +52,6 @@ export function InteractiveLogoSpacing({
     setLogoGuidelines(updatedLogoGuidelines);
   }, [guidelines, shapeKey]);
 
-  // Load guidelines when shape changes
   useEffect(() => {
     setGuidelines(logoGuidelines[shapeKey] || []);
   }, [shapeKey, logoGuidelines]);
@@ -73,10 +70,8 @@ export function InteractiveLogoSpacing({
   }, []);
 
   const snapToGrid = (position: number, containerDimension: number) => {
-    // Snap to grid
     const gridSnapped = Math.round(position / GRID_SIZE) * GRID_SIZE;
     
-    // Snap to edges
     if (Math.abs(position) < SNAP_THRESHOLD) return 0;
     if (Math.abs(position - containerDimension) < SNAP_THRESHOLD) return containerDimension;
     
@@ -121,7 +116,6 @@ export function InteractiveLogoSpacing({
         position = Math.max(0, Math.min(position, containerSize.width));
       }
 
-      // Only create guideline if mouse has moved enough
       const dragDistance = Math.abs(e.clientX - dragStartPos.x) + Math.abs(e.clientY - dragStartPos.y);
       if (dragDistance > 5) {
         const tempGuideline: Guideline = {
@@ -141,7 +135,6 @@ export function InteractiveLogoSpacing({
     const handleMouseUp = () => {
       setIsCreatingGuideline(false);
       
-      // Convert temp guideline to permanent
       setGuidelines(prev => 
         prev.map(g => 
           g.id === `temp-${type}` 
@@ -208,24 +201,27 @@ export function InteractiveLogoSpacing({
     setGuidelines([]);
   };
 
-  // Generate ruler tick marks
+  // Generate ruler tick marks - just lines without numbers
   const generateTicks = (dimension: number, isVertical: boolean = false) => {
     const ticks = [];
-    const tickSpacing = 40; // Show tick every 40px for values 0,2,4,6...
+    const majorTickSpacing = 20; // Major ticks every 20px
+    const minorTickSpacing = 5;  // Minor ticks every 5px
     
-    for (let i = 0; i <= dimension; i += tickSpacing) {
-      const value = i / 20; // Convert to readable units (every 40px = 2 units)
+    for (let i = 0; i <= dimension; i += minorTickSpacing) {
+      const isMajorTick = i % majorTickSpacing === 0;
+      const tickLength = isMajorTick ? '8px' : '4px';
+      
       ticks.push(
         <div
           key={i}
-          className="absolute text-xs text-muted-foreground pointer-events-none"
+          className="absolute bg-gray-400"
           style={{
             [isVertical ? 'top' : 'left']: `${i}px`,
-            [isVertical ? 'left' : 'top']: '2px'
+            [isVertical ? 'left' : 'top']: '0px',
+            [isVertical ? 'width' : 'height']: tickLength,
+            [isVertical ? 'height' : 'width']: '1px'
           }}
-        >
-          {value}
-        </div>
+        />
       );
     }
     return ticks;
@@ -256,7 +252,7 @@ export function InteractiveLogoSpacing({
       <div className="relative inline-block">
         {/* Top Ruler */}
         <div 
-          className="absolute -top-6 left-6 bg-gray-100 border-b cursor-grab select-none hover:bg-gray-200"
+          className="absolute -top-6 left-6 bg-gray-100 border-b cursor-grab select-none hover:bg-gray-200 relative"
           style={{ width: containerSize.width, height: '24px' }}
           onMouseDown={(e) => handleRulerMouseDown(e, 'vertical')}
         >
@@ -265,7 +261,7 @@ export function InteractiveLogoSpacing({
 
         {/* Left Ruler */}
         <div 
-          className="absolute -left-6 top-6 bg-gray-100 border-r cursor-grab select-none hover:bg-gray-200"
+          className="absolute -left-6 top-6 bg-gray-100 border-r cursor-grab select-none hover:bg-gray-200 relative"
           style={{ width: '24px', height: containerSize.height }}
           onMouseDown={(e) => handleRulerMouseDown(e, 'horizontal')}
         >
@@ -278,7 +274,6 @@ export function InteractiveLogoSpacing({
           className="relative border border-dashed border-gray-300 bg-white"
           style={{ width: '400px', height: '400px' }}
         >
-          {/* Logo */}
           <div 
             className={`w-full h-full ${shapeClasses[shape]} flex items-center justify-center overflow-hidden`}
             style={{ backgroundColor: logo.background }}
@@ -319,7 +314,6 @@ export function InteractiveLogoSpacing({
                 title="Drag to move, double-click to remove"
               />
               
-              {/* Guideline Label */}
               <div
                 className="absolute bg-red-500 text-white text-xs px-1 py-0.5 rounded pointer-events-none"
                 style={{
@@ -342,7 +336,6 @@ export function InteractiveLogoSpacing({
           ))}
         </div>
         
-        {/* Instructions */}
         <div className="mt-4 text-sm text-muted-foreground">
           <p>• Drag from rulers to add guidelines</p>
           <p>• Drag guidelines to reposition them</p>

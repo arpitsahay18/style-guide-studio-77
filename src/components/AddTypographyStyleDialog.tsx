@@ -26,7 +26,6 @@ import { FontFamily } from '@/types';
 
 interface AddTypographyStyleDialogProps {
   category: 'display' | 'heading' | 'body';
-  hiddenStyles?: string[];
 }
 
 const predefinedStyles = {
@@ -42,7 +41,6 @@ const predefinedStyles = {
   ]
 };
 
-// Available fonts for the selector
 const availableFonts: FontFamily[] = [
   { name: 'Inter', category: 'sans-serif' },
   { name: 'Roboto', category: 'sans-serif' },
@@ -69,7 +67,7 @@ const availableFonts: FontFamily[] = [
   { name: 'Space Mono', category: 'monospace' },
 ];
 
-export function AddTypographyStyleDialog({ category, hiddenStyles = [] }: AddTypographyStyleDialogProps) {
+export function AddTypographyStyleDialog({ category }: AddTypographyStyleDialogProps) {
   const { addTypographyStyle } = useBrandGuide();
   const [open, setOpen] = useState(false);
   const [styleType, setStyleType] = useState<'predefined' | 'custom'>('predefined');
@@ -118,53 +116,44 @@ export function AddTypographyStyleDialog({ category, hiddenStyles = [] }: AddTyp
         <DialogHeader>
           <DialogTitle>Add {category} Style</DialogTitle>
           <DialogDescription>
-            Add a new typography style to your {category} collection.
+            Choose a predefined style or create a custom one.
           </DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
+          {availablePredefined.length > 0 && (
+            <>
+              <div className="grid gap-2">
+                <Label>Predefined Styles</Label>
+                <Select value={selectedPredefined} onValueChange={setSelectedPredefined}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a predefined style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePredefined.map((style) => (
+                      <SelectItem key={style.key} value={style.key}>
+                        {style.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="text-center text-sm text-muted-foreground">
+                or
+              </div>
+            </>
+          )}
+
           <div className="grid gap-2">
-            <Label>Style Type</Label>
-            <Select value={styleType} onValueChange={(value: 'predefined' | 'custom') => setStyleType(value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="predefined">Predefined</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="name">Custom Style Name</Label>
+            <Input
+              id="name"
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              placeholder="e.g., Large Bold"
+            />
           </div>
-
-          {styleType === 'predefined' && availablePredefined.length > 0 && (
-            <div className="grid gap-2">
-              <Label>Predefined Style</Label>
-              <Select value={selectedPredefined} onValueChange={setSelectedPredefined}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a predefined style" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availablePredefined.map((style) => (
-                    <SelectItem key={style.key} value={style.key}>
-                      {style.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {styleType === 'custom' && (
-            <div className="grid gap-2">
-              <Label htmlFor="name">Style Name</Label>
-              <Input
-                id="name"
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                placeholder="e.g., Large Bold"
-              />
-            </div>
-          )}
 
           <div className="grid gap-2">
             <Label>Font Family</Label>
@@ -233,7 +222,7 @@ export function AddTypographyStyleDialog({ category, hiddenStyles = [] }: AddTyp
         <DialogFooter>
           <Button 
             onClick={handleAddStyle} 
-            disabled={(styleType === 'predefined' && !selectedPredefined) || (styleType === 'custom' && !customName)}
+            disabled={!selectedPredefined && !customName}
           >
             Add Style
           </Button>

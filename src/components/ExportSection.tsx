@@ -23,7 +23,6 @@ export function ExportSection() {
   const { toast } = useToast();
   const [linkCopied, setLinkCopied] = useState(false);
   
-  // Check if guide is complete
   const isGuideComplete = 
     currentGuide.colors.primary.length > 0 && 
     currentGuide.colors.secondary.length > 0 && 
@@ -51,7 +50,6 @@ export function ExportSection() {
     });
     
     try {
-      // Create a PDF for logo pack
       const doc = new jsPDF({
         orientation: "portrait",
         unit: "px",
@@ -59,7 +57,6 @@ export function ExportSection() {
         compress: true
       });
       
-      // Set up PDF with brand info
       doc.setFontSize(24);
       doc.setFont("helvetica", "bold");
       doc.text(`${currentGuide.name} Logo Pack`, 50, 50);
@@ -68,22 +65,18 @@ export function ExportSection() {
       doc.setFont("helvetica", "normal");
       doc.text("Original Logo", 50, 90);
       
-      // Add original logo as string
       if (typeof currentGuide.logos.original === 'string') {
         doc.addImage(currentGuide.logos.original, 'PNG', 50, 100, 150, 150);
       }
       
-      // Add logo variations heading
       doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
       doc.text("Logo Variations", 50, 280);
       
-      // Get first logo from each variation type
       const squareLogo = currentGuide.logos.square[0];
       const roundedLogo = currentGuide.logos.rounded[0];
       const circleLogo = currentGuide.logos.circle[0];
       
-      // Generate logo variations with proper shapes
       let squareDataUrl = '';
       let roundedDataUrl = '';
       let circleDataUrl = '';
@@ -96,7 +89,6 @@ export function ExportSection() {
         console.error("Error generating logo variations:", error);
       }
       
-      // Add square variation
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       doc.text("Square", 50, 310);
@@ -104,53 +96,43 @@ export function ExportSection() {
         doc.addImage(squareDataUrl, 'PNG', 50, 320, 100, 100);
       }
       
-      // Add rounded variation
       doc.text("Rounded", 200, 310);
       if (roundedDataUrl) {
         doc.addImage(roundedDataUrl, 'PNG', 200, 320, 100, 100);
       }
       
-      // Add circular variation
       doc.text("Circular", 350, 310);
       if (circleDataUrl) {
         doc.addImage(circleDataUrl, 'PNG', 350, 320, 100, 100);
       }
       
-      // Add spacing guidelines heading
       doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
       doc.text("Logo Spacing Guidelines", 50, 450);
       
-      // Add spacing guidelines info
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       doc.text("Maintain clear space around the logo for maximum impact and legibility.", 50, 480);
       
-      // Add spacing guidelines image
       if (typeof currentGuide.logos.original === 'string') {
         doc.addImage(currentGuide.logos.original, 'PNG', 50, 500, 200, 200);
       }
       
-      // Add grid lines to simulate spacing guidelines
       doc.setDrawColor(200, 200, 200);
       doc.setLineWidth(0.5);
       
-      // Vertical grid lines
       for (let i = 1; i < 4; i++) {
         doc.line(50 + (i * 50), 500, 50 + (i * 50), 700);
       }
       
-      // Horizontal grid lines
       for (let i = 1; i < 4; i++) {
         doc.line(50, 500 + (i * 50), 250, 500 + (i * 50));
       }
       
-      // Add logo usage notes
       doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
       doc.text("Logo Usage Guidelines", 50, 750);
       
-      // Add usage notes
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       const guidelines = [
@@ -165,12 +147,10 @@ export function ExportSection() {
         doc.text(line, 50, 780 + (index * 20));
       });
       
-      // Add watermark/footer
       doc.setFontSize(10);
       doc.setTextColor(150, 150, 150);
       doc.text(`Generated with Brand Studio | ${new Date().toLocaleDateString()}`, 50, 1050);
       
-      // Save the PDF
       doc.save(`${currentGuide.name.replace(/\s+/g, '-').toLowerCase()}-logo-pack.pdf`);
       
       toast({
@@ -187,10 +167,8 @@ export function ExportSection() {
     }
   };
 
-  // Helper function to convert logo to data URL
   const getLogoDataUrl = async (logo, shape): Promise<string> => {
     try {
-      // Create a temporary canvas to render the logo with the correct shape
       const canvas = document.createElement('canvas');
       canvas.width = 200;
       canvas.height = 200;
@@ -200,7 +178,6 @@ export function ExportSection() {
         throw new Error("Could not get canvas context");
       }
       
-      // Draw background
       ctx.fillStyle = logo.background;
       ctx.beginPath();
       
@@ -220,25 +197,20 @@ export function ExportSection() {
       
       ctx.fill();
       
-      // Load and draw the logo
       return new Promise<string>((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
-          // Calculate dimensions to maintain aspect ratio and fit within 75% of the canvas
           const maxDim = canvas.width * 0.75;
           const scale = Math.min(maxDim / img.width, maxDim / img.height);
           const width = img.width * scale;
           const height = img.height * scale;
           
-          // Center the logo
           const x = (canvas.width - width) / 2;
           const y = (canvas.height - height) / 2;
           
-          // Draw the logo
           ctx.drawImage(img, x, y, width, height);
           
-          // Get the data URL
           resolve(canvas.toDataURL('image/png'));
         };
         
@@ -250,15 +222,13 @@ export function ExportSection() {
       });
     } catch (error) {
       console.error("Error generating logo data URL:", error);
-      return ''; // Return empty string on error
+      return '';
     }
   };
 
   const generateShareableLink = () => {
-    // Generate a unique ID for this brand guide
     const brandGuideId = `brand-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Store the brand guide data with expiry (8 hours)
     const expiryTime = Date.now() + (8 * 60 * 60 * 1000); // 8 hours
     const shareData = {
       guide: currentGuide,
@@ -266,15 +236,11 @@ export function ExportSection() {
       createdAt: Date.now()
     };
     
-    // In a real app, this would be stored in a database
-    // For now, we'll store it in localStorage with the ID
     localStorage.setItem(`shared-brand-${brandGuideId}`, JSON.stringify(shareData));
     
-    // Generate the shareable URL
     const baseUrl = window.location.origin;
     const shareableUrl = `${baseUrl}/shared/${brandGuideId}`;
     
-    // Copy to clipboard
     navigator.clipboard.writeText(shareableUrl).then(() => {
       setLinkCopied(true);
       toast({
@@ -287,12 +253,11 @@ export function ExportSection() {
       toast({
         variant: "destructive",
         title: "Failed to copy link",
-        description: "Please copy the link manually.",
+        description: "Please copy the link manually: " + shareableUrl,
       });
     });
   };
   
-  // Only show warning when active section is export
   const showWarning = activeSection === 'export' && !isGuideComplete;
   
   return (
