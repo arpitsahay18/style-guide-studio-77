@@ -67,7 +67,13 @@ export function ImprovedFontSelector({ value, onChange, availableFonts = [] }: F
     
     // Extract font name from the value (remove quotes and fallback)
     const match = value.match(/^"([^"]+)"/);
-    return match ? match[1] : value;
+    if (match) {
+      return match[1];
+    }
+    
+    // Handle case where value might be just the font name without quotes
+    const fallbackMatch = value.split(',')[0].trim().replace(/"/g, '');
+    return fallbackMatch || value;
   };
 
   // Keep search input focused and active
@@ -85,6 +91,16 @@ export function ImprovedFontSelector({ value, onChange, availableFonts = [] }: F
       }, 100);
     }
   };
+
+  // Keep search input active while typing
+  useEffect(() => {
+    if (open) {
+      const searchInput = document.querySelector('[cmdk-input]') as HTMLInputElement;
+      if (searchInput && document.activeElement !== searchInput) {
+        searchInput.focus();
+      }
+    }
+  }, [searchTerm, open]);
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>

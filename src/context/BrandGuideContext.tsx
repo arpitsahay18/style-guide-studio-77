@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrandGuide, ColorPalette, TypographySet } from '@/types';
 import { storage } from '@/lib/storage';
@@ -55,28 +54,8 @@ const defaultBrandGuide: BrandGuide = {
   createdAt: new Date(),
   updatedAt: new Date(),
   colors: {
-    primary: [
-      {
-        hex: '#007BFF',
-        rgb: 'rgb(0, 123, 255)',
-        cmyk: 'cmyk(100%, 52%, 0%, 0%)',
-        tints: [],
-        shades: [],
-        blackContrast: 0,
-        whiteContrast: 0
-      }
-    ],
-    secondary: [
-      {
-        hex: '#6C757D',
-        rgb: 'rgb(108, 117, 125)',
-        cmyk: 'cmyk(13%, 6%, 0%, 51%)',
-        tints: [],
-        shades: [],
-        blackContrast: 0,
-        whiteContrast: 0
-      }
-    ],
+    primary: [],
+    secondary: [],
     neutral: []
   },
   typography: {

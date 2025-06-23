@@ -40,6 +40,8 @@ export function ColorPaletteSection() {
   } | null>(null);
   const [showAddForm, setShowAddForm] = useState<'primary' | 'secondary' | 'neutral' | null>(null);
   const [copiedColor, setCopiedColor] = useState<string>('');
+  const [editingColorName, setEditingColorName] = useState<string | null>(null);
+  const [tempColorName, setTempColorName] = useState('');
 
   const handleAddColor = (category: 'primary' | 'secondary' | 'neutral', colorInput: ColorInput) => {
     const rgb = hexToRgb(colorInput.hex);
@@ -147,6 +149,30 @@ export function ColorPaletteSection() {
     return currentGuide.colors[category].length > 1;
   };
 
+  const handleHexClick = (category: 'primary' | 'secondary' | 'neutral', index: number) => {
+    const colorKey = `${category}-${index}`;
+    setEditingColorName(colorKey);
+    setTempColorName(getColorDisplayName(index, category));
+  };
+
+  const handleColorNameSave = (category: 'primary' | 'secondary' | 'neutral', index: number) => {
+    if (editingColorName) {
+      const finalName = tempColorName.trim() || getColorDisplayName(index, category);
+      handleColorNameChange(index, category, finalName);
+      setEditingColorName(null);
+      setTempColorName('');
+    }
+  };
+
+  const handleColorNameKeyPress = (e: React.KeyboardEvent, category: 'primary' | 'secondary' | 'neutral', index: number) => {
+    if (e.key === 'Enter') {
+      handleColorNameSave(category, index);
+    } else if (e.key === 'Escape') {
+      setEditingColorName(null);
+      setTempColorName('');
+    }
+  };
+
   const ColorSection = ({ 
     title, 
     colors, 
@@ -190,121 +216,129 @@ export function ColorPaletteSection() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {colors.map((color, index) => (
-              <div key={index} className="space-y-4">
-                <div className="space-y-2">
-                  <div 
-                    className="cursor-pointer" 
-                    onClick={() => handleColorSwatchClick(category, index, color)}
-                    title="Click to edit color"
-                  >
-                    <ColorSwatch 
-                      color={color} 
-                      colorName={getColorDisplayName(index, category)} 
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    {canDeleteColor(category) && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            Delete
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Color</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to remove this color from your {category} palette?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteColor(category, index)}>
+            {colors.map((color, index) => {
+              const colorKey = `${category}-${index}`;
+              const isEditingName = editingColorName === colorKey;
+              
+              return (
+                <div key={index} className="space-y-4">
+                  <div className="space-y-2">
+                    <div 
+                      className="cursor-pointer" 
+                      onClick={() => handleColorSwatchClick(category, index, color)}
+                      title="Click to edit color"
+                    >
+                      <ColorSwatch 
+                        color={color} 
+                        colorName={getColorDisplayName(index, category)} 
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      {canDeleteColor(category) && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Trash2 className="h-3 w-3 mr-1" />
                               Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor={`color-name-${category}-${index}`} className="text-sm font-medium">
-                    Color Name
-                  </Label>
-                  <Input
-                    id={`color-name-${category}-${index}`}
-                    value={getColorDisplayName(index, category)}
-                    onChange={(e) => handleColorNameChange(index, category, e.target.value)}
-                    placeholder="Enter color name"
-                    className="text-sm"
-                  />
-                </div>
-
-                <div className="text-xs space-y-1 text-muted-foreground">
-                  <p><strong>HEX:</strong> <span 
-                    className="cursor-pointer hover:underline" 
-                    onClick={() => handleColorSwatchClick(category, index, color)}
-                    title="Click to edit"
-                  >{color.hex}</span></p>
-                  <p><strong>RGB:</strong> {color.rgb}</p>
-                  <p><strong>CMYK:</strong> {color.cmyk}</p>
-                </div>
-
-                {/* Tints */}
-                {color.tints && color.tints.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Tints</Label>
-                    <div className="flex flex-wrap gap-1">
-                      {color.tints.map((tint, tintIndex) => (
-                        <div
-                          key={tintIndex}
-                          className="relative group cursor-pointer"
-                          onClick={() => handleTintShadeClick(tint)}
-                          title={`Click to copy ${tint}`}
-                        >
-                          <div
-                            className="w-6 h-6 rounded border border-gray-200 hover:scale-110 transition-transform"
-                            style={{ backgroundColor: tint }}
-                          />
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                            {copiedColor === tint ? 'Copied!' : tint}
-                          </div>
-                        </div>
-                      ))}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Color</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to remove this color from your {category} palette?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteColor(category, index)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
                   </div>
-                )}
 
-                {/* Shades */}
-                {color.shades && color.shades.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Shades</Label>
-                    <div className="flex flex-wrap gap-1">
-                      {color.shades.map((shade, shadeIndex) => (
-                        <div
-                          key={shadeIndex}
-                          className="relative group cursor-pointer"
-                          onClick={() => handleTintShadeClick(shade)}
-                          title={`Click to copy ${shade}`}
+                  <div className="text-xs space-y-1 text-muted-foreground">
+                    <p>
+                      <strong>HEX:</strong>{' '}
+                      {isEditingName ? (
+                        <Input
+                          value={tempColorName}
+                          onChange={(e) => setTempColorName(e.target.value)}
+                          onBlur={() => handleColorNameSave(category, index)}
+                          onKeyDown={(e) => handleColorNameKeyPress(e, category, index)}
+                          className="inline-block w-32 h-6 text-xs px-1"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="cursor-pointer hover:underline" 
+                          onClick={() => handleHexClick(category, index)}
+                          title="Click to edit color name"
                         >
-                          <div
-                            className="w-6 h-6 rounded border border-gray-200 hover:scale-110 transition-transform"
-                            style={{ backgroundColor: shade }}
-                          />
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                            {copiedColor === shade ? 'Copied!' : shade}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                          {color.hex}
+                        </span>
+                      )}
+                    </p>
+                    <p><strong>RGB:</strong> {color.rgb}</p>
+                    <p><strong>CMYK:</strong> {color.cmyk}</p>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* Tints */}
+                  {color.tints && color.tints.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Tints</Label>
+                      <div className="flex flex-wrap gap-1">
+                        {color.tints.map((tint, tintIndex) => (
+                          <div
+                            key={tintIndex}
+                            className="relative group cursor-pointer"
+                            onClick={() => handleTintShadeClick(tint)}
+                            title={`Click to copy ${tint}`}
+                          >
+                            <div
+                              className="w-6 h-6 rounded border border-gray-200 hover:scale-110 transition-transform"
+                              style={{ backgroundColor: tint }}
+                            />
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                              {copiedColor === tint ? 'Copied!' : tint}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Shades */}
+                  {color.shades && color.shades.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Shades</Label>
+                      <div className="flex flex-wrap gap-1">
+                        {color.shades.map((shade, shadeIndex) => (
+                          <div
+                            key={shadeIndex}
+                            className="relative group cursor-pointer"
+                            onClick={() => handleTintShadeClick(shade)}
+                            title={`Click to copy ${shade}`}
+                          >
+                            <div
+                              className="w-6 h-6 rounded border border-gray-200 hover:scale-110 transition-transform"
+                              style={{ backgroundColor: shade }}
+                            />
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                              {copiedColor === shade ? 'Copied!' : shade}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </CardContent>
