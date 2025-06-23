@@ -6,6 +6,7 @@ import { TypographySection } from '@/components/TypographySection';
 import { ColorPaletteSection } from '@/components/ColorPaletteSection';
 import { LogoSection } from '@/components/LogoSection';
 import { ExportSection } from '@/components/ExportSection';
+import { SignInPrompt } from '@/components/SignInPrompt';
 import { Input } from '@/components/ui/input';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { WelcomeDialog } from '@/components/WelcomeDialog';
@@ -68,6 +69,8 @@ const Index = () => {
       <WelcomeDialog open={welcomeOpen} onOpenChange={setWelcomeOpen} onGetStarted={handleWelcomeComplete} />
       
       <div className={`container mx-auto px-4 transition-all duration-300 ${overlayClass}`}>
+        <SignInPrompt />
+        
         <div className="flex flex-col gap-6 mb-6">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">Brand Guideline Generator</h1>

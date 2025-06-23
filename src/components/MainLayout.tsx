@@ -3,6 +3,7 @@ import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { useNavigate } from 'react-router-dom';
 import { BrandStudioLogo } from '@/components/BrandStudioLogo';
+import { AuthButton } from '@/components/AuthButton';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,7 +22,7 @@ export function MainLayout({
   
   const handleNavigation = (path: string) => {
     if (navigate) {
-      if (!currentGuide.name.trim()) {
+      if (!currentGuide.name.trim() && path !== '/') {
         toast({
           variant: "destructive",
           title: "Brand name missing",
@@ -32,17 +33,26 @@ export function MainLayout({
       navigate(path);
     }
   };
+
+  const handleHeaderClick = () => {
+    if (navigate) {
+      navigate('/');
+    }
+  };
   
   const content = (
     <div className="flex flex-col min-h-screen">
       <header className="border-b bg-background">
         <div className="container mx-auto py-4 px-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div 
+            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" 
+            onClick={handleHeaderClick}
+          >
             <BrandStudioLogo />
           </div>
           
           <div className="flex items-center gap-4">
-            {/* "View complete guide" button removed as requested */}
+            <AuthButton />
           </div>
         </div>
       </header>
@@ -78,7 +88,5 @@ export function MainLayout({
     </div>
   );
   
-  // Remove the BrandGuideProvider wrapper when not standalone
-  // as it's already provided by the App component
   return content;
 }
