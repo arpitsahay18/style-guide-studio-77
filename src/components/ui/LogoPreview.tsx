@@ -43,7 +43,8 @@ export function LogoPreview({
         <img 
           src={logo.src} 
           alt="Logo" 
-          className="max-w-[75%] max-h-[75%] object-contain"
+          className="w-full h-full object-contain"
+          style={{ padding: '0' }}
         />
       </div>
       
@@ -113,7 +114,7 @@ export function LogoWithSpacingGuidelines({
         <img 
           src={logo.src} 
           alt="Logo with spacing guidelines" 
-          className="max-w-[75%] max-h-[75%] object-contain"
+          className="w-full h-full object-contain"
         />
       </div>
       

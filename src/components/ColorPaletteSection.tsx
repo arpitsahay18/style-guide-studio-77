@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import { Trash2, Plus, Edit3, Palette } from 'lucide-react';
+import { Trash2, Plus, Palette } from 'lucide-react';
 import { hexToRgb, rgbToCmyk, generateTints, generateShades } from '@/utils/colorUtils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -51,7 +51,7 @@ export function ColorPaletteSection() {
       cmyk: `cmyk(${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%)`,
       tints: generateTints(colorInput.hex),
       shades: generateShades(colorInput.hex),
-      blackContrast: 0, // These would be calculated in a real app
+      blackContrast: 0,
       whiteContrast: 0
     };
 
@@ -139,16 +139,22 @@ export function ColorPaletteSection() {
     });
   };
 
+  const handleColorSwatchClick = (category: 'primary' | 'secondary' | 'neutral', index: number, color: ColorWithTintsShades) => {
+    setEditingColor({ category, index, color });
+  };
+
+  const canDeleteColor = (category: 'primary' | 'secondary' | 'neutral') => {
+    return currentGuide.colors[category].length > 1;
+  };
+
   const ColorSection = ({ 
     title, 
     colors, 
-    category, 
-    canDelete = true 
+    category
   }: { 
     title: string; 
     colors: ColorWithTintsShades[]; 
     category: 'primary' | 'secondary' | 'neutral';
-    canDelete?: boolean;
   }) => (
     <Card>
       <CardHeader>
@@ -187,20 +193,18 @@ export function ColorPaletteSection() {
             {colors.map((color, index) => (
               <div key={index} className="space-y-4">
                 <div className="space-y-2">
-                  <ColorSwatch 
-                    color={color} 
-                    colorName={getColorDisplayName(index, category)} 
-                  />
+                  <div 
+                    className="cursor-pointer" 
+                    onClick={() => handleColorSwatchClick(category, index, color)}
+                    title="Click to edit color"
+                  >
+                    <ColorSwatch 
+                      color={color} 
+                      colorName={getColorDisplayName(index, category)} 
+                    />
+                  </div>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditingColor({ category, index, color })}
-                    >
-                      <Edit3 className="h-3 w-3 mr-1" />
-                      Edit
-                    </Button>
-                    {canDelete && (
+                    {canDeleteColor(category) && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="outline" size="sm">
@@ -241,7 +245,11 @@ export function ColorPaletteSection() {
                 </div>
 
                 <div className="text-xs space-y-1 text-muted-foreground">
-                  <p><strong>HEX:</strong> {color.hex}</p>
+                  <p><strong>HEX:</strong> <span 
+                    className="cursor-pointer hover:underline" 
+                    onClick={() => handleColorSwatchClick(category, index, color)}
+                    title="Click to edit"
+                  >{color.hex}</span></p>
                   <p><strong>RGB:</strong> {color.rgb}</p>
                   <p><strong>CMYK:</strong> {color.cmyk}</p>
                 </div>
@@ -317,14 +325,12 @@ export function ColorPaletteSection() {
           title="Primary Colors"
           colors={currentGuide.colors.primary}
           category="primary"
-          canDelete={currentGuide.colors.primary.length > 1}
         />
 
         <ColorSection
           title="Secondary Colors"
           colors={currentGuide.colors.secondary}
           category="secondary"
-          canDelete={currentGuide.colors.secondary.length > 1}
         />
 
         <ColorSection

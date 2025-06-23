@@ -202,10 +202,10 @@ export function InteractiveLogoSpacing({
     setGuidelines([]);
   };
 
-  // Generate ruler tick marks - just lines without numbers
+  // Generate ruler tick marks
   const generateTicks = (dimension: number, isVertical: boolean = false) => {
     const ticks = [];
-    const minorTickSpacing = 10;  // Tick every 10px
+    const minorTickSpacing = 10;
     
     for (let i = 0; i <= dimension; i += minorTickSpacing) {
       const tickLength = '4px';
@@ -249,91 +249,93 @@ export function InteractiveLogoSpacing({
       </p>
       
       <div className="relative inline-block">
-        <div className="relative">
-          {/* Top Ruler */}
-          <div 
-            className="absolute -top-6 left-0 bg-gray-100 border-b cursor-grab select-none hover:bg-gray-200 relative"
-            style={{ width: containerSize.width, height: '24px' }}
-            onMouseDown={(e) => handleRulerMouseDown(e, 'vertical')}
-          >
-            {generateTicks(containerSize.width)}
-          </div>
-
+        <div className="relative flex">
           {/* Left Ruler */}
           <div 
-            className="absolute -left-6 top-0 bg-gray-100 border-r cursor-grab select-none hover:bg-gray-200 relative"
-            style={{ width: '24px', height: containerSize.height }}
+            className="bg-gray-100 border-r cursor-grab select-none hover:bg-gray-200 relative flex-shrink-0"
+            style={{ width: '24px', height: '400px' }}
             onMouseDown={(e) => handleRulerMouseDown(e, 'horizontal')}
           >
-            {generateTicks(containerSize.height, true)}
+            {generateTicks(400, true)}
           </div>
 
-          {/* Logo Container */}
-          <div 
-            ref={containerRef}
-            className="relative border border-dashed border-gray-300 bg-white"
-            style={{ width: '400px', height: '400px' }}
-          >
+          <div className="flex flex-col">
+            {/* Top Ruler */}
             <div 
-              className={`w-full h-full ${shapeClasses[shape]} flex items-center justify-center overflow-hidden`}
-              style={{ backgroundColor: logo.background }}
+              className="bg-gray-100 border-b cursor-grab select-none hover:bg-gray-200 relative"
+              style={{ width: '400px', height: '24px' }}
+              onMouseDown={(e) => handleRulerMouseDown(e, 'vertical')}
             >
-              <img 
-                src={logo.src} 
-                alt="Logo with spacing guidelines" 
-                className="max-w-[75%] max-h-[75%] object-contain"
-              />
+              {generateTicks(400)}
             </div>
-            
-            {/* Guidelines */}
-            {guidelines.map((guideline) => (
-              <div key={guideline.id}>
-                <div
-                  className="absolute cursor-move hover:opacity-75"
-                  style={{
-                    ...(guideline.type === 'horizontal' 
-                      ? {
-                          top: `${guideline.position}px`,
-                          left: 0,
-                          right: 0,
-                          height: '2px',
-                          borderTop: '2px dashed rgba(255, 0, 0, 0.8)'
-                        }
-                      : {
-                          left: `${guideline.position}px`,
-                          top: 0,
-                          bottom: 0,
-                          width: '2px',
-                          borderLeft: '2px dashed rgba(255, 0, 0, 0.8)'
-                        }
-                    ),
-                    zIndex: 10
-                  }}
-                  onMouseDown={(e) => handleGuidelineMouseDown(guideline, e)}
-                  onDoubleClick={() => handleGuidelineDoubleClick(guideline)}
-                  title="Drag to move, double-click to remove"
+
+            {/* Logo Container */}
+            <div 
+              ref={containerRef}
+              className="relative border border-dashed border-gray-300 bg-white"
+              style={{ width: '400px', height: '400px' }}
+            >
+              <div 
+                className={`w-full h-full ${shapeClasses[shape]} flex items-center justify-center overflow-hidden`}
+                style={{ backgroundColor: logo.background }}
+              >
+                <img 
+                  src={logo.src} 
+                  alt="Logo with spacing guidelines" 
+                  className="w-full h-full object-contain"
                 />
-                
-                <div
-                  className="absolute bg-red-500 text-white text-xs px-1 py-0.5 rounded pointer-events-none"
-                  style={{
-                    ...(guideline.type === 'horizontal'
-                      ? {
-                          top: `${guideline.position - 12}px`,
-                          left: '8px'
-                        }
-                      : {
-                          left: `${guideline.position + 8}px`,
-                          top: '8px'
-                        }
-                    ),
-                    zIndex: 11
-                  }}
-                >
-                  {guideline.name}: {Math.round(guideline.position)}px
-                </div>
               </div>
-            ))}
+              
+              {/* Guidelines */}
+              {guidelines.map((guideline) => (
+                <div key={guideline.id}>
+                  <div
+                    className="absolute cursor-move hover:opacity-75"
+                    style={{
+                      ...(guideline.type === 'horizontal' 
+                        ? {
+                            top: `${guideline.position}px`,
+                            left: 0,
+                            right: 0,
+                            height: '2px',
+                            borderTop: '2px dashed rgba(255, 0, 0, 0.8)'
+                          }
+                        : {
+                            left: `${guideline.position}px`,
+                            top: 0,
+                            bottom: 0,
+                            width: '2px',
+                            borderLeft: '2px dashed rgba(255, 0, 0, 0.8)'
+                          }
+                      ),
+                      zIndex: 10
+                    }}
+                    onMouseDown={(e) => handleGuidelineMouseDown(guideline, e)}
+                    onDoubleClick={() => handleGuidelineDoubleClick(guideline)}
+                    title="Drag to move, double-click to remove"
+                  />
+                  
+                  <div
+                    className="absolute bg-red-500 text-white text-xs px-1 py-0.5 rounded pointer-events-none"
+                    style={{
+                      ...(guideline.type === 'horizontal'
+                        ? {
+                            top: `${guideline.position - 12}px`,
+                            left: '8px'
+                          }
+                        : {
+                            left: `${guideline.position + 8}px`,
+                            top: '8px'
+                          }
+                      ),
+                      zIndex: 11
+                    }}
+                  >
+                    {guideline.name}: {Math.round(guideline.position)}px
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         

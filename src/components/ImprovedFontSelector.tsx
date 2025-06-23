@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -27,19 +26,6 @@ interface FontSelectorProps {
 export function ImprovedFontSelector({ value, onChange, availableFonts = [] }: FontSelectorProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Auto-focus search input when popover opens
-  useEffect(() => {
-    if (open) {
-      // Small delay to ensure the input is rendered
-      setTimeout(() => {
-        const searchInput = document.querySelector('[cmdk-input]') as HTMLInputElement;
-        if (searchInput) {
-          searchInput.focus();
-        }
-      }, 100);
-    }
-  }, [open]);
 
   // Ensure we have a valid array of fonts to work with
   const fonts = Array.isArray(availableFonts) ? availableFonts : [];
@@ -84,15 +70,30 @@ export function ImprovedFontSelector({ value, onChange, availableFonts = [] }: F
     return match ? match[1] : value;
   };
 
+  // Keep search input focused and active
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (newOpen) {
+      // Reset search when opening
+      setSearchTerm('');
+      // Focus the search input after a short delay
+      setTimeout(() => {
+        const searchInput = document.querySelector('[cmdk-input]') as HTMLInputElement;
+        if (searchInput) {
+          searchInput.focus();
+        }
+      }, 100);
+    }
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
-          style={{ cursor: 'pointer' }}
         >
           <span className="truncate">{getDisplayValue()}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -105,7 +106,6 @@ export function ImprovedFontSelector({ value, onChange, availableFonts = [] }: F
             value={searchTerm}
             onValueChange={setSearchTerm}
             className="h-9"
-            style={{ cursor: 'text' }}
             autoFocus
           />
           <CommandList className="max-h-[300px]">
