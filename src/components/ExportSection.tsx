@@ -56,7 +56,7 @@ export function ExportSection() {
     const pageWidth = doc.internal.pageSize.getWidth();
     
     if (pageNum === 1 || pageNum === totalPages) {
-      const footerY = pageHeight - 25; // Moved up from border
+      const footerY = pageHeight - 20; // Positioned above border
       const footerX = pageWidth / 2;
       const pillWidth = 50;
       const pillHeight = 8;
@@ -72,6 +72,47 @@ export function ExportSection() {
       doc.setTextColor(255, 255, 255);
       doc.text("Made with Brand Studio", footerX, footerY + 1, { align: 'center' });
     }
+  };
+  
+  const renderLogoWithBackground = async (logoSrc: string, background: string, size: number): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        // Fill background
+        ctx.fillStyle = background;
+        ctx.fillRect(0, 0, size, size);
+        
+        // Load and draw logo
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        
+        img.onload = () => {
+          // Calculate dimensions to fit logo properly without extra padding
+          const padding = size * 0.1; // 10% padding
+          const availableSize = size - (padding * 2);
+          const scale = Math.min(availableSize / img.width, availableSize / img.height);
+          const width = img.width * scale;
+          const height = img.height * scale;
+          const x = (size - width) / 2;
+          const y = (size - height) / 2;
+          
+          ctx.drawImage(img, x, y, width, height);
+          resolve(canvas.toDataURL('image/png', 0.9));
+        };
+        
+        img.onerror = () => {
+          resolve(canvas.toDataURL('image/png', 0.9));
+        };
+        
+        img.src = logoSrc;
+      } else {
+        resolve('');
+      }
+    });
   };
   
   const handleExportPDF = async () => {
@@ -102,29 +143,29 @@ export function ExportSection() {
       const margin = 20;
       let currentY = margin;
 
-      // Helper function to add page header
-      const addPageHeader = (title: string) => {
+      // Helper function to check if we need a new page
+      const checkNewPage = (requiredSpace: number) => {
+        if (currentY + requiredSpace > pageHeight - 30) {
+          doc.addPage();
+          currentY = margin;
+          return true;
+        }
+        return false;
+      };
+
+      // Helper function to add section header
+      const addSectionHeader = (title: string) => {
         doc.setFontSize(24);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(0, 0, 0);
         doc.text(title, margin, currentY);
-        currentY += 15;
+        currentY += 10;
         
         // Add separator line
         doc.setLineWidth(0.5);
         doc.setDrawColor(200, 200, 200);
         doc.line(margin, currentY, pageWidth - margin, currentY);
         currentY += 15;
-      };
-
-      // Helper function to check if we need a new page
-      const checkNewPage = (requiredSpace: number) => {
-        if (currentY + requiredSpace > pageHeight - 40) {
-          doc.addPage();
-          currentY = margin;
-          return true;
-        }
-        return false;
       };
 
       // PAGE 1: Title Page
@@ -147,204 +188,354 @@ export function ExportSection() {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 100, 100);
       doc.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 18, { align: 'center' });
-      
-      // PAGE 2: Typography Section
+
+      // PAGE 2+: Typography Section
       doc.addPage();
       currentY = margin;
-      addPageHeader("Typography");
+      addSectionHeader("Typography");
 
       // Display Typography
-      doc.setFontSize(20);
+      doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(0, 0, 0);
       doc.text("Display Typography", margin, currentY);
-      currentY += 15;
+      currentY += 12;
 
       Object.entries(currentGuide.typography.display).forEach(([key, style]) => {
-        checkNewPage(40);
+        checkNewPage(35);
         
         const styleName = typographyNames[`display-${key}`] || `Display ${key.charAt(0).toUpperCase() + key.slice(1)}`;
         
-        doc.setFontSize(16);
+        doc.setFontSize(14);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(0, 0, 0);
         doc.text(styleName, margin, currentY);
-        currentY += 10;
+        currentY += 8;
         
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(80, 80, 80);
         doc.text(`Font: ${style.fontFamily.replace(/"/g, '')}`, margin, currentY);
-        currentY += 6;
-        doc.text(`Size: ${style.fontSize} | Weight: ${style.fontWeight} | Line Height: ${style.lineHeight}`, margin, currentY);
-        currentY += 15;
+        currentY += 5;
+        doc.text(`Size: ${style.fontSize}`, margin, currentY);
+        doc.text(`Weight: ${style.fontWeight}`, margin + 40, currentY);
+        doc.text(`Line Height: ${style.lineHeight}`, margin + 80, currentY);
+        currentY += 12;
       });
 
-      // Heading Typography
-      checkNewPage(25);
-      doc.setFontSize(20);
+      // Headings
+      checkNewPage(20);
+      doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
       doc.text("Headings", margin, currentY);
-      currentY += 15;
+      currentY += 12;
 
       Object.entries(currentGuide.typography.heading).forEach(([key, style]) => {
-        checkNewPage(40);
+        checkNewPage(35);
         
         const styleName = typographyNames[`heading-${key}`] || `Heading ${key.toUpperCase()}`;
         
-        doc.setFontSize(16);
+        doc.setFontSize(14);
         doc.setFont("helvetica", "bold");
         doc.text(styleName, margin, currentY);
-        currentY += 10;
+        currentY += 8;
         
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(80, 80, 80);
         doc.text(`Font: ${style.fontFamily.replace(/"/g, '')}`, margin, currentY);
-        currentY += 6;
-        doc.text(`Size: ${style.fontSize} | Weight: ${style.fontWeight} | Line Height: ${style.lineHeight}`, margin, currentY);
-        currentY += 15;
+        currentY += 5;
+        doc.text(`Size: ${style.fontSize}`, margin, currentY);
+        doc.text(`Weight: ${style.fontWeight}`, margin + 40, currentY);
+        doc.text(`Line Height: ${style.lineHeight}`, margin + 80, currentY);
+        currentY += 12;
       });
 
       // Body Typography
-      checkNewPage(25);
-      doc.setFontSize(20);
+      checkNewPage(20);
+      doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
       doc.text("Body Text", margin, currentY);
-      currentY += 15;
+      currentY += 12;
 
       Object.entries(currentGuide.typography.body).forEach(([key, style]) => {
-        checkNewPage(40);
+        checkNewPage(35);
         
         const styleName = typographyNames[`body-${key}`] || `Body ${key.charAt(0).toUpperCase() + key.slice(1)}`;
         
-        doc.setFontSize(16);
+        doc.setFontSize(14);
         doc.setFont("helvetica", "bold");
         doc.text(styleName, margin, currentY);
-        currentY += 10;
+        currentY += 8;
         
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(80, 80, 80);
         doc.text(`Font: ${style.fontFamily.replace(/"/g, '')}`, margin, currentY);
-        currentY += 6;
-        doc.text(`Size: ${style.fontSize} | Weight: ${style.fontWeight} | Line Height: ${style.lineHeight}`, margin, currentY);
-        currentY += 15;
+        currentY += 5;
+        doc.text(`Size: ${style.fontSize}`, margin, currentY);
+        doc.text(`Weight: ${style.fontWeight}`, margin + 40, currentY);
+        doc.text(`Line Height: ${style.lineHeight}`, margin + 80, currentY);
+        currentY += 12;
       });
 
-      // PAGE 3: Color Palette Section
+      // Color Palette Section
       doc.addPage();
       currentY = margin;
-      addPageHeader("Color Palette");
+      addSectionHeader("Color Palette");
 
       // Primary Colors
       if (currentGuide.colors.primary.length > 0) {
-        doc.setFontSize(20);
+        doc.setFontSize(18);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(0, 0, 0);
         doc.text("Primary Colors", margin, currentY);
-        currentY += 15;
+        currentY += 12;
 
         currentGuide.colors.primary.forEach((color, index) => {
-          checkNewPage(60);
+          checkNewPage(45);
           
           const colorName = colorNames[`primary-${index}`] || color.hex;
           
           // Color swatch
           doc.setFillColor(color.hex);
-          doc.rect(margin, currentY, 30, 20, 'F');
+          doc.rect(margin, currentY, 25, 20, 'F');
           doc.setDrawColor(200, 200, 200);
           doc.setLineWidth(0.5);
-          doc.rect(margin, currentY, 30, 20);
+          doc.rect(margin, currentY, 25, 20);
           
-          // Color details
-          doc.setFontSize(14);
+          // Color details aligned properly
+          doc.setFontSize(12);
           doc.setFont("helvetica", "bold");
           doc.setTextColor(0, 0, 0);
-          doc.text(colorName, margin + 35, currentY + 8);
+          doc.text(colorName, margin + 30, currentY + 8);
           
-          doc.setFontSize(10);
+          doc.setFontSize(9);
           doc.setFont("helvetica", "normal");
           doc.setTextColor(80, 80, 80);
-          doc.text(`HEX: ${color.hex}`, margin + 35, currentY + 14);
-          doc.text(`RGB: ${color.rgb}`, margin + 80, currentY + 14);
-          doc.text(`CMYK: ${color.cmyk}`, margin + 130, currentY + 14);
-          doc.text(`Pantone: ${getClosestPantone(color.hex)}`, margin + 35, currentY + 18);
+          doc.text(`HEX: ${color.hex}`, margin + 30, currentY + 14);
+          doc.text(`RGB: ${color.rgb}`, margin + 70, currentY + 14);
+          doc.text(`CMYK: ${color.cmyk}`, margin + 120, currentY + 14);
+          doc.text(`Pantone: ${getClosestPantone(color.hex)}`, margin + 30, currentY + 18);
           
-          currentY += 35;
+          currentY += 30;
         });
       }
 
       // Secondary Colors
       if (currentGuide.colors.secondary.length > 0) {
-        checkNewPage(25);
-        doc.setFontSize(20);
+        checkNewPage(20);
+        doc.setFontSize(18);
         doc.setFont("helvetica", "bold");
         doc.text("Secondary Colors", margin, currentY);
-        currentY += 15;
+        currentY += 12;
 
         currentGuide.colors.secondary.forEach((color, index) => {
-          checkNewPage(60);
+          checkNewPage(45);
           
           const colorName = colorNames[`secondary-${index}`] || color.hex;
           
           // Color swatch
           doc.setFillColor(color.hex);
-          doc.rect(margin, currentY, 30, 20, 'F');
+          doc.rect(margin, currentY, 25, 20, 'F');
           doc.setDrawColor(200, 200, 200);
           doc.setLineWidth(0.5);
-          doc.rect(margin, currentY, 30, 20);
+          doc.rect(margin, currentY, 25, 20);
           
-          // Color details
-          doc.setFontSize(14);
+          // Color details aligned properly
+          doc.setFontSize(12);
           doc.setFont("helvetica", "bold");
           doc.setTextColor(0, 0, 0);
-          doc.text(colorName, margin + 35, currentY + 8);
+          doc.text(colorName, margin + 30, currentY + 8);
           
-          doc.setFontSize(10);
+          doc.setFontSize(9);
           doc.setFont("helvetica", "normal");
           doc.setTextColor(80, 80, 80);
-          doc.text(`HEX: ${color.hex}`, margin + 35, currentY + 14);
-          doc.text(`RGB: ${color.rgb}`, margin + 80, currentY + 14);
-          doc.text(`CMYK: ${color.cmyk}`, margin + 130, currentY + 14);
-          doc.text(`Pantone: ${getClosestPantone(color.hex)}`, margin + 35, currentY + 18);
+          doc.text(`HEX: ${color.hex}`, margin + 30, currentY + 14);
+          doc.text(`RGB: ${color.rgb}`, margin + 70, currentY + 14);
+          doc.text(`CMYK: ${color.cmyk}`, margin + 120, currentY + 14);
+          doc.text(`Pantone: ${getClosestPantone(color.hex)}`, margin + 30, currentY + 18);
           
-          currentY += 35;
+          currentY += 30;
         });
       }
 
-      // PAGE 4: Logo Section
+      // Logo Section
       if (currentGuide.logos.original) {
         doc.addPage();
         currentY = margin;
-        addPageHeader("Logo");
+        addSectionHeader("Logo");
 
+        // Logo Guidelines if they exist
+        const squareGuidelines = logoGuidelines['square-logo'] || [];
+        if (squareGuidelines.length > 0) {
+          doc.setFontSize(18);
+          doc.setFont("helvetica", "bold");
+          doc.text("Logo Guidelines", margin, currentY);
+          currentY += 15;
+          
+          doc.setFontSize(14);
+          doc.setFont("helvetica", "bold");
+          doc.text("Square Logo Guidelines:", margin, currentY);
+          currentY += 10;
+
+          try {
+            // Create logo with guidelines
+            const canvas = document.createElement('canvas');
+            canvas.width = 300;
+            canvas.height = 300;
+            const ctx = canvas.getContext('2d');
+            
+            if (ctx) {
+              // White background
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              
+              // Load and draw logo
+              const img = new Image();
+              img.crossOrigin = "anonymous";
+              
+              await new Promise<void>((resolve) => {
+                img.onload = () => {
+                  const padding = canvas.width * 0.1;
+                  const availableSize = canvas.width - (padding * 2);
+                  const scale = Math.min(availableSize / img.width, availableSize / img.height);
+                  const width = img.width * scale;
+                  const height = img.height * scale;
+                  
+                  const x = (canvas.width - width) / 2;
+                  const y = (canvas.height - height) / 2;
+                  
+                  ctx.drawImage(img, x, y, width, height);
+                  
+                  // Draw guidelines properly aligned
+                  ctx.setLineDash([6, 6]);
+                  ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+                  ctx.lineWidth = 2;
+                  
+                  squareGuidelines.forEach(guideline => {
+                    const pos = (guideline.position / 400) * canvas.width;
+                    
+                    if (guideline.type === 'horizontal') {
+                      ctx.beginPath();
+                      ctx.moveTo(0, pos);
+                      ctx.lineTo(canvas.width, pos);
+                      ctx.stroke();
+                      
+                      // Add label properly positioned
+                      ctx.fillStyle = 'rgba(255, 0, 0, 0.9)';
+                      ctx.fillRect(8, pos - 12, 100, 16);
+                      ctx.fillStyle = 'white';
+                      ctx.font = '10px Arial';
+                      ctx.fillText(`${guideline.name}: ${Math.round(guideline.position)}px`, 12, pos - 2);
+                    } else {
+                      ctx.beginPath();
+                      ctx.moveTo(pos, 0);
+                      ctx.lineTo(pos, canvas.height);
+                      ctx.stroke();
+                      
+                      // Add label properly positioned
+                      ctx.fillStyle = 'rgba(255, 0, 0, 0.9)';
+                      ctx.fillRect(pos + 8, 8, 100, 16);
+                      ctx.fillStyle = 'white';
+                      ctx.font = '10px Arial';
+                      ctx.fillText(`${guideline.name}: ${Math.round(guideline.position)}px`, pos + 12, 20);
+                    }
+                  });
+                  
+                  resolve();
+                };
+                img.onerror = () => resolve();
+                img.src = currentGuide.logos.original;
+              });
+              
+              const logoWithGuidelines = canvas.toDataURL('image/png', 0.8);
+              doc.addImage(logoWithGuidelines, 'PNG', margin, currentY, 60, 60);
+              currentY += 70;
+              
+              // Add guidelines list properly aligned
+              doc.setFontSize(12);
+              doc.setFont("helvetica", "normal");
+              doc.text("Guidelines:", margin, currentY);
+              currentY += 8;
+              
+              squareGuidelines.forEach((guideline) => {
+                doc.setFontSize(10);
+                doc.text(`${guideline.name}: ${Math.round(guideline.position)}px`, margin + 5, currentY);
+                currentY += 6;
+              });
+            }
+          } catch (error) {
+            console.error("Error creating logo guidelines:", error);
+          }
+        }
+
+        // Primary Logo
+        checkNewPage(40);
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
         doc.text("Primary Logo", margin, currentY);
         currentY += 15;
 
         try {
-          doc.addImage(currentGuide.logos.original, 'PNG', margin, currentY, 60, 60);
-          currentY += 70;
-          
-          // Add guidelines if they exist
-          const squareGuidelines = logoGuidelines['square-logo'] || [];
-          if (squareGuidelines.length > 0) {
-            doc.setFontSize(14);
-            doc.setFont("helvetica", "bold");
-            doc.text("Logo Guidelines:", margin, currentY);
-            currentY += 10;
-            
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
-            squareGuidelines.forEach((guideline) => {
-              doc.text(`${guideline.name}: ${Math.round(guideline.position)}px`, margin, currentY);
-              currentY += 6;
-            });
-          }
+          doc.addImage(currentGuide.logos.original, 'PNG', margin, currentY, 50, 50);
+          currentY += 60;
         } catch (error) {
           console.error("Error adding logo to PDF:", error);
+        }
+
+        // Logo Variations
+        checkNewPage(80);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("Logo Variations", margin, currentY);
+        currentY += 15;
+
+        const logoSets = [
+          { title: 'Square', logos: currentGuide.logos.square },
+          { title: 'Rounded', logos: currentGuide.logos.rounded },
+          { title: 'Circle', logos: currentGuide.logos.circle }
+        ];
+
+        for (const set of logoSets) {
+          if (set.logos.length > 0) {
+            checkNewPage(50);
+            
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text(set.title, margin, currentY);
+            currentY += 8;
+            
+            // Create 4 logo variations in a row
+            const logosToShow = set.logos.slice(0, 4);
+            let xPosition = margin;
+            const logoSize = 20;
+            const spacing = 30;
+            
+            for (let i = 0; i < logosToShow.length; i++) {
+              const logo = logosToShow[i];
+              
+              try {
+                const logoDataUrl = await renderLogoWithBackground(logo.src, logo.background, 150);
+                doc.addImage(logoDataUrl, 'PNG', xPosition, currentY, logoSize, logoSize);
+                
+                // Add background label properly positioned
+                doc.setFontSize(7);
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(100, 100, 100);
+                const bgText = logo.background === '#FFFFFF' ? 'White' : 
+                              logo.background === '#000000' ? 'Black' : 
+                              'Color';
+                doc.text(bgText, xPosition + logoSize/2, currentY + logoSize + 4, { align: 'center' });
+              } catch (error) {
+                console.error("Error rendering logo variation:", error);
+              }
+              
+              xPosition += spacing;
+            }
+            
+            currentY += logoSize + 12;
+          }
         }
       }
 
@@ -418,6 +609,16 @@ export function ExportSection() {
       const margin = 20;
       let currentY = margin;
       
+      // Helper function to check if we need a new page
+      const checkNewPage = (requiredSpace: number) => {
+        if (currentY + requiredSpace > pageHeight - 30) {
+          doc.addPage();
+          currentY = margin;
+          return true;
+        }
+        return false;
+      };
+      
       // Title
       doc.setFontSize(24);
       doc.setFont("helvetica", "bold");
@@ -433,10 +634,11 @@ export function ExportSection() {
       
       if (typeof currentGuide.logos.original === 'string') {
         doc.addImage(currentGuide.logos.original, 'PNG', margin, currentY, 50, 50);
-        currentY += 70;
+        currentY += 60;
       }
       
       // Logo Variations Section
+      checkNewPage(20);
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.text("Logo Variations", margin, currentY);
@@ -450,11 +652,7 @@ export function ExportSection() {
       
       for (const set of logoSets) {
         if (set.logos.length > 0) {
-          // Check if we need a new page
-          if (currentY + 80 > pageHeight - margin) {
-            doc.addPage();
-            currentY = margin;
-          }
+          checkNewPage(50);
           
           doc.setFontSize(14);
           doc.setFont("helvetica", "bold");
@@ -471,49 +669,17 @@ export function ExportSection() {
             const logo = logosToShow[i];
             
             try {
-              // Create a canvas to render the logo with its background
-              const canvas = document.createElement('canvas');
-              canvas.width = 200;
-              canvas.height = 200;
-              const ctx = canvas.getContext('2d');
+              const logoDataUrl = await renderLogoWithBackground(logo.src, logo.background, 200);
+              doc.addImage(logoDataUrl, 'PNG', xPosition, currentY, logoSize, logoSize);
               
-              if (ctx) {
-                // Fill background
-                ctx.fillStyle = logo.background;
-                ctx.fillRect(0, 0, 200, 200);
-                
-                // Load and draw logo
-                const img = new Image();
-                img.crossOrigin = "anonymous";
-                
-                await new Promise<void>((resolve) => {
-                  img.onload = () => {
-                    const maxDim = 150;
-                    const scale = Math.min(maxDim / img.width, maxDim / img.height);
-                    const width = img.width * scale;
-                    const height = img.height * scale;
-                    const x = (200 - width) / 2;
-                    const y = (200 - height) / 2;
-                    
-                    ctx.drawImage(img, x, y, width, height);
-                    resolve();
-                  };
-                  img.onerror = () => resolve(); // Continue even if image fails
-                  img.src = logo.src;
-                });
-                
-                const logoDataUrl = canvas.toDataURL('image/png', 0.8);
-                doc.addImage(logoDataUrl, 'PNG', xPosition, currentY, logoSize, logoSize);
-                
-                // Add background label
-                doc.setFontSize(8);
-                doc.setFont("helvetica", "normal");
-                doc.setTextColor(100, 100, 100);
-                const bgText = logo.background === '#FFFFFF' ? 'White' : 
-                              logo.background === '#000000' ? 'Black' : 
-                              logo.background;
-                doc.text(bgText, xPosition + logoSize/2, currentY + logoSize + 5, { align: 'center' });
-              }
+              // Add background label
+              doc.setFontSize(8);
+              doc.setFont("helvetica", "normal");
+              doc.setTextColor(100, 100, 100);
+              const bgText = logo.background === '#FFFFFF' ? 'White' : 
+                            logo.background === '#000000' ? 'Black' : 
+                            'Color';
+              doc.text(bgText, xPosition + logoSize/2, currentY + logoSize + 5, { align: 'center' });
             } catch (error) {
               console.error("Error rendering logo variation:", error);
               // Fallback: just add a placeholder
@@ -531,11 +697,7 @@ export function ExportSection() {
       // Add guidelines if they exist
       const squareGuidelines = logoGuidelines['square-logo'] || [];
       if (squareGuidelines.length > 0) {
-        // Check if we need a new page
-        if (currentY + 100 > pageHeight - margin) {
-          doc.addPage();
-          currentY = margin;
-        }
+        checkNewPage(100);
         
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
@@ -560,8 +722,9 @@ export function ExportSection() {
             
             await new Promise<void>((resolve) => {
               img.onload = () => {
-                const maxDim = canvas.width * 0.75;
-                const scale = Math.min(maxDim / img.width, maxDim / img.height);
+                const padding = canvas.width * 0.1;
+                const availableSize = canvas.width - (padding * 2);
+                const scale = Math.min(availableSize / img.width, availableSize / img.height);
                 const width = img.width * scale;
                 const height = img.height * scale;
                 
@@ -576,30 +739,32 @@ export function ExportSection() {
                 ctx.lineWidth = 3;
                 
                 squareGuidelines.forEach(guideline => {
+                  const pos = (guideline.position / 400) * canvas.width;
+                  
                   if (guideline.type === 'horizontal') {
                     ctx.beginPath();
-                    ctx.moveTo(0, guideline.position);
-                    ctx.lineTo(canvas.width, guideline.position);
+                    ctx.moveTo(0, pos);
+                    ctx.lineTo(canvas.width, pos);
                     ctx.stroke();
                     
                     // Add label
                     ctx.fillStyle = 'rgba(255, 0, 0, 0.9)';
-                    ctx.fillRect(10, guideline.position - 15, 120, 20);
+                    ctx.fillRect(10, pos - 15, 120, 20);
                     ctx.fillStyle = 'white';
                     ctx.font = '12px Arial';
-                    ctx.fillText(`${guideline.name}: ${Math.round(guideline.position)}px`, 15, guideline.position - 2);
+                    ctx.fillText(`${guideline.name}: ${Math.round(guideline.position)}px`, 15, pos - 2);
                   } else {
                     ctx.beginPath();
-                    ctx.moveTo(guideline.position, 0);
-                    ctx.lineTo(guideline.position, canvas.height);
+                    ctx.moveTo(pos, 0);
+                    ctx.lineTo(pos, canvas.height);
                     ctx.stroke();
                     
                     // Add label
                     ctx.fillStyle = 'rgba(255, 0, 0, 0.9)';
-                    ctx.fillRect(guideline.position + 10, 10, 120, 20);
+                    ctx.fillRect(pos + 10, 10, 120, 20);
                     ctx.fillStyle = 'white';
                     ctx.font = '12px Arial';
-                    ctx.fillText(`${guideline.name}: ${Math.round(guideline.position)}px`, guideline.position + 15, 25);
+                    ctx.fillText(`${guideline.name}: ${Math.round(guideline.position)}px`, pos + 15, 25);
                   }
                 });
                 
@@ -630,10 +795,17 @@ export function ExportSection() {
         }
       }
       
-      // Add footer
+      // Add footer with clickable link
       doc.setFontSize(10);
       doc.setTextColor(150, 150, 150);
       doc.text(`Generated on ${new Date().toLocaleDateString()}`, margin, pageHeight - 20);
+      
+      // Add clickable footer
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        addClickableFooter(doc, i, totalPages);
+      }
       
       // Save the PDF
       doc.save(`${currentGuide.name.replace(/\s+/g, '_')}_logo_pack.pdf`);

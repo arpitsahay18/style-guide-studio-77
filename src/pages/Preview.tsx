@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { MainLayout } from '@/components/MainLayout';
@@ -117,7 +118,7 @@ const Preview = () => {
       const addFooter = (isFirstOrLast: boolean = false) => {
         if (isFirstOrLast) {
           // Add gradient pill footer for first and last page
-          const footerY = pageHeight - 15;
+          const footerY = pageHeight - 20; // Positioned above border
           const footerX = pageWidth / 2;
           const pillWidth = 50;
           const pillHeight = 8;
@@ -125,6 +126,9 @@ const Preview = () => {
           // Create gradient effect with rounded rectangle
           pdf.setFillColor(60, 60, 60);
           pdf.roundedRect(footerX - pillWidth/2, footerY - pillHeight/2, pillWidth, pillHeight, 4, 4, 'F');
+          
+          // Add clickable link
+          pdf.link(footerX - pillWidth/2, footerY - pillHeight/2, pillWidth, pillHeight, { url: 'https://google.com' });
           
           pdf.setFontSize(8);
           pdf.setTextColor(255, 255, 255);
