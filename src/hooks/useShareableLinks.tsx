@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { BrandGuide } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { useBrandGuide } from '@/context/BrandGuideContext';
 
 interface ShareableLink {
   id: string;
@@ -19,6 +20,13 @@ export const useShareableLinks = () => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { 
+    colorNames, 
+    typographyNames, 
+    typographyVisibility, 
+    previewText, 
+    logoGuidelines 
+  } = useBrandGuide();
 
   const fetchLinks = async () => {
     if (!user) return;
@@ -67,10 +75,18 @@ export const useShareableLinks = () => {
         userId: user.uid,
         linkId,
         brandGuide,
+        // Include all the context data needed for proper display
+        colorNames,
+        typographyNames,
+        typographyVisibility,
+        previewText,
+        logoGuidelines,
         createdAt: new Date(),
         expiresAt,
         brandGuideName: brandGuide.name || 'Untitled Brand Guide'
       };
+
+      console.log('Saving shareable link data:', linkData);
 
       await addDoc(collection(db, 'shareableLinks'), linkData);
       
