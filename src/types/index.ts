@@ -1,3 +1,4 @@
+import { CSSProperties } from 'react';
 
 // Typography Types
 export interface FontFamily {
@@ -12,7 +13,7 @@ export interface TypographyStyle {
   fontWeight: number | string;
   lineHeight: string;
   letterSpacing: string;
-  textTransform?: string;
+  textTransform?: CSSProperties['textTransform'];
 }
 
 export interface TypographySet {

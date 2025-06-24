@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
@@ -225,6 +224,18 @@ const Preview = () => {
   const displayPreviewText = sharedGuide?.previewText || previewText;
   const displayLogoGuidelines = sharedGuide?.logoGuidelines || logoGuidelines;
 
+  // Helper function to convert TypographyStyle to CSSProperties
+  const convertToCSS = (style: TypographyStyle): React.CSSProperties => {
+    return {
+      fontFamily: style.fontFamily,
+      fontSize: style.fontSize,
+      fontWeight: style.fontWeight,
+      lineHeight: style.lineHeight,
+      letterSpacing: style.letterSpacing,
+      textTransform: style.textTransform
+    };
+  };
+
   return (
     <MainLayout standalone={!!guideId}>
       <div className="container mx-auto px-4">
@@ -272,7 +283,7 @@ const Preview = () => {
                         <div key={key} className="space-y-2">
                           <div className="flex items-baseline gap-4">
                             <h4 className="text-lg font-medium text-muted-foreground min-w-[120px]">{styleName}</h4>
-                            <p style={typedStyle} className="flex-1">
+                            <p style={convertToCSS(typedStyle)} className="flex-1">
                               {displayPreviewText || "The quick brown fox jumps over the lazy dog"}
                             </p>
                           </div>
@@ -302,7 +313,7 @@ const Preview = () => {
                         <div key={key} className="space-y-2">
                           <div className="flex items-baseline gap-4">
                             <h4 className="text-lg font-medium text-muted-foreground min-w-[120px]">{styleName}</h4>
-                            <p style={typedStyle} className="flex-1">
+                            <p style={convertToCSS(typedStyle)} className="flex-1">
                               {displayPreviewText || "The quick brown fox jumps over the lazy dog"}
                             </p>
                           </div>
@@ -332,7 +343,7 @@ const Preview = () => {
                         <div key={key} className="space-y-2">
                           <div className="flex items-baseline gap-4">
                             <h4 className="text-lg font-medium text-muted-foreground min-w-[120px]">{styleName}</h4>
-                            <p style={typedStyle} className="flex-1">
+                            <p style={convertToCSS(typedStyle)} className="flex-1">
                               {displayPreviewText || "The quick brown fox jumps over the lazy dog. This is sample body text to demonstrate the typography style with multiple lines and proper spacing."}
                             </p>
                           </div>
