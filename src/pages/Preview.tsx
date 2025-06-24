@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
@@ -12,23 +13,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { TypographyStyle } from '@/types';
-
-const getClosestPantone = (hex: string): string => {
-  const pantoneMap: { [key: string]: string } = {
-    '#FF0000': 'Pantone Red 032 C',
-    '#00FF00': 'Pantone Green C',
-    '#0000FF': 'Pantone Blue 072 C',
-    '#FFFF00': 'Pantone Yellow C',
-    '#FF00FF': 'Pantone Magenta C',
-    '#00FFFF': 'Pantone Cyan C',
-    '#000000': 'Pantone Black C',
-    '#FFFFFF': 'Pantone White',
-    '#007BFF': 'Pantone 279 C',
-    '#6C757D': 'Pantone Cool Gray 8 C'
-  };
-
-  return pantoneMap[hex.toUpperCase()] || `Pantone ${hex.substring(1).toUpperCase()}`;
-};
 
 const Preview = () => {
   const { guideId } = useParams();
@@ -73,23 +57,25 @@ const Preview = () => {
 
     try {
       toast({
-        title: "Generating Professional PDF",
-        description: "Creating your comprehensive brand guide..."
+        title: "Generating PDF",
+        description: "Creating your brand guide PDF with proper spacing and pagination..."
       });
 
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const margin = 20;
-      
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
 
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 15;
+      const contentWidth = pageWidth - (margin * 2);
+      const contentHeight = pageHeight - (margin * 2);
+      
       const addFooter = (isFirstOrLast: boolean = false) => {
         if (isFirstOrLast) {
-          const footerY = pageHeight - 20;
+          const footerY = pageHeight - 15;
           const footerX = pageWidth / 2;
           const pillWidth = 50;
           const pillHeight = 8;
@@ -97,15 +83,13 @@ const Preview = () => {
           pdf.setFillColor(60, 60, 60);
           pdf.roundedRect(footerX - pillWidth/2, footerY - pillHeight/2, pillWidth, pillHeight, 4, 4, 'F');
           
-          pdf.link(footerX - pillWidth/2, footerY - pillHeight/2, pillWidth, pillHeight, { url: 'https://google.com' });
-          
           pdf.setFontSize(8);
           pdf.setTextColor(255, 255, 255);
           pdf.text("Made with Brand Studio", footerX, footerY + 1, { align: 'center' });
         }
       };
 
-      // PAGE 1: Title Page with border
+      // Title Page
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
       
@@ -125,40 +109,76 @@ const Preview = () => {
       
       addFooter(true);
 
-      const sections = contentRef.current.querySelectorAll('section');
+      const sections = contentRef.current.querySelectorAll('.pdf-section');
       
       for (let i = 0; i < sections.length; i++) {
-        pdf.addPage();
+        const section = sections[i] as HTMLElement;
         
         try {
-          const canvas = await html2canvas(sections[i] as HTMLElement, {
-            scale: 1.5,
+          // Create canvas with better quality
+          const canvas = await html2canvas(section, {
+            scale: 2,
             useCORS: true,
             allowTaint: true,
             backgroundColor: '#ffffff',
-            width: 800,
-            height: 1000
+            width: section.scrollWidth,
+            height: section.scrollHeight,
+            windowWidth: 1200,
+            windowHeight: section.scrollHeight
           });
           
-          const imgData = canvas.toDataURL('image/jpeg', 0.8);
-          const imgWidth = pageWidth - (margin * 2);
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          const imgData = canvas.toDataURL('image/jpeg', 0.85);
+          const imgWidth = contentWidth;
+          const imgHeight = (canvas.height * contentWidth) / canvas.width;
           
-          const maxHeight = pageHeight - (margin * 2) - 10;
-          const finalHeight = Math.min(imgHeight, maxHeight);
-          const finalWidth = (canvas.width * finalHeight) / canvas.height;
-          
-          pdf.addImage(imgData, 'JPEG', margin, margin, finalWidth, finalHeight);
+          // Check if content fits on one page
+          if (imgHeight <= contentHeight) {
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+          } else {
+            // Split content across multiple pages
+            const totalPages = Math.ceil(imgHeight / contentHeight);
+            
+            for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+              pdf.addPage();
+              
+              const sourceY = (pageNum * contentHeight * canvas.width) / contentWidth;
+              const sourceHeight = Math.min(
+                (contentHeight * canvas.width) / contentWidth,
+                canvas.height - sourceY
+              );
+              
+              // Create a temporary canvas for this page slice
+              const tempCanvas = document.createElement('canvas');
+              tempCanvas.width = canvas.width;
+              tempCanvas.height = sourceHeight;
+              const tempCtx = tempCanvas.getContext('2d');
+              
+              if (tempCtx) {
+                tempCtx.drawImage(
+                  canvas,
+                  0, sourceY, canvas.width, sourceHeight,
+                  0, 0, canvas.width, sourceHeight
+                );
+                
+                const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.85);
+                const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
+                
+                pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
+              }
+            }
+          }
           
         } catch (error) {
           console.error('Error capturing section:', error);
+          pdf.addPage();
           pdf.setFontSize(18);
           pdf.setFont('helvetica', 'bold');
-          pdf.text(sections[i].querySelector('h2')?.textContent || 'Section', margin, margin + 20);
+          pdf.text(section.querySelector('h2')?.textContent || 'Section', margin, margin + 20);
         }
       }
 
-      // FINAL PAGE: Closing with border
+      // Final Page
       pdf.addPage();
       
       pdf.setDrawColor(0, 0, 0);
@@ -179,8 +199,8 @@ const Preview = () => {
       pdf.save(`${currentGuide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
       
       toast({
-        title: "Professional PDF Generated",
-        description: "Your comprehensive brand guide has been downloaded successfully."
+        title: "PDF Generated Successfully",
+        description: "Your brand guide has been downloaded with proper formatting."
       });
 
     } catch (error) {
@@ -232,362 +252,392 @@ const Preview = () => {
       fontWeight: style.fontWeight,
       lineHeight: style.lineHeight,
       letterSpacing: style.letterSpacing,
-      textTransform: style.textTransform
+      textTransform: style.textTransform,
+      wordWrap: 'break-word',
+      overflowWrap: 'break-word'
     };
   };
 
   return (
     <MainLayout standalone={!!guideId}>
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">{guide.name}</h1>
-            <p className="text-xl text-muted-foreground">Brand Guidelines</p>
-          </div>
-          
-          <div className="flex gap-4">
-            <Button onClick={handleExportPDF} variant="outline">
-              <FileDown className="mr-2 h-4 w-4" />
-              Save as PDF
-            </Button>
-            {!guideId && (
-              <Button 
-                onClick={handleGenerateShareableLink}
-                disabled={!user || isGeneratingLink}
-              >
-                <Share className="mr-2 h-4 w-4" />
-                {isGeneratingLink ? "Generating..." : "Share Link"}
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-6 py-8 max-w-6xl">
+          <div className="flex justify-between items-center mb-12">
+            <div>
+              <h1 className="text-5xl font-bold mb-4 text-gray-900">{guide.name}</h1>
+              <p className="text-2xl text-gray-600">Brand Guidelines</p>
+            </div>
+            
+            <div className="flex gap-4">
+              <Button onClick={handleExportPDF} variant="outline" size="lg">
+                <FileDown className="mr-2 h-5 w-5" />
+                Save as PDF
               </Button>
-            )}
+              {!guideId && (
+                <Button 
+                  onClick={handleGenerateShareableLink}
+                  disabled={!user || isGeneratingLink}
+                  size="lg"
+                >
+                  <Share className="mr-2 h-5 w-5" />
+                  {isGeneratingLink ? "Generating..." : "Share Link"}
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div ref={contentRef}>
-          {/* Typography Section */}
-          <section className="mb-12">
-            <h2 className="text-3xl font-bold mb-8">Typography</h2>
-            
-            {/* Display Typography */}
-            {Object.entries(guide.typography.display).some(([key]) => 
-              displayTypographyVisibility.display?.includes(key)
-            ) && (
-              <div className="mb-8">
-                <h3 className="text-2xl font-semibold mb-6">Display Typography</h3>
-                <div className="grid gap-6">
-                  {Object.entries(guide.typography.display)
-                    .filter(([key]) => displayTypographyVisibility.display?.includes(key))
-                    .map(([key, style]) => {
-                      const typedStyle = style as TypographyStyle;
-                      const styleName = displayTypographyNames[`display-${key}`] || `Display ${key.charAt(0).toUpperCase() + key.slice(1)}`;
-                      return (
-                        <div key={key} className="space-y-2">
-                          <div className="flex items-baseline gap-4">
-                            <h4 className="text-lg font-medium text-muted-foreground min-w-[120px]">{styleName}</h4>
-                            <p style={convertToCSS(typedStyle)} className="flex-1">
-                              {displayPreviewText || "The quick brown fox jumps over the lazy dog"}
-                            </p>
-                          </div>
-                          <div className="text-sm text-muted-foreground ml-[136px]">
-                            {typedStyle.fontFamily.replace(/"/g, '')} • {typedStyle.fontSize} • {typedStyle.fontWeight} • {typedStyle.lineHeight}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-
-            {/* Heading Typography */}
-            {Object.entries(guide.typography.heading).some(([key]) => 
-              displayTypographyVisibility.heading?.includes(key)
-            ) && (
-              <div className="mb-8">
-                <h3 className="text-2xl font-semibold mb-6">Headings</h3>
-                <div className="grid gap-6">
-                  {Object.entries(guide.typography.heading)
-                    .filter(([key]) => displayTypographyVisibility.heading?.includes(key))
-                    .map(([key, style]) => {
-                      const typedStyle = style as TypographyStyle;
-                      const styleName = displayTypographyNames[`heading-${key}`] || `Heading ${key.toUpperCase()}`;
-                      return (
-                        <div key={key} className="space-y-2">
-                          <div className="flex items-baseline gap-4">
-                            <h4 className="text-lg font-medium text-muted-foreground min-w-[120px]">{styleName}</h4>
-                            <p style={convertToCSS(typedStyle)} className="flex-1">
-                              {displayPreviewText || "The quick brown fox jumps over the lazy dog"}
-                            </p>
-                          </div>
-                          <div className="text-sm text-muted-foreground ml-[136px]">
-                            {typedStyle.fontFamily.replace(/"/g, '')} • {typedStyle.fontSize} • {typedStyle.fontWeight} • {typedStyle.lineHeight}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-
-            {/* Body Typography */}
-            {Object.entries(guide.typography.body).some(([key]) => 
-              displayTypographyVisibility.body?.includes(key)
-            ) && (
-              <div className="mb-8">
-                <h3 className="text-2xl font-semibold mb-6">Body Text</h3>
-                <div className="grid gap-6">
-                  {Object.entries(guide.typography.body)
-                    .filter(([key]) => displayTypographyVisibility.body?.includes(key))
-                    .map(([key, style]) => {
-                      const typedStyle = style as TypographyStyle;
-                      const styleName = displayTypographyNames[`body-${key}`] || `Body ${key.charAt(0).toUpperCase() + key.slice(1)}`;
-                      return (
-                        <div key={key} className="space-y-2">
-                          <div className="flex items-baseline gap-4">
-                            <h4 className="text-lg font-medium text-muted-foreground min-w-[120px]">{styleName}</h4>
-                            <p style={convertToCSS(typedStyle)} className="flex-1">
-                              {displayPreviewText || "The quick brown fox jumps over the lazy dog. This is sample body text to demonstrate the typography style with multiple lines and proper spacing."}
-                            </p>
-                          </div>
-                          <div className="text-sm text-muted-foreground ml-[136px]">
-                            {typedStyle.fontFamily.replace(/"/g, '')} • {typedStyle.fontSize} • {typedStyle.fontWeight} • {typedStyle.lineHeight}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Colors Section */}
-          <section className="mb-12">
-            <h2 className="text-3xl font-bold mb-8">Color Palette</h2>
-            
-            {guide.colors.primary && guide.colors.primary.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-2xl font-semibold mb-6">Primary Colors</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {guide.colors.primary.map((color: any, index: number) => {
-                    const colorName = displayColorNames[`primary-${index}`] || color.hex;
-                    return (
-                      <div key={index} className="flex items-center gap-4">
-                        <div 
-                          className="w-16 h-16 rounded-lg border shadow-sm"
-                          style={{ backgroundColor: color.hex }}
-                        />
-                        <div>
-                          <h4 className="font-medium">{colorName}</h4>
-                          <p className="text-sm text-muted-foreground">{color.hex}</p>
-                          <p className="text-sm text-muted-foreground">{color.rgb}</p>
-                          <p className="text-sm text-muted-foreground">{color.cmyk}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {guide.colors.secondary && guide.colors.secondary.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-2xl font-semibold mb-6">Secondary Colors</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {guide.colors.secondary.map((color: any, index: number) => {
-                    const colorName = displayColorNames[`secondary-${index}`] || color.hex;
-                    return (
-                      <div key={index} className="flex items-center gap-4">
-                        <div 
-                          className="w-16 h-16 rounded-lg border shadow-sm"
-                          style={{ backgroundColor: color.hex }}
-                        />
-                        <div>
-                          <h4 className="font-medium">{colorName}</h4>
-                          <p className="text-sm text-muted-foreground">{color.hex}</p>
-                          <p className="text-sm text-muted-foreground">{color.rgb}</p>
-                          <p className="text-sm text-muted-foreground">{color.cmyk}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Logo Section */}
-          {guide.logos.original && (
-            <section className="mb-12">
-              <h2 className="text-3xl font-bold mb-8">Logo</h2>
+          <div ref={contentRef} className="space-y-16">
+            {/* Typography Section */}
+            <section className="pdf-section bg-white rounded-lg shadow-sm p-8">
+              <h2 className="text-4xl font-bold mb-12 text-gray-900 border-b pb-4">Typography</h2>
               
-              {/* Logo Guidelines */}
-              {displayLogoGuidelines && Object.keys(displayLogoGuidelines).length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-2xl font-semibold mb-6">Logo Guidelines</h3>
-                  {Object.entries(displayLogoGuidelines).map(([logoType, guidelines]: [string, any]) => (
-                    guidelines.length > 0 && (
-                      <div key={logoType} className="mb-6">
-                        <h4 className="text-lg font-medium mb-4 capitalize">
-                          {logoType.replace('-', ' ')} Guidelines
-                        </h4>
-                        <div className="relative inline-block">
-                          <div 
-                            className="relative bg-white border rounded-lg p-4"
-                            style={{ width: '300px', height: '300px' }}
-                          >
-                            <img 
-                              src={guide.logos.original} 
-                              alt="Logo with guidelines"
-                              className="absolute inset-4 w-auto h-auto max-w-[calc(100%-2rem)] max-h-[calc(100%-2rem)] object-contain"
-                              style={{
-                                left: '50%',
-                                top: '50%',
-                                transform: 'translate(-50%, -50%)'
-                              }}
-                            />
-                            {guidelines.map((guideline: any) => (
-                              <div key={guideline.id}>
-                                {guideline.type === 'horizontal' ? (
-                                  <div
-                                    className="absolute border-t-2 border-dashed border-red-500"
-                                    style={{
-                                      top: `${(guideline.position / 400) * 100}%`,
-                                      left: 0,
-                                      right: 0,
-                                    }}
-                                  >
-                                    <span className="absolute left-2 -top-3 text-xs bg-red-500 text-white px-1 rounded">
-                                      {guideline.name}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <div
-                                    className="absolute border-l-2 border-dashed border-red-500"
-                                    style={{
-                                      left: `${(guideline.position / 400) * 100}%`,
-                                      top: 0,
-                                      bottom: 0,
-                                    }}
-                                  >
-                                    <span className="absolute top-2 -left-8 text-xs bg-red-500 text-white px-1 rounded transform -rotate-90">
-                                      {guideline.name}
-                                    </span>
-                                  </div>
-                                )}
+              {/* Display Typography */}
+              {Object.entries(guide.typography.display).some(([key]) => 
+                displayTypographyVisibility.display?.includes(key)
+              ) && (
+                <div className="mb-12">
+                  <h3 className="text-3xl font-semibold mb-8 text-gray-800">Display Typography</h3>
+                  <div className="space-y-8">
+                    {Object.entries(guide.typography.display)
+                      .filter(([key]) => displayTypographyVisibility.display?.includes(key))
+                      .map(([key, style]) => {
+                        const typedStyle = style as TypographyStyle;
+                        const styleName = displayTypographyNames[`display-${key}`] || `Display ${key.charAt(0).toUpperCase() + key.slice(1)}`;
+                        return (
+                          <div key={key} className="border-l-4 border-blue-500 pl-6 py-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+                              <div className="lg:col-span-1">
+                                <h4 className="text-lg font-semibold text-gray-700 mb-2">{styleName}</h4>
+                                <div className="text-sm text-gray-500 space-y-1">
+                                  <p>{typedStyle.fontFamily.replace(/"/g, '')}</p>
+                                  <p>{typedStyle.fontSize} • {typedStyle.fontWeight}</p>
+                                  <p>{typedStyle.lineHeight} • {typedStyle.letterSpacing}</p>
+                                </div>
                               </div>
-                            ))}
+                              <div className="lg:col-span-3">
+                                <p style={convertToCSS(typedStyle)} className="break-words">
+                                  {displayPreviewText || "The quick brown fox jumps over the lazy dog"}
+                                </p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="mt-4 text-sm text-muted-foreground">
-                            <p className="font-medium mb-2">Guidelines:</p>
-                            <ul className="space-y-1">
-                              {guidelines.map((guideline: any) => (
-                                <li key={guideline.id}>
-                                  {guideline.name}: {Math.round(guideline.position)}px
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  ))}
+                        );
+                      })}
+                  </div>
                 </div>
               )}
 
-              {/* Primary Logo */}
-              <div className="mb-8">
-                <h3 className="text-2xl font-semibold mb-6">Primary Logo</h3>
-                <div className="flex items-center justify-center w-48 h-48 bg-white border rounded-lg">
-                  <img 
-                    src={guide.logos.original} 
-                    alt="Primary Logo" 
-                    className="max-w-full max-h-full object-contain p-4"
-                  />
+              {/* Heading Typography */}
+              {Object.entries(guide.typography.heading).some(([key]) => 
+                displayTypographyVisibility.heading?.includes(key)
+              ) && (
+                <div className="mb-12">
+                  <h3 className="text-3xl font-semibold mb-8 text-gray-800">Headings</h3>
+                  <div className="space-y-8">
+                    {Object.entries(guide.typography.heading)
+                      .filter(([key]) => displayTypographyVisibility.heading?.includes(key))
+                      .map(([key, style]) => {
+                        const typedStyle = style as TypographyStyle;
+                        const styleName = displayTypographyNames[`heading-${key}`] || `Heading ${key.toUpperCase()}`;
+                        return (
+                          <div key={key} className="border-l-4 border-green-500 pl-6 py-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+                              <div className="lg:col-span-1">
+                                <h4 className="text-lg font-semibold text-gray-700 mb-2">{styleName}</h4>
+                                <div className="text-sm text-gray-500 space-y-1">
+                                  <p>{typedStyle.fontFamily.replace(/"/g, '')}</p>
+                                  <p>{typedStyle.fontSize} • {typedStyle.fontWeight}</p>
+                                  <p>{typedStyle.lineHeight} • {typedStyle.letterSpacing}</p>
+                                </div>
+                              </div>
+                              <div className="lg:col-span-3">
+                                <p style={convertToCSS(typedStyle)} className="break-words">
+                                  {displayPreviewText || "The quick brown fox jumps over the lazy dog"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Logo Variations */}
-              <div className="mb-8">
-                <h3 className="text-2xl font-semibold mb-6">Logo Variations</h3>
-                
-                {guide.logos.square && guide.logos.square.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-lg font-medium mb-4">Square</h4>
-                    <div className="flex gap-4 flex-wrap">
-                      {guide.logos.square.slice(0, 4).map((logo: any, index: number) => (
-                        <div key={index} className="text-center">
-                          <div 
-                            className="w-20 h-20 rounded border flex items-center justify-center mb-2"
-                            style={{ backgroundColor: logo.background }}
-                          >
-                            <img 
-                              src={logo.src} 
-                              alt={`Square logo ${index + 1}`}
-                              className="w-16 h-16 object-contain"
-                            />
+              {/* Body Typography */}
+              {Object.entries(guide.typography.body).some(([key]) => 
+                displayTypographyVisibility.body?.includes(key)
+              ) && (
+                <div className="mb-12">
+                  <h3 className="text-3xl font-semibold mb-8 text-gray-800">Body Text</h3>
+                  <div className="space-y-8">
+                    {Object.entries(guide.typography.body)
+                      .filter(([key]) => displayTypographyVisibility.body?.includes(key))
+                      .map(([key, style]) => {
+                        const typedStyle = style as TypographyStyle;
+                        const styleName = displayTypographyNames[`body-${key}`] || `Body ${key.charAt(0).toUpperCase() + key.slice(1)}`;
+                        return (
+                          <div key={key} className="border-l-4 border-purple-500 pl-6 py-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+                              <div className="lg:col-span-1">
+                                <h4 className="text-lg font-semibold text-gray-700 mb-2">{styleName}</h4>
+                                <div className="text-sm text-gray-500 space-y-1">
+                                  <p>{typedStyle.fontFamily.replace(/"/g, '')}</p>
+                                  <p>{typedStyle.fontSize} • {typedStyle.fontWeight}</p>
+                                  <p>{typedStyle.lineHeight} • {typedStyle.letterSpacing}</p>
+                                </div>
+                              </div>
+                              <div className="lg:col-span-3">
+                                <p style={convertToCSS(typedStyle)} className="break-words">
+                                  {displayPreviewText || "The quick brown fox jumps over the lazy dog. This is sample body text to demonstrate the typography style with multiple lines and proper spacing."}
+                                </p>
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {logo.background === '#FFFFFF' ? 'White' : 
-                             logo.background === '#000000' ? 'Black' : 'Color'}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
+                        );
+                      })}
                   </div>
-                )}
-
-                {guide.logos.rounded && guide.logos.rounded.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-lg font-medium mb-4">Rounded</h4>
-                    <div className="flex gap-4 flex-wrap">
-                      {guide.logos.rounded.slice(0, 4).map((logo: any, index: number) => (
-                        <div key={index} className="text-center">
-                          <div 
-                            className="w-20 h-20 rounded-lg border flex items-center justify-center mb-2"
-                            style={{ backgroundColor: logo.background }}
-                          >
-                            <img 
-                              src={logo.src} 
-                              alt={`Rounded logo ${index + 1}`}
-                              className="w-16 h-16 object-contain"
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {logo.background === '#FFFFFF' ? 'White' : 
-                             logo.background === '#000000' ? 'Black' : 'Color'}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {guide.logos.circle && guide.logos.circle.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-lg font-medium mb-4">Circle</h4>
-                    <div className="flex gap-4 flex-wrap">
-                      {guide.logos.circle.slice(0, 4).map((logo: any, index: number) => (
-                        <div key={index} className="text-center">
-                          <div 
-                            className="w-20 h-20 rounded-full border flex items-center justify-center mb-2"
-                            style={{ backgroundColor: logo.background }}
-                          >
-                            <img 
-                              src={logo.src} 
-                              alt={`Circle logo ${index + 1}`}
-                              className="w-16 h-16 object-contain rounded-full"
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {logo.background === '#FFFFFF' ? 'White' : 
-                             logo.background === '#000000' ? 'Black' : 'Color'}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </section>
-          )}
+
+            {/* Colors Section */}
+            <section className="pdf-section bg-white rounded-lg shadow-sm p-8">
+              <h2 className="text-4xl font-bold mb-12 text-gray-900 border-b pb-4">Color Palette</h2>
+              
+              {guide.colors.primary && guide.colors.primary.length > 0 && (
+                <div className="mb-12">
+                  <h3 className="text-3xl font-semibold mb-8 text-gray-800">Primary Colors</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {guide.colors.primary.map((color: any, index: number) => {
+                      const colorName = displayColorNames[`primary-${index}`] || color.hex;
+                      return (
+                        <div key={index} className="bg-gray-50 rounded-lg p-6">
+                          <div 
+                            className="w-full h-24 rounded-lg border shadow-sm mb-4"
+                            style={{ backgroundColor: color.hex }}
+                          />
+                          <div className="space-y-2">
+                            <h4 className="font-semibold text-lg text-gray-900">{colorName}</h4>
+                            <p className="text-sm text-gray-600">HEX: {color.hex}</p>
+                            <p className="text-sm text-gray-600">RGB: {color.rgb}</p>
+                            <p className="text-sm text-gray-600">CMYK: {color.cmyk}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {guide.colors.secondary && guide.colors.secondary.length > 0 && (
+                <div className="mb-12">
+                  <h3 className="text-3xl font-semibold mb-8 text-gray-800">Secondary Colors</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {guide.colors.secondary.map((color: any, index: number) => {
+                      const colorName = displayColorNames[`secondary-${index}`] || color.hex;
+                      return (
+                        <div key={index} className="bg-gray-50 rounded-lg p-6">
+                          <div 
+                            className="w-full h-24 rounded-lg border shadow-sm mb-4"
+                            style={{ backgroundColor: color.hex }}
+                          />
+                          <div className="space-y-2">
+                            <h4 className="font-semibold text-lg text-gray-900">{colorName}</h4>
+                            <p className="text-sm text-gray-600">HEX: {color.hex}</p>
+                            <p className="text-sm text-gray-600">RGB: {color.rgb}</p>
+                            <p className="text-sm text-gray-600">CMYK: {color.cmyk}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Logo Section */}
+            {guide.logos.original && (
+              <section className="pdf-section bg-white rounded-lg shadow-sm p-8">
+                <h2 className="text-4xl font-bold mb-12 text-gray-900 border-b pb-4">Logo</h2>
+                
+                {/* Logo Guidelines */}
+                {displayLogoGuidelines && Object.keys(displayLogoGuidelines).length > 0 && (
+                  <div className="mb-12">
+                    <h3 className="text-3xl font-semibold mb-8 text-gray-800">Logo Guidelines</h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                      {Object.entries(displayLogoGuidelines).map(([logoType, guidelines]: [string, any]) => (
+                        guidelines && guidelines.length > 0 && (
+                          <div key={logoType} className="bg-gray-50 rounded-lg p-6">
+                            <h4 className="text-xl font-semibold mb-6 capitalize text-gray-800">
+                              {logoType.replace('-', ' ')} Guidelines
+                            </h4>
+                            <div className="relative inline-block mb-4">
+                              <div 
+                                className="relative bg-white border-2 border-gray-200 rounded-lg p-6 shadow-sm"
+                                style={{ width: '200px', height: '200px' }}
+                              >
+                                <img 
+                                  src={guide.logos.original} 
+                                  alt="Logo with guidelines"
+                                  className="absolute inset-4 w-auto h-auto max-w-[calc(100%-2rem)] max-h-[calc(100%-2rem)] object-contain"
+                                  style={{
+                                    left: '50%',
+                                    top: '50%',
+                                    transform: 'translate(-50%, -50%)'
+                                  }}
+                                />
+                                {guidelines.map((guideline: any) => (
+                                  <div key={guideline.id}>
+                                    {guideline.type === 'horizontal' ? (
+                                      <div
+                                        className="absolute border-t-2 border-dashed border-red-500"
+                                        style={{
+                                          top: `${(guideline.position / 400) * 100}%`,
+                                          left: 0,
+                                          right: 0,
+                                        }}
+                                      >
+                                        <span className="absolute left-2 -top-3 text-xs bg-red-500 text-white px-2 py-1 rounded">
+                                          {guideline.name}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div
+                                        className="absolute border-l-2 border-dashed border-red-500"
+                                        style={{
+                                          left: `${(guideline.position / 400) * 100}%`,
+                                          top: 0,
+                                          bottom: 0,
+                                        }}
+                                      >
+                                        <span className="absolute top-2 -left-8 text-xs bg-red-500 text-white px-2 py-1 rounded transform -rotate-90 origin-center">
+                                          {guideline.name}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              <p className="font-medium mb-2">Active Guidelines:</p>
+                              <ul className="space-y-1">
+                                {guidelines.map((guideline: any) => (
+                                  <li key={guideline.id} className="flex justify-between">
+                                    <span>{guideline.name}:</span>
+                                    <span>{Math.round(guideline.position)}px</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Primary Logo */}
+                <div className="mb-12">
+                  <h3 className="text-3xl font-semibold mb-8 text-gray-800">Primary Logo</h3>
+                  <div className="flex justify-center">
+                    <div className="bg-gray-50 rounded-lg p-8 shadow-sm">
+                      <div className="flex items-center justify-center w-64 h-64 bg-white border-2 border-gray-200 rounded-lg shadow-sm">
+                        <img 
+                          src={guide.logos.original} 
+                          alt="Primary Logo" 
+                          className="max-w-full max-h-full object-contain p-6"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Logo Variations */}
+                <div className="mb-12">
+                  <h3 className="text-3xl font-semibold mb-8 text-gray-800">Logo Variations</h3>
+                  
+                  {guide.logos.square && guide.logos.square.length > 0 && (
+                    <div className="mb-10">
+                      <h4 className="text-2xl font-medium mb-6 text-gray-700">Square</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        {guide.logos.square.slice(0, 4).map((logo: any, index: number) => (
+                          <div key={index} className="text-center bg-gray-50 rounded-lg p-4">
+                            <div 
+                              className="w-24 h-24 rounded border-2 border-gray-200 flex items-center justify-center mb-3 mx-auto shadow-sm"
+                              style={{ backgroundColor: logo.background }}
+                            >
+                              <img 
+                                src={logo.src} 
+                                alt={`Square logo ${index + 1}`}
+                                className="w-20 h-20 object-contain"
+                              />
+                            </div>
+                            <p className="text-sm font-medium text-gray-600">
+                              {logo.background === '#FFFFFF' ? 'White Background' : 
+                               logo.background === '#000000' ? 'Black Background' : 'Color Background'}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {guide.logos.rounded && guide.logos.rounded.length > 0 && (
+                    <div className="mb-10">
+                      <h4 className="text-2xl font-medium mb-6 text-gray-700">Rounded</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        {guide.logos.rounded.slice(0, 4).map((logo: any, index: number) => (
+                          <div key={index} className="text-center bg-gray-50 rounded-lg p-4">
+                            <div 
+                              className="w-24 h-24 rounded-lg border-2 border-gray-200 flex items-center justify-center mb-3 mx-auto shadow-sm"
+                              style={{ backgroundColor: logo.background }}
+                            >
+                              <img 
+                                src={logo.src} 
+                                alt={`Rounded logo ${index + 1}`}
+                                className="w-20 h-20 object-contain"
+                              />
+                            </div>
+                            <p className="text-sm font-medium text-gray-600">
+                              {logo.background === '#FFFFFF' ? 'White Background' : 
+                               logo.background === '#000000' ? 'Black Background' : 'Color Background'}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {guide.logos.circle && guide.logos.circle.length > 0 && (
+                    <div className="mb-10">
+                      <h4 className="text-2xl font-medium mb-6 text-gray-700">Circle</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        {guide.logos.circle.slice(0, 4).map((logo: any, index: number) => (
+                          <div key={index} className="text-center bg-gray-50 rounded-lg p-4">
+                            <div 
+                              className="w-24 h-24 rounded-full border-2 border-gray-200 flex items-center justify-center mb-3 mx-auto shadow-sm"
+                              style={{ backgroundColor: logo.background }}
+                            >
+                              <img 
+                                src={logo.src} 
+                                alt={`Circle logo ${index + 1}`}
+                                className="w-20 h-20 object-contain rounded-full"
+                              />
+                            </div>
+                            <p className="text-sm font-medium text-gray-600">
+                              {logo.background === '#FFFFFF' ? 'White Background' : 
+                               logo.background === '#000000' ? 'Black Background' : 'Color Background'}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+          </div>
         </div>
       </div>
     </MainLayout>
