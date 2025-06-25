@@ -10,21 +10,20 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eye, Share, Copy, Check } from 'lucide-react';
+import { Eye, Share } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BrandGuideWarning } from './BrandGuideWarning';
-import { useToast } from '@/hooks/use-toast';
 import { useShareableLinks } from '@/hooks/useShareableLinks';
 import { useAuth } from '@/hooks/useAuth';
+import { ShareableLinkPopup } from './ShareableLinkPopup';
 
 export function ExportSection() {
   const navigate = useNavigate();
-  const { currentGuide, activeSection, colorNames, typographyNames } = useBrandGuide();
-  const { generateShareableLink } = useShareableLinks();
+  const { currentGuide, activeSection } = useBrandGuide();
+  const { generateShareableLink, loading: linksLoading, copyLinkToClipboard } = useShareableLinks();
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [linkCopied, setLinkCopied] = useState(false);
-  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<string>('');
+  const [showLinkPopup, setShowLinkPopup] = useState(false);
   
   const isGuideComplete = 
     currentGuide.colors.primary.length > 0 && 
@@ -37,33 +36,18 @@ export function ExportSection() {
   
   const handleGenerateShareableLink = async () => {
     if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Authentication required",
-        description: "Please sign in to generate shareable links.",
-      });
       return;
     }
 
-    if (!isGuideComplete) {
-      toast({
-        variant: "destructive",
-        title: "Incomplete brand guide",
-        description: "Please complete your brand guide first.",
-      });
-      return;
+    const link = await generateShareableLink(currentGuide);
+    if (link) {
+      setGeneratedLink(link);
+      setShowLinkPopup(true);
     }
+  };
 
-    setIsGeneratingLink(true);
-    try {
-      const link = await generateShareableLink(currentGuide);
-      if (link) {
-        setLinkCopied(true);
-        setTimeout(() => setLinkCopied(false), 3000);
-      }
-    } finally {
-      setIsGeneratingLink(false);
-    }
+  const handleCopyLink = () => {
+    copyLinkToClipboard(generatedLink);
   };
   
   const showWarning = activeSection === 'export' && !isGuideComplete;
@@ -128,26 +112,27 @@ export function ExportSection() {
           <Button 
             onClick={handleGenerateShareableLink}
             className="w-full sm:w-auto"
-            disabled={!user || !isGuideComplete || isGeneratingLink}
+            disabled={!user || !isGuideComplete || linksLoading}
           >
-            {linkCopied ? (
-              <Check className="mr-2 h-4 w-4" />
-            ) : (
-              <Share className="mr-2 h-4 w-4" />
-            )}
-            {isGeneratingLink 
+            <Share className="mr-2 h-4 w-4" />
+            {linksLoading 
               ? "Generating..." 
-              : linkCopied 
-                ? "Link Copied!" 
-                : !user 
-                  ? "Sign in Required"
-                  : !isGuideComplete 
-                    ? "Complete Guide First" 
-                    : "Generate Shareable Link"
+              : !user 
+                ? "Sign in Required"
+                : !isGuideComplete 
+                  ? "Complete Guide First" 
+                  : "Generate Shareable Link"
             }
           </Button>
         </CardFooter>
       </Card>
+
+      <ShareableLinkPopup
+        open={showLinkPopup}
+        onOpenChange={setShowLinkPopup}
+        link={generatedLink}
+        onCopy={handleCopyLink}
+      />
     </div>
   );
 }

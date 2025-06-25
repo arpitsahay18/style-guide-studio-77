@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { useShareableLinks } from '@/hooks/useShareableLinks';
 import { X, Copy } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
 interface GeneratedLinksDialogProps {
   open: boolean;
@@ -21,16 +20,7 @@ export const GeneratedLinksDialog: React.FC<GeneratedLinksDialogProps> = ({
   open,
   onOpenChange,
 }) => {
-  const { links, loading, deleteLink } = useShareableLinks();
-  const { toast } = useToast();
-
-  const copyToClipboard = (url: string) => {
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "Copied!",
-      description: "Link copied to clipboard.",
-    });
-  };
+  const { links, loading, deleteLink, copyLinkToClipboard } = useShareableLinks();
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -76,7 +66,7 @@ export const GeneratedLinksDialog: React.FC<GeneratedLinksDialogProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard(link.url)}
+                    onClick={() => copyLinkToClipboard(link.url)}
                   >
                     <Copy className="h-4 w-4" />
                   </Button>

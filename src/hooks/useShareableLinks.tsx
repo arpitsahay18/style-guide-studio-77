@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { BrandGuide } from '@/types';
@@ -9,6 +9,7 @@ import { useBrandGuide } from '@/context/BrandGuideContext';
 
 interface ShareableLink {
   id: string;
+  linkId: string;
   url: string;
   createdAt: Date;
   expiresAt: Date;
@@ -28,25 +29,33 @@ export const useShareableLinks = () => {
   } = useBrandGuide();
 
   const fetchLinks = async () => {
-    if (!user) return;
+    if (!user) {
+      setLinks([]);
+      return;
+    }
     
     setLoading(true);
     try {
       const q = query(
         collection(db, 'shareableLinks'),
         where('userId', '==', user.uid),
-        where('expiresAt', '>', new Date()),
+        where('expiresAt', '>', Timestamp.now()),
         orderBy('expiresAt', 'desc'),
         orderBy('createdAt', 'desc')
       );
       
       const querySnapshot = await getDocs(q);
-      const fetchedLinks = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt.toDate(),
-        expiresAt: doc.data().expiresAt.toDate(),
-      })) as ShareableLink[];
+      const fetchedLinks = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          linkId: data.linkId,
+          url: `${window.location.origin}/s/${data.linkId}`,
+          createdAt: data.createdAt.toDate(),
+          expiresAt: data.expiresAt.toDate(),
+          brandGuideName: data.brandGuide?.name || 'Untitled Brand Guide'
+        };
+      }) as ShareableLink[];
       
       setLinks(fetchedLinks);
     } catch (error) {
@@ -71,8 +80,22 @@ export const useShareableLinks = () => {
       return null;
     }
 
+    if (!brandGuide.colors.primary.length || !brandGuide.colors.secondary.length || !brandGuide.logos.original) {
+      toast({
+        variant: "destructive",
+        title: "Incomplete brand guide",
+        description: "Please add primary colors, secondary colors, and a logo before sharing.",
+      });
+      return null;
+    }
+
     try {
-      const linkId = Math.random().toString(36).substring(2, 15);
+      setLoading(true);
+      
+      // Generate unique link ID
+      const linkId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
+      // Set expiration to 72 hours from now
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 72);
 
@@ -80,29 +103,40 @@ export const useShareableLinks = () => {
         userId: user.uid,
         linkId,
         brandGuide,
-        colorNames,
-        typographyNames,
-        typographyVisibility,
-        previewText,
-        createdAt: new Date(),
-        expiresAt,
-        brandGuideName: brandGuide.name || 'Untitled Brand Guide'
+        colorNames: colorNames || {},
+        typographyNames: typographyNames || {},
+        typographyVisibility: typographyVisibility || {
+          display: ['large', 'regular'],
+          heading: ['h1', 'h2', 'h3'],
+          body: ['large', 'medium', 'small']
+        },
+        previewText: previewText || 'The quick brown fox jumps over the lazy dog',
+        createdAt: Timestamp.now(),
+        expiresAt: Timestamp.fromDate(expiresAt)
       };
 
-      console.log('Saving shareable link data:', linkData);
+      console.log('Creating shareable link with data:', linkData);
 
       await addDoc(collection(db, 'shareableLinks'), linkData);
       
-      const shareableUrl = `${window.location.origin}/preview/${linkId}`;
+      const shareableUrl = `${window.location.origin}/s/${linkId}`;
       
+      // Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(shareableUrl);
+        toast({
+          title: "Link generated and copied!",
+          description: "Your shareable link has been copied to clipboard.",
+        });
+      } catch (clipboardError) {
+        toast({
+          title: "Link generated!",
+          description: "Your shareable link has been created.",
+        });
+      }
+      
+      // Refresh links list
       await fetchLinks();
-      
-      toast({
-        title: "Link generated!",
-        description: "Your shareable link has been created and copied to clipboard.",
-      });
-
-      navigator.clipboard.writeText(shareableUrl);
       
       return shareableUrl;
     } catch (error) {
@@ -110,26 +144,44 @@ export const useShareableLinks = () => {
       toast({
         variant: "destructive",
         title: "Failed to generate link",
-        description: "There was an error creating the shareable link.",
+        description: "There was an error creating the shareable link. Please try again.",
       });
       return null;
+    } finally {
+      setLoading(false);
     }
   };
 
   const deleteLink = async (linkId: string) => {
     try {
       await deleteDoc(doc(db, 'shareableLinks', linkId));
-      await fetchLinks();
       toast({
         title: "Link deleted",
         description: "The shareable link has been removed.",
       });
+      await fetchLinks();
     } catch (error) {
       console.error('Error deleting link:', error);
       toast({
         variant: "destructive",
         title: "Failed to delete link",
         description: "There was an error removing the link.",
+      });
+    }
+  };
+
+  const copyLinkToClipboard = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Copied!",
+        description: "Link copied to clipboard.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Copy failed",
+        description: "Could not copy link to clipboard.",
       });
     }
   };
@@ -147,6 +199,7 @@ export const useShareableLinks = () => {
     loading,
     generateShareableLink,
     deleteLink,
+    copyLinkToClipboard,
     fetchLinks
   };
 };
