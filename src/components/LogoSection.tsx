@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { LogoVariation, LogoSet } from '@/types';
@@ -53,28 +54,32 @@ function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreator
   const generateVariations = () => {
     const variations: LogoVariation[] = [];
     
+    // Color version on white background
     variations.push({
       src: originalLogo,
       background: '#FFFFFF',
       type: 'color'
     });
     
+    // Color version on black background
     variations.push({
       src: originalLogo,
       background: '#000000',
       type: 'color'
     });
     
+    // Color version on brand color background
     variations.push({
       src: originalLogo,
       background: '#0062FF',
-      type: 'white'
+      type: 'color'
     });
     
+    // Color version on gray background
     variations.push({
       src: originalLogo,
-      background: '#FFFFFF',
-      type: 'black'
+      background: '#F5F5F5',
+      type: 'color'
     });
     
     onComplete(variations);
@@ -108,6 +113,30 @@ function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreator
     </div>
   );
 }
+
+// Helper function to convert image URL to base64
+const convertImageToBase64 = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL('image/png');
+        resolve(dataURL);
+      } else {
+        reject(new Error('Failed to get canvas context'));
+      }
+    };
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = url;
+  });
+};
 
 export function LogoSection() {
   const { currentGuide, updateLogos } = useBrandGuide();
@@ -217,8 +246,24 @@ export function LogoSection() {
       doc.setFont("helvetica", "normal");
       doc.text('Original Logo', 20, 50);
       
-      if (currentGuide.logos.original) {
-        doc.addImage(currentGuide.logos.original, 'PNG', 20, 60, 60, 60);
+      // Convert Firebase Storage URL to base64 if needed
+      let logoBase64 = currentGuide.logos.original;
+      if (currentGuide.logos.original.startsWith('https://')) {
+        try {
+          logoBase64 = await convertImageToBase64(currentGuide.logos.original);
+        } catch (error) {
+          console.error('Failed to convert logo to base64:', error);
+          toast({
+            variant: "destructive",
+            title: "Image loading failed",
+            description: "Failed to load logo for PDF. Please try again.",
+          });
+          return;
+        }
+      }
+      
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', 20, 60, 60, 60);
       }
       
       doc.text('Logo Variations', 20, 140);
@@ -267,7 +312,7 @@ export function LogoSection() {
                   ctx.drawImage(img, x, y, width, height);
                   resolve();
                 };
-                img.src = logo.src;
+                img.src = logoBase64; // Use the base64 version
               });
               
               const logoDataUrl = canvas.toDataURL('image/png');

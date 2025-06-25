@@ -31,6 +31,30 @@ const Preview = () => {
   const [error, setError] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Helper function to convert Firebase Storage URL to base64
+  const convertImageToBase64 = (url: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          const dataURL = canvas.toDataURL('image/png');
+          resolve(dataURL);
+        } else {
+          reject(new Error('Failed to get canvas context'));
+        }
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = url;
+    });
+  };
+
   const loadSharedGuide = async () => {
     if (!guideId) return;
 
@@ -154,6 +178,21 @@ const Preview = () => {
         pdf.addPage();
         
         try {
+          // Convert Firebase Storage URLs to base64 before capturing
+          const images = section.querySelectorAll('img');
+          const imagePromises = Array.from(images).map(async (img) => {
+            if (img.src.startsWith('https://firebasestorage.googleapis.com')) {
+              try {
+                const base64 = await convertImageToBase64(img.src);
+                img.src = base64;
+              } catch (error) {
+                console.error('Failed to convert image to base64:', error);
+              }
+            }
+          });
+          
+          await Promise.all(imagePromises);
+
           const canvas = await html2canvas(section, {
             scale: 1.2,
             useCORS: true,
