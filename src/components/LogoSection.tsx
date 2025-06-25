@@ -41,6 +41,7 @@ import { LogoDropzone } from './LogoDropzone';
 import { LogoCropper } from './LogoCropper';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { uploadBase64ToStorage } from '@/utils/firebaseStorage';
 
 interface LogoVariationCreatorProps {
   originalLogo: string;
@@ -135,21 +136,50 @@ export function LogoSection() {
   };
   
   const handleCropComplete = async (croppedImage: string) => {
-    // Store logo locally as base64 - no authentication required
-    const updatedLogos: LogoSet = {
-      ...currentGuide.logos,
-      original: croppedImage
-    };
+    setUploading(true);
     
-    updateLogos(updatedLogos);
-    setCroppedImage(croppedImage);
-    setShowCropper(false);
-    setShowVariationCreator(true);
-    
-    toast({
-      title: "Logo uploaded successfully",
-      description: "Your logo has been saved locally. Sign in to create shareable links or download PDFs.",
-    });
+    try {
+      let finalLogoUrl = croppedImage;
+      
+      // If user is signed in, upload to Firebase Storage
+      if (user) {
+        console.log('User is signed in, uploading logo to Firebase Storage...');
+        finalLogoUrl = await uploadBase64ToStorage(croppedImage, user.uid, 'brand_logo.png');
+        console.log('Logo uploaded to Firebase Storage:', finalLogoUrl);
+      }
+      
+      const updatedLogos: LogoSet = {
+        ...currentGuide.logos,
+        original: finalLogoUrl
+      };
+      
+      updateLogos(updatedLogos);
+      setCroppedImage(finalLogoUrl);
+      setShowCropper(false);
+      setShowVariationCreator(true);
+      
+      // Updated toast notifications based on user status
+      if (user) {
+        toast({
+          title: "Logo uploaded successfully",
+          description: "Your logo has been saved to the cloud and is ready for sharing.",
+        });
+      } else {
+        toast({
+          title: "Logo saved locally",
+          description: "Your logo has been saved to your browser. Sign in to save to the cloud and create shareable links.",
+        });
+      }
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: "There was an error uploading your logo. Please try again.",
+      });
+    } finally {
+      setUploading(false);
+    }
   };
   
   const handleVariationsComplete = (variations: LogoVariation[]) => {
@@ -186,7 +216,7 @@ export function LogoSection() {
         <CardHeader>
           <CardTitle>Logo Implementation</CardTitle>
           <CardDescription>
-            Upload your logo and create variations for different use cases. {!user && "Sign in to download PDFs or create shareable links."}
+            Upload your logo and create variations for different use cases. {!user && "Sign in to save logos to the cloud and create shareable links."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -226,7 +256,7 @@ export function LogoSection() {
                   <h3 className="text-lg font-medium mb-2">Your Logo</h3>
                   <p className="text-sm text-muted-foreground">
                     View and manage your logo variations.
-                    {!user && " Sign in to download logo packs."}
+                    {!user && " Sign in to save logos to the cloud."}
                   </p>
                 </div>
                 

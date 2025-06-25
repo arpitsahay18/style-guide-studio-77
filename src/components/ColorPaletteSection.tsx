@@ -26,7 +26,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import { Trash2, Plus, Palette } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Trash2, Plus, Palette, Edit } from 'lucide-react';
 import { hexToRgb, rgbToCmyk, generateTints, generateShades } from '@/utils/colorUtils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -40,7 +49,10 @@ export function ColorPaletteSection() {
   } | null>(null);
   const [showAddForm, setShowAddForm] = useState<'primary' | 'secondary' | 'neutral' | null>(null);
   const [copiedColor, setCopiedColor] = useState<string>('');
-  const [editingColorName, setEditingColorName] = useState<string | null>(null);
+  const [renamingColor, setRenamingColor] = useState<{
+    category: 'primary' | 'secondary' | 'neutral';
+    index: number;
+  } | null>(null);
   const [tempColorName, setTempColorName] = useState('');
 
   const handleAddColor = (category: 'primary' | 'secondary' | 'neutral', colorInput: ColorInput) => {
@@ -149,27 +161,22 @@ export function ColorPaletteSection() {
     return currentGuide.colors[category].length > 1;
   };
 
-  const handleHexClick = (category: 'primary' | 'secondary' | 'neutral', index: number) => {
-    const colorKey = `${category}-${index}`;
-    setEditingColorName(colorKey);
+  const handleRenameColor = (category: 'primary' | 'secondary' | 'neutral', index: number) => {
+    setRenamingColor({ category, index });
     setTempColorName(getColorDisplayName(index, category));
   };
 
-  const handleColorNameSave = (category: 'primary' | 'secondary' | 'neutral', index: number) => {
-    if (editingColorName) {
-      const finalName = tempColorName.trim() || getColorDisplayName(index, category);
-      handleColorNameChange(index, category, finalName);
-      setEditingColorName(null);
+  const handleSaveColorName = () => {
+    if (renamingColor) {
+      const finalName = tempColorName.trim() || getColorDisplayName(renamingColor.index, renamingColor.category);
+      handleColorNameChange(renamingColor.index, renamingColor.category, finalName);
+      setRenamingColor(null);
       setTempColorName('');
-    }
-  };
-
-  const handleColorNameKeyPress = (e: React.KeyboardEvent, category: 'primary' | 'secondary' | 'neutral', index: number) => {
-    if (e.key === 'Enter') {
-      handleColorNameSave(category, index);
-    } else if (e.key === 'Escape') {
-      setEditingColorName(null);
-      setTempColorName('');
+      
+      toast({
+        title: "Color renamed",
+        description: `Color name updated to "${finalName}".`,
+      });
     }
   };
 
@@ -217,9 +224,6 @@ export function ColorPaletteSection() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {colors.map((color, index) => {
-              const colorKey = `${category}-${index}`;
-              const isEditingName = editingColorName === colorKey;
-              
               return (
                 <div key={index} className="space-y-4">
                   <div className="space-y-2">
@@ -234,6 +238,55 @@ export function ColorPaletteSection() {
                       />
                     </div>
                     <div className="flex gap-2">
+                      <Dialog open={renamingColor?.category === category && renamingColor?.index === index} onOpenChange={(open) => !open && setRenamingColor(null)}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleRenameColor(category, index)}
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Rename
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                          <DialogHeader>
+                            <DialogTitle>Rename Color</DialogTitle>
+                            <DialogDescription>
+                              Give this color a custom name that will appear in your brand guide.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                              <Label htmlFor="color-name" className="text-right">
+                                Name
+                              </Label>
+                              <Input
+                                id="color-name"
+                                value={tempColorName}
+                                onChange={(e) => setTempColorName(e.target.value)}
+                                className="col-span-3"
+                                maxLength={20}
+                                placeholder="Enter color name"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleSaveColorName();
+                                  }
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setRenamingColor(null)}>
+                              Cancel
+                            </Button>
+                            <Button onClick={handleSaveColorName}>
+                              Save Name
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                      
                       {canDeleteColor(category) && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -263,26 +316,10 @@ export function ColorPaletteSection() {
 
                   <div className="text-xs space-y-1 text-muted-foreground">
                     <p>
-                      <strong>HEX:</strong>{' '}
-                      {isEditingName ? (
-                        <Input
-                          value={tempColorName}
-                          onChange={(e) => setTempColorName(e.target.value)}
-                          onBlur={() => handleColorNameSave(category, index)}
-                          onKeyDown={(e) => handleColorNameKeyPress(e, category, index)}
-                          className="inline-block w-32 h-6 text-xs px-1"
-                          maxLength={20}
-                          autoFocus
-                        />
-                      ) : (
-                        <span 
-                          className="cursor-pointer hover:underline" 
-                          onClick={() => handleHexClick(category, index)}
-                          title="Click to edit color name"
-                        >
-                          {getColorDisplayName(index, category)}
-                        </span>
-                      )}
+                      <strong>HEX:</strong> {color.hex}
+                    </p>
+                    <p>
+                      <strong>Name:</strong> {getColorDisplayName(index, category)}
                     </p>
                     <p><strong>RGB:</strong> {color.rgb}</p>
                     <p><strong>CMYK:</strong> {color.cmyk}</p>
