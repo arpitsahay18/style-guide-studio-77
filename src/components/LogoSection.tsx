@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { LogoVariation, LogoSet } from '@/types';
@@ -42,6 +41,8 @@ import { LogoDropzone } from './LogoDropzone';
 import { LogoCropper } from './LogoCropper';
 import { jsPDF } from 'jspdf';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { uploadBase64ToStorage } from '@/utils/firebaseStorage';
 
 interface LogoVariationCreatorProps {
   originalLogo: string;
@@ -111,11 +112,13 @@ function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreator
 export function LogoSection() {
   const { currentGuide, updateLogos } = useBrandGuide();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [showUploader, setShowUploader] = useState(!currentGuide.logos.original);
   const [showCropper, setShowCropper] = useState(false);
   const [uploadedImage, setUploadedImage] = useState('');
   const [croppedImage, setCroppedImage] = useState('');
   const [showVariationCreator, setShowVariationCreator] = useState(false);
+  const [uploading, setUploading] = useState(false);
   
   const handleLogoUpload = (file: File) => {
     const reader = new FileReader();
@@ -129,17 +132,45 @@ export function LogoSection() {
     reader.readAsDataURL(file);
   };
   
-  const handleCropComplete = (croppedImage: string) => {
-    setCroppedImage(croppedImage);
-    
-    const updatedLogos: LogoSet = {
-      ...currentGuide.logos,
-      original: croppedImage
-    };
-    
-    updateLogos(updatedLogos);
-    setShowCropper(false);
-    setShowVariationCreator(true);
+  const handleCropComplete = async (croppedImage: string) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication required",
+        description: "Please sign in to upload logos.",
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Upload the cropped image to Firebase Storage
+      const logoUrl = await uploadBase64ToStorage(croppedImage, user.uid, 'logo.png');
+      
+      const updatedLogos: LogoSet = {
+        ...currentGuide.logos,
+        original: logoUrl
+      };
+      
+      updateLogos(updatedLogos);
+      setCroppedImage(logoUrl);
+      setShowCropper(false);
+      setShowVariationCreator(true);
+      
+      toast({
+        title: "Logo uploaded successfully",
+        description: "Your logo has been saved to the cloud.",
+      });
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: "There was an error uploading your logo. Please try again.",
+      });
+    } finally {
+      setUploading(false);
+    }
   };
   
   const handleVariationsComplete = (variations: LogoVariation[]) => {
@@ -308,7 +339,15 @@ export function LogoSection() {
                 setShowCropper(false);
                 setShowUploader(true);
               }}
+              disabled={uploading}
             />
+          )}
+          
+          {uploading && (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-600">Uploading logo to cloud storage...</p>
+            </div>
           )}
           
           {showVariationCreator && (
@@ -318,7 +357,7 @@ export function LogoSection() {
             />
           )}
           
-          {!showUploader && !showCropper && !showVariationCreator && currentGuide.logos.original && (
+          {!showUploader && !showCropper && !showVariationCreator && !uploading && currentGuide.logos.original && (
             <div className="space-y-8">
               <div className="flex justify-between items-start">
                 <div>

@@ -16,6 +16,67 @@ interface ShareableLink {
   brandGuideName: string;
 }
 
+interface OptimizedBrandGuide {
+  name: string;
+  colors: {
+    primary: Array<{ hex: string; rgb: string; cmyk: string }>;
+    secondary: Array<{ hex: string; rgb: string; cmyk: string }>;
+  };
+  typography: any;
+  logos: {
+    original: string;
+    square: Array<{ src: string; background: string; type: string }>;
+    rounded: Array<{ src: string; background: string; type: string }>;
+    circle: Array<{ src: string; background: string; type: string }>;
+  };
+}
+
+const optimizeBrandGuideForSharing = (brandGuide: BrandGuide, colorNames: any, typographyNames: any, typographyVisibility: any, previewText: string): OptimizedBrandGuide => {
+  // Create an optimized version with only essential data
+  const optimized: OptimizedBrandGuide = {
+    name: brandGuide.name,
+    colors: {
+      primary: brandGuide.colors.primary.map(color => ({
+        hex: color.hex,
+        rgb: color.rgb,
+        cmyk: color.cmyk
+      })),
+      secondary: brandGuide.colors.secondary.map(color => ({
+        hex: color.hex,
+        rgb: color.rgb,
+        cmyk: color.cmyk
+      }))
+    },
+    typography: brandGuide.typography,
+    logos: {
+      original: brandGuide.logos.original,
+      square: brandGuide.logos.square.map(logo => ({
+        src: logo.src,
+        background: logo.background,
+        type: logo.type
+      })),
+      rounded: brandGuide.logos.rounded.map(logo => ({
+        src: logo.src,
+        background: logo.background,
+        type: logo.type
+      })),
+      circle: brandGuide.logos.circle.map(logo => ({
+        src: logo.src,
+        background: logo.background,
+        type: logo.type
+      }))
+    }
+  };
+
+  return optimized;
+};
+
+const checkDataSize = (data: any): boolean => {
+  const sizeInBytes = new TextEncoder().encode(JSON.stringify(data)).length;
+  console.log('Data size:', sizeInBytes, 'bytes');
+  return sizeInBytes < 1000000; // 1MB limit
+};
+
 export const useShareableLinks = () => {
   const [links, setLinks] = useState<ShareableLink[]>([]);
   const [loading, setLoading] = useState(false);
@@ -99,10 +160,19 @@ export const useShareableLinks = () => {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 72);
 
+      // Optimize brand guide data
+      const optimizedBrandGuide = optimizeBrandGuideForSharing(
+        brandGuide, 
+        colorNames, 
+        typographyNames, 
+        typographyVisibility, 
+        previewText
+      );
+
       const linkData = {
         userId: user.uid,
         linkId,
-        brandGuide,
+        brandGuide: optimizedBrandGuide,
         colorNames: colorNames || {},
         typographyNames: typographyNames || {},
         typographyVisibility: typographyVisibility || {
@@ -115,25 +185,16 @@ export const useShareableLinks = () => {
         expiresAt: Timestamp.fromDate(expiresAt)
       };
 
-      console.log('Creating shareable link with data:', linkData);
+      // Check data size before saving
+      if (!checkDataSize(linkData)) {
+        throw new Error('Brand guide data is too large for sharing. Please reduce the size of your assets.');
+      }
+
+      console.log('Creating shareable link with optimized data:', linkData);
 
       await addDoc(collection(db, 'shareableLinks'), linkData);
       
       const shareableUrl = `${window.location.origin}/s/${linkId}`;
-      
-      // Copy to clipboard
-      try {
-        await navigator.clipboard.writeText(shareableUrl);
-        toast({
-          title: "Link generated and copied!",
-          description: "Your shareable link has been copied to clipboard.",
-        });
-      } catch (clipboardError) {
-        toast({
-          title: "Link generated!",
-          description: "Your shareable link has been created.",
-        });
-      }
       
       // Refresh links list
       await fetchLinks();
@@ -144,7 +205,7 @@ export const useShareableLinks = () => {
       toast({
         variant: "destructive",
         title: "Failed to generate link",
-        description: "There was an error creating the shareable link. Please try again.",
+        description: error instanceof Error ? error.message : "There was an error creating the shareable link. Please try again.",
       });
       return null;
     } finally {

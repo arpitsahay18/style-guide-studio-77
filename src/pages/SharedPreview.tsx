@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
@@ -129,20 +128,32 @@ const SharedPreview = () => {
       pdf.setTextColor(100, 100, 100);
       pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 18, { align: 'center' });
 
-      // Capture the main content
-      const canvas = await html2canvas(contentRef.current, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-      });
+      // Capture sections separately to avoid page breaks cutting content
+      const sections = contentRef.current.querySelectorAll('.pdf-section');
+      
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i];
+        
+        // Add new page for each section
+        pdf.addPage();
+        
+        try {
+          const canvas = await html2canvas(section, {
+            scale: 1.2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+          });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.8);
-      const imgWidth = contentWidth;
-      const imgHeight = (canvas.height * contentWidth) / canvas.width;
-
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+          const imgData = canvas.toDataURL('image/jpeg', 0.8);
+          const imgWidth = contentWidth;
+          const imgHeight = (canvas.height * contentWidth) / canvas.width;
+          
+          pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+        } catch (sectionError) {
+          console.error('Error capturing section:', sectionError);
+        }
+      }
 
       pdf.save(`${sharedGuide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
 
@@ -225,7 +236,7 @@ const SharedPreview = () => {
         <div ref={contentRef} className="container mx-auto px-4 py-8 space-y-12">
           
           {/* Brand Header */}
-          <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg">
+          <div className="pdf-section text-center py-16 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg page-break-inside-avoid">
             {sharedGuide.logos?.original && (
               <div className="mb-8">
                 <img 
@@ -241,15 +252,15 @@ const SharedPreview = () => {
 
           {/* Color Palette */}
           {(sharedGuide.colors?.primary?.length > 0 || sharedGuide.colors?.secondary?.length > 0) && (
-            <section className="pdf-section">
+            <section className="pdf-section page-break-inside-avoid">
               <h2 className="text-3xl font-bold text-gray-900 mb-8">Color Palette</h2>
               
               {sharedGuide.colors.primary?.length > 0 && (
-                <div className="mb-8">
+                <div className="mb-8 page-break-inside-avoid">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4">Primary Colors</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {sharedGuide.colors.primary.map((color, index) => (
-                      <div key={index} className="text-center">
+                      <div key={index} className="text-center page-break-inside-avoid">
                         <div 
                           className="w-full h-24 rounded-lg border border-gray-200 mb-2"
                           style={{ backgroundColor: color.hex }}
@@ -268,11 +279,11 @@ const SharedPreview = () => {
               )}
 
               {sharedGuide.colors.secondary?.length > 0 && (
-                <div>
+                <div className="page-break-inside-avoid">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4">Secondary Colors</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {sharedGuide.colors.secondary.map((color, index) => (
-                      <div key={index} className="text-center">
+                      <div key={index} className="text-center page-break-inside-avoid">
                         <div 
                           className="w-full h-24 rounded-lg border border-gray-200 mb-2"
                           style={{ backgroundColor: color.hex }}
@@ -294,15 +305,15 @@ const SharedPreview = () => {
 
           {/* Typography */}
           {Object.keys(sharedGuide.typography || {}).length > 0 && (
-            <section className="pdf-section">
+            <section className="pdf-section page-break-inside-avoid">
               <h2 className="text-3xl font-bold text-gray-900 mb-8">Typography</h2>
               
               {Object.entries(sharedGuide.typography).map(([category, fonts]) => (
-                <div key={category} className="mb-8">
+                <div key={category} className="mb-8 page-break-inside-avoid">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4 capitalize">{category}</h3>
                   <div className="space-y-6">
                     {Object.entries(fonts).map(([fontName, fontData]) => (
-                      <div key={fontName} className="border border-gray-200 rounded-lg p-6">
+                      <div key={fontName} className="border border-gray-200 rounded-lg p-6 page-break-inside-avoid">
                         <h4 className="text-lg font-medium text-gray-900 mb-4">
                           {sharedGuide.typographyNames?.[fontName] || fontName}
                         </h4>
@@ -312,7 +323,7 @@ const SharedPreview = () => {
                             if (!sizeConfig) return null;
                             
                             return (
-                              <div key={size} className="flex items-center justify-between">
+                              <div key={size} className="flex items-center justify-between page-break-inside-avoid">
                                 <div className="flex-1">
                                   <p 
                                     style={{ 
@@ -343,7 +354,7 @@ const SharedPreview = () => {
 
           {/* Logo Section */}
           {sharedGuide.logos?.original && (
-            <section className="pdf-section">
+            <section className="pdf-section page-break-inside-avoid">
               <h2 className="text-3xl font-bold text-gray-900 mb-8">Logo</h2>
               <div className="bg-gray-50 rounded-lg p-8 text-center">
                 <img 

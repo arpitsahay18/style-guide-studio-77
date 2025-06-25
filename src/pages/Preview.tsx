@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
@@ -113,16 +112,6 @@ const Preview = () => {
         description: "Creating your brand guide PDF..."
       });
 
-      // Capture the entire preview content as it appears
-      const canvas = await html2canvas(contentRef.current, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#f9fafb',
-        width: contentRef.current.scrollWidth,
-        height: contentRef.current.scrollHeight
-      });
-
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -135,6 +124,8 @@ const Preview = () => {
       const contentWidth = pageWidth - (margin * 2);
       const contentHeight = pageHeight - (margin * 2);
       
+      const guide = sharedGuide || currentGuide;
+      
       // Title Page
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
@@ -146,66 +137,74 @@ const Preview = () => {
       pdf.setFontSize(42);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
-      const guide = sharedGuide || currentGuide;
       pdf.text(guide.name, pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
       
       pdf.setFontSize(24);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 100, 100);
       pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 18, { align: 'center' });
+
+      // Capture sections separately to avoid page breaks cutting content
+      const sections = contentRef.current.querySelectorAll('.pdf-section');
       
-      // Add brand guide content pages
-      const imgData = canvas.toDataURL('image/jpeg', 0.8);
-      const imgWidth = contentWidth;
-      const imgHeight = (canvas.height * contentWidth) / canvas.width;
-      
-      // Calculate how many pages we need
-      const totalPages = Math.ceil(imgHeight / contentHeight);
-      
-      for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i] as HTMLElement;
+        
+        // Add new page for each section
         pdf.addPage();
         
-        const sourceY = (pageNum * contentHeight * canvas.width) / contentWidth;
-        const sourceHeight = Math.min(
-          (contentHeight * canvas.width) / contentWidth,
-          canvas.height - sourceY
-        );
-        
-        // Create a temporary canvas for this page slice
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = sourceHeight;
-        const tempCtx = tempCanvas.getContext('2d');
-        
-        if (tempCtx) {
-          tempCtx.drawImage(
-            canvas,
-            0, sourceY, canvas.width, sourceHeight,
-            0, 0, canvas.width, sourceHeight
-          );
+        try {
+          const canvas = await html2canvas(section, {
+            scale: 1.2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            height: section.scrollHeight,
+            width: section.scrollWidth
+          });
+
+          const imgData = canvas.toDataURL('image/jpeg', 0.8);
+          const imgWidth = contentWidth;
+          const imgHeight = (canvas.height * contentWidth) / canvas.width;
           
-          const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.8);
-          const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
-          
-          pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
+          // If content is too tall, split it across multiple pages
+          if (imgHeight > contentHeight) {
+            const totalPages = Math.ceil(imgHeight / contentHeight);
+            
+            for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+              if (pageNum > 0) pdf.addPage();
+              
+              const sourceY = (pageNum * contentHeight * canvas.width) / contentWidth;
+              const sourceHeight = Math.min(
+                (contentHeight * canvas.width) / contentWidth,
+                canvas.height - sourceY
+              );
+              
+              const tempCanvas = document.createElement('canvas');
+              tempCanvas.width = canvas.width;
+              tempCanvas.height = sourceHeight;
+              const tempCtx = tempCanvas.getContext('2d');
+              
+              if (tempCtx) {
+                tempCtx.drawImage(
+                  canvas,
+                  0, sourceY, canvas.width, sourceHeight,
+                  0, 0, canvas.width, sourceHeight
+                );
+                
+                const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.8);
+                const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
+                
+                pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
+              }
+            }
+          } else {
+            pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+          }
+        } catch (sectionError) {
+          console.error('Error capturing section:', sectionError);
         }
       }
-
-      // Final Page
-      pdf.addPage();
-      
-      pdf.setDrawColor(0, 0, 0);
-      pdf.setLineWidth(0.5);
-      pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
-      
-      pdf.setFontSize(20);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(`Brand Guidelines of ${guide.name}`, pageWidth / 2, pageHeight - 60, { align: 'center' });
-      
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(new Date().toLocaleDateString(), pageWidth / 2, pageHeight - 45, { align: 'center' });
 
       pdf.save(`${guide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
       
@@ -328,13 +327,13 @@ const Preview = () => {
 
           <div ref={contentRef} className="space-y-16">
             {/* Typography Section */}
-            <section className="bg-white rounded-lg shadow-sm p-8">
+            <section className="pdf-section bg-white rounded-lg shadow-sm p-8 page-break-inside-avoid">
               <h2 className="text-4xl font-bold mb-12 text-gray-900 border-b pb-4">Typography</h2>
               
               {Object.entries(guide.typography.display).some(([key]) => 
                 displayTypographyVisibility.display?.includes(key)
               ) && (
-                <div className="mb-12">
+                <div className="mb-12 page-break-inside-avoid">
                   <h3 className="text-3xl font-semibold mb-8 text-gray-800">Display Typography</h3>
                   <div className="space-y-8">
                     {Object.entries(guide.typography.display)
@@ -343,7 +342,7 @@ const Preview = () => {
                         const typedStyle = style as TypographyStyle;
                         const styleName = displayTypographyNames[`display-${key}`] || `Display ${key.charAt(0).toUpperCase() + key.slice(1)}`;
                         return (
-                          <div key={key} className="border-l-4 border-blue-500 pl-6 py-4">
+                          <div key={key} className="border-l-4 border-blue-500 pl-6 py-4 page-break-inside-avoid">
                             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
                               <div className="lg:col-span-1">
                                 <h4 className="text-lg font-semibold text-gray-700 mb-2">{styleName}</h4>
@@ -369,7 +368,7 @@ const Preview = () => {
               {Object.entries(guide.typography.heading).some(([key]) => 
                 displayTypographyVisibility.heading?.includes(key)
               ) && (
-                <div className="mb-12">
+                <div className="mb-12 page-break-inside-avoid">
                   <h3 className="text-3xl font-semibold mb-8 text-gray-800">Headings</h3>
                   <div className="space-y-8">
                     {Object.entries(guide.typography.heading)
@@ -378,7 +377,7 @@ const Preview = () => {
                         const typedStyle = style as TypographyStyle;
                         const styleName = displayTypographyNames[`heading-${key}`] || `Heading ${key.toUpperCase()}`;
                         return (
-                          <div key={key} className="border-l-4 border-green-500 pl-6 py-4">
+                          <div key={key} className="border-l-4 border-green-500 pl-6 py-4 page-break-inside-avoid">
                             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
                               <div className="lg:col-span-1">
                                 <h4 className="text-lg font-semibold text-gray-700 mb-2">{styleName}</h4>
@@ -404,7 +403,7 @@ const Preview = () => {
               {Object.entries(guide.typography.body).some(([key]) => 
                 displayTypographyVisibility.body?.includes(key)
               ) && (
-                <div className="mb-12">
+                <div className="mb-12 page-break-inside-avoid">
                   <h3 className="text-3xl font-semibold mb-8 text-gray-800">Body Text</h3>
                   <div className="space-y-8">
                     {Object.entries(guide.typography.body)
@@ -413,7 +412,7 @@ const Preview = () => {
                         const typedStyle = style as TypographyStyle;
                         const styleName = displayTypographyNames[`body-${key}`] || `Body ${key.charAt(0).toUpperCase() + key.slice(1)}`;
                         return (
-                          <div key={key} className="border-l-4 border-purple-500 pl-6 py-4">
+                          <div key={key} className="border-l-4 border-purple-500 pl-6 py-4 page-break-inside-avoid">
                             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
                               <div className="lg:col-span-1">
                                 <h4 className="text-lg font-semibold text-gray-700 mb-2">{styleName}</h4>
@@ -438,17 +437,17 @@ const Preview = () => {
             </section>
 
             {/* Colors Section */}
-            <section className="bg-white rounded-lg shadow-sm p-8">
+            <section className="pdf-section bg-white rounded-lg shadow-sm p-8 page-break-inside-avoid">
               <h2 className="text-4xl font-bold mb-12 text-gray-900 border-b pb-4">Color Palette</h2>
               
               {guide.colors.primary && guide.colors.primary.length > 0 && (
-                <div className="mb-12">
+                <div className="mb-12 page-break-inside-avoid">
                   <h3 className="text-3xl font-semibold mb-8 text-gray-800">Primary Colors</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {guide.colors.primary.map((color: any, index: number) => {
                       const colorName = displayColorNames[`primary-${index}`] || color.hex;
                       return (
-                        <div key={index} className="bg-gray-50 rounded-lg p-6">
+                        <div key={index} className="bg-gray-50 rounded-lg p-6 page-break-inside-avoid">
                           <div 
                             className="w-full h-24 rounded-lg border shadow-sm mb-4"
                             style={{ backgroundColor: color.hex }}
@@ -467,13 +466,13 @@ const Preview = () => {
               )}
 
               {guide.colors.secondary && guide.colors.secondary.length > 0 && (
-                <div className="mb-12">
+                <div className="mb-12 page-break-inside-avoid">
                   <h3 className="text-3xl font-semibold mb-8 text-gray-800">Secondary Colors</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {guide.colors.secondary.map((color: any, index: number) => {
                       const colorName = displayColorNames[`secondary-${index}`] || color.hex;
                       return (
-                        <div key={index} className="bg-gray-50 rounded-lg p-6">
+                        <div key={index} className="bg-gray-50 rounded-lg p-6 page-break-inside-avoid">
                           <div 
                             className="w-full h-24 rounded-lg border shadow-sm mb-4"
                             style={{ backgroundColor: color.hex }}
@@ -494,10 +493,10 @@ const Preview = () => {
 
             {/* Logo Section */}
             {guide.logos.original && (
-              <section className="bg-white rounded-lg shadow-sm p-8">
+              <section className="pdf-section bg-white rounded-lg shadow-sm p-8 page-break-inside-avoid">
                 <h2 className="text-4xl font-bold mb-12 text-gray-900 border-b pb-4">Logo</h2>
                 
-                <div className="mb-12">
+                <div className="mb-12 page-break-inside-avoid">
                   <h3 className="text-3xl font-semibold mb-8 text-gray-800">Primary Logo</h3>
                   <div className="flex justify-center">
                     <div className="bg-gray-50 rounded-lg p-8 shadow-sm">
@@ -512,15 +511,15 @@ const Preview = () => {
                   </div>
                 </div>
 
-                <div className="mb-12">
+                <div className="mb-12 page-break-inside-avoid">
                   <h3 className="text-3xl font-semibold mb-8 text-gray-800">Logo Variations</h3>
                   
                   {guide.logos.square && guide.logos.square.length > 0 && (
-                    <div className="mb-10">
+                    <div className="mb-10 page-break-inside-avoid">
                       <h4 className="text-2xl font-medium mb-6 text-gray-700">Square</h4>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {guide.logos.square.slice(0, 4).map((logo: any, index: number) => (
-                          <div key={index} className="text-center bg-gray-50 rounded-lg p-4">
+                          <div key={index} className="text-center bg-gray-50 rounded-lg p-4 page-break-inside-avoid">
                             <div 
                               className="w-24 h-24 rounded border-2 border-gray-200 flex items-center justify-center mb-3 mx-auto shadow-sm"
                               style={{ backgroundColor: logo.background }}
@@ -542,11 +541,11 @@ const Preview = () => {
                   )}
 
                   {guide.logos.rounded && guide.logos.rounded.length > 0 && (
-                    <div className="mb-10">
+                    <div className="mb-10 page-break-inside-avoid">
                       <h4 className="text-2xl font-medium mb-6 text-gray-700">Rounded</h4>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {guide.logos.rounded.slice(0, 4).map((logo: any, index: number) => (
-                          <div key={index} className="text-center bg-gray-50 rounded-lg p-4">
+                          <div key={index} className="text-center bg-gray-50 rounded-lg p-4 page-break-inside-avoid">
                             <div 
                               className="w-24 h-24 rounded-lg border-2 border-gray-200 flex items-center justify-center mb-3 mx-auto shadow-sm"
                               style={{ backgroundColor: logo.background }}
@@ -568,11 +567,11 @@ const Preview = () => {
                   )}
 
                   {guide.logos.circle && guide.logos.circle.length > 0 && (
-                    <div className="mb-10">
+                    <div className="mb-10 page-break-inside-avoid">
                       <h4 className="text-2xl font-medium mb-6 text-gray-700">Circle</h4>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {guide.logos.circle.slice(0, 4).map((logo: any, index: number) => (
-                          <div key={index} className="text-center bg-gray-50 rounded-lg p-4">
+                          <div key={index} className="text-center bg-gray-50 rounded-lg p-4 page-break-inside-avoid">
                             <div 
                               className="w-24 h-24 rounded-full border-2 border-gray-200 flex items-center justify-center mb-3 mx-auto shadow-sm"
                               style={{ backgroundColor: logo.background }}
