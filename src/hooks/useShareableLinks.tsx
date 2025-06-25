@@ -24,8 +24,7 @@ export const useShareableLinks = () => {
     colorNames, 
     typographyNames, 
     typographyVisibility, 
-    previewText, 
-    logoGuidelines 
+    previewText
   } = useBrandGuide();
 
   const fetchLinks = async () => {
@@ -37,6 +36,7 @@ export const useShareableLinks = () => {
         collection(db, 'shareableLinks'),
         where('userId', '==', user.uid),
         where('expiresAt', '>', new Date()),
+        orderBy('expiresAt', 'desc'),
         orderBy('createdAt', 'desc')
       );
       
@@ -51,6 +51,11 @@ export const useShareableLinks = () => {
       setLinks(fetchedLinks);
     } catch (error) {
       console.error('Error fetching links:', error);
+      toast({
+        variant: "destructive",
+        title: "Error fetching links",
+        description: "Could not load your shareable links.",
+      });
     } finally {
       setLoading(false);
     }
@@ -69,18 +74,16 @@ export const useShareableLinks = () => {
     try {
       const linkId = Math.random().toString(36).substring(2, 15);
       const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 72); // 72 hours from now
+      expiresAt.setHours(expiresAt.getHours() + 72);
 
       const linkData = {
         userId: user.uid,
         linkId,
         brandGuide,
-        // Include all the context data needed for proper display
         colorNames,
         typographyNames,
         typographyVisibility,
         previewText,
-        logoGuidelines,
         createdAt: new Date(),
         expiresAt,
         brandGuideName: brandGuide.name || 'Untitled Brand Guide'
@@ -92,14 +95,13 @@ export const useShareableLinks = () => {
       
       const shareableUrl = `${window.location.origin}/preview/${linkId}`;
       
-      await fetchLinks(); // Refresh the links list
+      await fetchLinks();
       
       toast({
         title: "Link generated!",
         description: "Your shareable link has been created and copied to clipboard.",
       });
 
-      // Copy to clipboard
       navigator.clipboard.writeText(shareableUrl);
       
       return shareableUrl;
@@ -117,7 +119,7 @@ export const useShareableLinks = () => {
   const deleteLink = async (linkId: string) => {
     try {
       await deleteDoc(doc(db, 'shareableLinks', linkId));
-      await fetchLinks(); // Refresh the links list
+      await fetchLinks();
       toast({
         title: "Link deleted",
         description: "The shareable link has been removed.",

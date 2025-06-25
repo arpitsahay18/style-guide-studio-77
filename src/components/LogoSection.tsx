@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { LogoVariation, LogoSet } from '@/types';
 import { LogoPreview } from '@/components/ui/LogoPreview';
-import { InteractiveLogoSpacing } from '@/components/InteractiveLogoSpacing';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -193,12 +192,10 @@ export function LogoSection() {
         format: "a4",
       });
       
-      // Add title
       doc.setFontSize(24);
       doc.setFont("helvetica", "bold");
       doc.text(`${currentGuide.name || 'Brand'} Logo Pack`, 20, 30);
       
-      // Add original logo
       doc.setFontSize(16);
       doc.setFont("helvetica", "normal");
       doc.text('Original Logo', 20, 50);
@@ -207,7 +204,6 @@ export function LogoSection() {
         doc.addImage(currentGuide.logos.original, 'PNG', 20, 60, 60, 60);
       }
       
-      // Add variations section
       doc.text('Logo Variations', 20, 140);
       
       let yPosition = 150;
@@ -224,25 +220,21 @@ export function LogoSection() {
           doc.text(set.title, 20, yPosition);
           yPosition += 10;
           
-          // Add first 4 variations in a row
           const logosToShow = set.logos.slice(0, 4);
           let xPosition = 20;
           
           for (let i = 0; i < logosToShow.length; i++) {
             const logo = logosToShow[i];
             
-            // Create a canvas to render the logo with its background
             const canvas = document.createElement('canvas');
             canvas.width = 100;
             canvas.height = 100;
             const ctx = canvas.getContext('2d');
             
             if (ctx) {
-              // Fill background
               ctx.fillStyle = logo.background;
               ctx.fillRect(0, 0, 100, 100);
               
-              // Load and draw logo
               const img = new Image();
               img.crossOrigin = "anonymous";
               
@@ -272,12 +264,10 @@ export function LogoSection() {
         }
       }
       
-      // Add footer
       doc.setFontSize(10);
       doc.setTextColor(150, 150, 150);
       doc.text(`Generated on ${new Date().toLocaleDateString()}`, 20, 280);
       
-      // Save the PDF
       const filename = `${(currentGuide.name || 'Brand').replace(/\s+/g, '_')}_logo_pack.pdf`;
       doc.save(filename);
       
@@ -302,7 +292,7 @@ export function LogoSection() {
         <CardHeader>
           <CardTitle>Logo Implementation</CardTitle>
           <CardDescription>
-            Upload your logo, create variations, and generate guidelines for proper usage.
+            Upload your logo and create variations for different use cases.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -334,7 +324,7 @@ export function LogoSection() {
                 <div>
                   <h3 className="text-lg font-medium mb-2">Your Logo</h3>
                   <p className="text-sm text-muted-foreground">
-                    View and manage your logo variations and guidelines.
+                    View and manage your logo variations.
                   </p>
                 </div>
                 
@@ -420,12 +410,6 @@ export function LogoSection() {
                   </div>
                 </TabsContent>
               </Tabs>
-              
-              <div>
-                {currentGuide.logos.square.length > 0 && (
-                  <InteractiveLogoSpacing logo={currentGuide.logos.square[0]} />
-                )}
-              </div>
             </div>
           )}
         </CardContent>

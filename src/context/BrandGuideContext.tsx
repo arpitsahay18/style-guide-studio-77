@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrandGuide, ColorPalette, TypographySet } from '@/types';
 import { storage } from '@/lib/storage';
@@ -24,14 +25,6 @@ interface BrandGuideContextType {
   typographyNames: TypographyNames;
   previewText: string;
   activeTab: string;
-  logoGuidelines: {
-    [key: string]: Array<{
-      id: string;
-      type: 'horizontal' | 'vertical';
-      position: number;
-      name: string;
-    }>;
-  };
   setGuideName: (name: string) => void;
   updateColors: (colors: ColorPalette) => void;
   updateTypography: (typography: TypographySet) => void;
@@ -45,7 +38,6 @@ interface BrandGuideContextType {
   removeTypographyStyle: (category: 'display' | 'heading' | 'body', styleKey: string) => void;
   exportGuide: (format: 'json' | 'pdf') => void;
   activeSection: string;
-  setLogoGuidelines: (guidelines: any) => void;
 }
 
 const defaultBrandGuide: BrandGuide = {
@@ -172,16 +164,7 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
   const [previewText, setPreviewText] = useState('The quick brown fox jumps over the lazy dog');
   const [activeTab, setActiveTab] = useState('typography');
   const [activeSection, setActiveSection] = useState('');
-  const [logoGuidelines, setLogoGuidelinesState] = useState<{
-    [key: string]: Array<{
-      id: string;
-      type: 'horizontal' | 'vertical';
-      position: number;
-      name: string;
-    }>;
-  }>({});
 
-  // Load saved data on mount
   useEffect(() => {
     const saved = storage.loadBrandGuide();
     if (saved) {
@@ -190,21 +173,18 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
       if (saved.typographyVisibility) setTypographyVisibilityState(saved.typographyVisibility);
       if (saved.typographyNames) setTypographyNames(saved.typographyNames);
       if (saved.previewText) setPreviewText(saved.previewText);
-      if (saved.logoGuidelines) setLogoGuidelinesState(saved.logoGuidelines);
     }
   }, []);
 
-  // Save data whenever it changes - include logoGuidelines
   useEffect(() => {
     storage.saveBrandGuide({
       guide: currentGuide,
       colorNames,
       typographyVisibility,
       typographyNames,
-      previewText,
-      logoGuidelines
+      previewText
     });
-  }, [currentGuide, colorNames, typographyVisibility, typographyNames, previewText, logoGuidelines]);
+  }, [currentGuide, colorNames, typographyVisibility, typographyNames, previewText]);
 
   const setGuideName = (name: string) => {
     setCurrentGuide(prev => ({ ...prev, name }));
@@ -235,13 +215,11 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
   };
 
   const addTypographyStyle = (category: 'display' | 'heading' | 'body', styleKey: string, customStyle?: any) => {
-    // Add style to visibility
     setTypographyVisibilityState(prev => ({
       ...prev,
       [category]: [...prev[category], styleKey]
     }));
 
-    // If it's a custom style, add it to the typography
     if (customStyle) {
       setCurrentGuide(prev => ({
         ...prev,
@@ -257,7 +235,6 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
   };
 
   const removeTypographyStyle = (category: 'display' | 'heading' | 'body', styleKey: string) => {
-    // Don't allow removal if it's the last style
     if (typographyVisibility[category].length <= 1) return;
 
     setTypographyVisibilityState(prev => ({
@@ -265,7 +242,6 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
       [category]: prev[category].filter(style => style !== styleKey)
     }));
 
-    // Remove from typography names if exists
     const nameKey = `${category}-${styleKey}`;
     setTypographyNames(prev => {
       const newNames = { ...prev };
@@ -281,7 +257,6 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
         colorNames,
         typographyVisibility,
         typographyNames,
-        logoGuidelines,
         metadata: {
           exportedAt: new Date().toISOString(),
           version: '1.0'
@@ -291,10 +266,6 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       saveAs(blob, `${currentGuide.name.replace(/\s+/g, '_')}_brand_guide.json`);
     }
-  };
-
-  const setLogoGuidelines = (guidelines: any) => {
-    setLogoGuidelinesState(guidelines);
   };
 
   return (
@@ -307,7 +278,6 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
         previewText,
         activeTab,
         activeSection,
-        logoGuidelines,
         setGuideName,
         updateColors,
         updateTypography,
@@ -319,8 +289,7 @@ export function BrandGuideProvider({ children }: { children: React.ReactNode }) 
         setTypographyVisibility,
         addTypographyStyle,
         removeTypographyStyle,
-        exportGuide,
-        setLogoGuidelines
+        exportGuide
       }}
     >
       {children}

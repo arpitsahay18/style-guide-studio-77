@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
@@ -8,7 +9,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { useShareableLinks } from '@/hooks/useShareableLinks';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/useAuth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { TypographyStyle } from '@/types';
@@ -20,8 +21,7 @@ const Preview = () => {
     colorNames, 
     typographyNames, 
     typographyVisibility,
-    previewText,
-    logoGuidelines
+    previewText
   } = useBrandGuide();
   const { toast } = useToast();
   const { generateShareableLink } = useShareableLinks();
@@ -41,7 +41,6 @@ const Preview = () => {
     try {
       console.log('Loading shared guide with linkId:', guideId);
       
-      // Query the shareableLinks collection using linkId
       const q = query(
         collection(db, 'shareableLinks'), 
         where('linkId', '==', guideId)
@@ -60,7 +59,6 @@ const Preview = () => {
       
       console.log('Found shareable link data:', linkData);
       
-      // Check if link has expired
       const expiresAt = linkData.expiresAt?.toDate?.() || new Date(linkData.expiresAt);
       const now = new Date();
       
@@ -70,7 +68,6 @@ const Preview = () => {
         return;
       }
       
-      // Extract the brand guide data
       const brandGuideData = linkData.brandGuide;
       
       if (!brandGuideData) {
@@ -85,8 +82,7 @@ const Preview = () => {
         colorNames: linkData.colorNames || {},
         typographyNames: linkData.typographyNames || {},
         typographyVisibility: linkData.typographyVisibility || {},
-        previewText: linkData.previewText || '',
-        logoGuidelines: linkData.logoGuidelines || {}
+        previewText: linkData.previewText || ''
       });
       
     } catch (error) {
@@ -114,7 +110,17 @@ const Preview = () => {
     try {
       toast({
         title: "Generating PDF",
-        description: "Creating your brand guide PDF with proper spacing and pagination..."
+        description: "Creating your brand guide PDF..."
+      });
+
+      // Capture the entire preview content as it appears
+      const canvas = await html2canvas(contentRef.current, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#f9fafb',
+        width: contentRef.current.scrollWidth,
+        height: contentRef.current.scrollHeight
       });
 
       const pdf = new jsPDF({
@@ -129,22 +135,6 @@ const Preview = () => {
       const contentWidth = pageWidth - (margin * 2);
       const contentHeight = pageHeight - (margin * 2);
       
-      const addFooter = (isFirstOrLast: boolean = false) => {
-        if (isFirstOrLast) {
-          const footerY = pageHeight - 15;
-          const footerX = pageWidth / 2;
-          const pillWidth = 50;
-          const pillHeight = 8;
-          
-          pdf.setFillColor(60, 60, 60);
-          pdf.roundedRect(footerX - pillWidth/2, footerY - pillHeight/2, pillWidth, pillHeight, 4, 4, 'F');
-          
-          pdf.setFontSize(8);
-          pdf.setTextColor(255, 255, 255);
-          pdf.text("Made with Brand Studio", footerX, footerY + 1, { align: 'center' });
-        }
-      };
-
       // Title Page
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
@@ -156,81 +146,48 @@ const Preview = () => {
       pdf.setFontSize(42);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
-      pdf.text(currentGuide.name, pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
+      const guide = sharedGuide || currentGuide;
+      pdf.text(guide.name, pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
       
       pdf.setFontSize(24);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 100, 100);
       pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 18, { align: 'center' });
       
-      addFooter(true);
-
-      const sections = contentRef.current.querySelectorAll('.pdf-section');
+      // Add brand guide content pages
+      const imgData = canvas.toDataURL('image/jpeg', 0.8);
+      const imgWidth = contentWidth;
+      const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      for (let i = 0; i < sections.length; i++) {
-        const section = sections[i] as HTMLElement;
+      // Calculate how many pages we need
+      const totalPages = Math.ceil(imgHeight / contentHeight);
+      
+      for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+        pdf.addPage();
         
-        try {
-          // Create canvas with better quality
-          const canvas = await html2canvas(section, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: '#ffffff',
-            width: section.scrollWidth,
-            height: section.scrollHeight,
-            windowWidth: 1200,
-            windowHeight: section.scrollHeight
-          });
+        const sourceY = (pageNum * contentHeight * canvas.width) / contentWidth;
+        const sourceHeight = Math.min(
+          (contentHeight * canvas.width) / contentWidth,
+          canvas.height - sourceY
+        );
+        
+        // Create a temporary canvas for this page slice
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = sourceHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        if (tempCtx) {
+          tempCtx.drawImage(
+            canvas,
+            0, sourceY, canvas.width, sourceHeight,
+            0, 0, canvas.width, sourceHeight
+          );
           
-          const imgData = canvas.toDataURL('image/jpeg', 0.85);
-          const imgWidth = contentWidth;
-          const imgHeight = (canvas.height * contentWidth) / canvas.width;
+          const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.8);
+          const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
           
-          // Check if content fits on one page
-          if (imgHeight <= contentHeight) {
-            pdf.addPage();
-            pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
-          } else {
-            // Split content across multiple pages
-            const totalPages = Math.ceil(imgHeight / contentHeight);
-            
-            for (let pageNum = 0; pageNum < totalPages; pageNum++) {
-              pdf.addPage();
-              
-              const sourceY = (pageNum * contentHeight * canvas.width) / contentWidth;
-              const sourceHeight = Math.min(
-                (contentHeight * canvas.width) / contentWidth,
-                canvas.height - sourceY
-              );
-              
-              // Create a temporary canvas for this page slice
-              const tempCanvas = document.createElement('canvas');
-              tempCanvas.width = canvas.width;
-              tempCanvas.height = sourceHeight;
-              const tempCtx = tempCanvas.getContext('2d');
-              
-              if (tempCtx) {
-                tempCtx.drawImage(
-                  canvas,
-                  0, sourceY, canvas.width, sourceHeight,
-                  0, 0, canvas.width, sourceHeight
-                );
-                
-                const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.85);
-                const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
-                
-                pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
-              }
-            }
-          }
-          
-        } catch (error) {
-          console.error('Error capturing section:', error);
-          pdf.addPage();
-          pdf.setFontSize(18);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(section.querySelector('h2')?.textContent || 'Section', margin, margin + 20);
+          pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
         }
       }
 
@@ -244,19 +201,17 @@ const Preview = () => {
       pdf.setFontSize(20);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
-      pdf.text(`Brand Guidelines of ${currentGuide.name}`, pageWidth / 2, pageHeight - 60, { align: 'center' });
+      pdf.text(`Brand Guidelines of ${guide.name}`, pageWidth / 2, pageHeight - 60, { align: 'center' });
       
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'normal');
       pdf.text(new Date().toLocaleDateString(), pageWidth / 2, pageHeight - 45, { align: 'center' });
-      
-      addFooter(true);
 
-      pdf.save(`${currentGuide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
+      pdf.save(`${guide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
       
       toast({
         title: "PDF Generated Successfully",
-        description: "Your brand guide has been downloaded with proper formatting."
+        description: "Your brand guide has been downloaded."
       });
 
     } catch (error) {
@@ -293,7 +248,6 @@ const Preview = () => {
     }
   };
 
-  // Show loading state for shared guides
   if (loading && guideId) {
     return (
       <MainLayout standalone={true}>
@@ -307,7 +261,6 @@ const Preview = () => {
     );
   }
 
-  // Show error state for shared guides
   if (error && guideId) {
     return (
       <MainLayout standalone={true}>
@@ -331,9 +284,7 @@ const Preview = () => {
   const displayTypographyNames = sharedGuide?.typographyNames || typographyNames;
   const displayTypographyVisibility = sharedGuide?.typographyVisibility || typographyVisibility;
   const displayPreviewText = sharedGuide?.previewText || previewText;
-  const displayLogoGuidelines = sharedGuide?.logoGuidelines || logoGuidelines;
 
-  // Helper function to convert TypographyStyle to CSSProperties
   const convertToCSS = (style: TypographyStyle): React.CSSProperties => {
     return {
       fontFamily: style.fontFamily,
@@ -377,10 +328,9 @@ const Preview = () => {
 
           <div ref={contentRef} className="space-y-16">
             {/* Typography Section */}
-            <section className="pdf-section bg-white rounded-lg shadow-sm p-8">
+            <section className="bg-white rounded-lg shadow-sm p-8">
               <h2 className="text-4xl font-bold mb-12 text-gray-900 border-b pb-4">Typography</h2>
               
-              {/* Display Typography */}
               {Object.entries(guide.typography.display).some(([key]) => 
                 displayTypographyVisibility.display?.includes(key)
               ) && (
@@ -416,7 +366,6 @@ const Preview = () => {
                 </div>
               )}
 
-              {/* Heading Typography */}
               {Object.entries(guide.typography.heading).some(([key]) => 
                 displayTypographyVisibility.heading?.includes(key)
               ) && (
@@ -452,7 +401,6 @@ const Preview = () => {
                 </div>
               )}
 
-              {/* Body Typography */}
               {Object.entries(guide.typography.body).some(([key]) => 
                 displayTypographyVisibility.body?.includes(key)
               ) && (
@@ -490,7 +438,7 @@ const Preview = () => {
             </section>
 
             {/* Colors Section */}
-            <section className="pdf-section bg-white rounded-lg shadow-sm p-8">
+            <section className="bg-white rounded-lg shadow-sm p-8">
               <h2 className="text-4xl font-bold mb-12 text-gray-900 border-b pb-4">Color Palette</h2>
               
               {guide.colors.primary && guide.colors.primary.length > 0 && (
@@ -546,87 +494,9 @@ const Preview = () => {
 
             {/* Logo Section */}
             {guide.logos.original && (
-              <section className="pdf-section bg-white rounded-lg shadow-sm p-8">
+              <section className="bg-white rounded-lg shadow-sm p-8">
                 <h2 className="text-4xl font-bold mb-12 text-gray-900 border-b pb-4">Logo</h2>
                 
-                {/* Logo Guidelines */}
-                {displayLogoGuidelines && Object.keys(displayLogoGuidelines).length > 0 && (
-                  <div className="mb-12">
-                    <h3 className="text-3xl font-semibold mb-8 text-gray-800">Logo Guidelines</h3>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                      {Object.entries(displayLogoGuidelines).map(([logoType, guidelines]: [string, any]) => (
-                        guidelines && guidelines.length > 0 && (
-                          <div key={logoType} className="bg-gray-50 rounded-lg p-6">
-                            <h4 className="text-xl font-semibold mb-6 capitalize text-gray-800">
-                              {logoType.replace('-', ' ')} Guidelines
-                            </h4>
-                            <div className="relative inline-block mb-4">
-                              <div 
-                                className="relative bg-white border-2 border-gray-200 rounded-lg p-6 shadow-sm"
-                                style={{ width: '200px', height: '200px' }}
-                              >
-                                <img 
-                                  src={guide.logos.original} 
-                                  alt="Logo with guidelines"
-                                  className="absolute inset-4 w-auto h-auto max-w-[calc(100%-2rem)] max-h-[calc(100%-2rem)] object-contain"
-                                  style={{
-                                    left: '50%',
-                                    top: '50%',
-                                    transform: 'translate(-50%, -50%)'
-                                  }}
-                                />
-                                {guidelines.map((guideline: any) => (
-                                  <div key={guideline.id}>
-                                    {guideline.type === 'horizontal' ? (
-                                      <div
-                                        className="absolute border-t-2 border-dashed border-red-500"
-                                        style={{
-                                          top: `${(guideline.position / 400) * 100}%`,
-                                          left: 0,
-                                          right: 0,
-                                        }}
-                                      >
-                                        <span className="absolute left-2 -top-3 text-xs bg-red-500 text-white px-2 py-1 rounded">
-                                          {guideline.name}
-                                        </span>
-                                      </div>
-                                    ) : (
-                                      <div
-                                        className="absolute border-l-2 border-dashed border-red-500"
-                                        style={{
-                                          left: `${(guideline.position / 400) * 100}%`,
-                                          top: 0,
-                                          bottom: 0,
-                                        }}
-                                      >
-                                        <span className="absolute top-2 -left-8 text-xs bg-red-500 text-white px-2 py-1 rounded transform -rotate-90 origin-center">
-                                          {guideline.name}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              <p className="font-medium mb-2">Active Guidelines:</p>
-                              <ul className="space-y-1">
-                                {guidelines.map((guideline: any) => (
-                                  <li key={guideline.id} className="flex justify-between">
-                                    <span>{guideline.name}:</span>
-                                    <span>{Math.round(guideline.position)}px</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                        )
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Primary Logo */}
                 <div className="mb-12">
                   <h3 className="text-3xl font-semibold mb-8 text-gray-800">Primary Logo</h3>
                   <div className="flex justify-center">
@@ -642,7 +512,6 @@ const Preview = () => {
                   </div>
                 </div>
 
-                {/* Logo Variations */}
                 <div className="mb-12">
                   <h3 className="text-3xl font-semibold mb-8 text-gray-800">Logo Variations</h3>
                   
