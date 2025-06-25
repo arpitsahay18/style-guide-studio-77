@@ -33,17 +33,14 @@ import {
   Crop, 
   ZoomIn, 
   ZoomOut, 
-  Move, 
-  Download,
+  Move,
   ArrowRight
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { LogoDropzone } from './LogoDropzone';
 import { LogoCropper } from './LogoCropper';
-import { jsPDF } from 'jspdf';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { uploadBase64ToStorage } from '@/utils/firebaseStorage';
 
 interface LogoVariationCreatorProps {
   originalLogo: string;
@@ -114,30 +111,6 @@ function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreator
   );
 }
 
-// Helper function to convert image URL to base64
-const convertImageToBase64 = (url: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      
-      if (ctx) {
-        ctx.drawImage(img, 0, 0);
-        const dataURL = canvas.toDataURL('image/png');
-        resolve(dataURL);
-      } else {
-        reject(new Error('Failed to get canvas context'));
-      }
-    };
-    img.onerror = () => reject(new Error('Failed to load image'));
-    img.src = url;
-  });
-};
-
 export function LogoSection() {
   const { currentGuide, updateLogos } = useBrandGuide();
   const { toast } = useToast();
@@ -205,147 +178,6 @@ export function LogoSection() {
     setShowVariationCreator(false);
     setUploadedImage('');
     setCroppedImage('');
-  };
-  
-  const handleDownloadLogoPack = async () => {
-    if (!currentGuide.logos.original) {
-      toast({
-        variant: "destructive",
-        title: "No logo available",
-        description: "Please upload a logo first.",
-      });
-      return;
-    }
-
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Sign in required",
-        description: "Please sign in to download logo packs.",
-      });
-      return;
-    }
-    
-    toast({
-      title: "Generating logo pack",
-      description: "Creating PDF with all variations...",
-    });
-    
-    try {
-      const doc = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-      
-      doc.setFontSize(24);
-      doc.setFont("helvetica", "bold");
-      doc.text(`${currentGuide.name || 'Brand'} Logo Pack`, 20, 30);
-      
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "normal");
-      doc.text('Original Logo', 20, 50);
-      
-      // Convert Firebase Storage URL to base64 if needed
-      let logoBase64 = currentGuide.logos.original;
-      if (currentGuide.logos.original.startsWith('https://')) {
-        try {
-          logoBase64 = await convertImageToBase64(currentGuide.logos.original);
-        } catch (error) {
-          console.error('Failed to convert logo to base64:', error);
-          toast({
-            variant: "destructive",
-            title: "Image loading failed",
-            description: "Failed to load logo for PDF. Please try again.",
-          });
-          return;
-        }
-      }
-      
-      if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', 20, 60, 60, 60);
-      }
-      
-      doc.text('Logo Variations', 20, 140);
-      
-      let yPosition = 150;
-      const logoSets = [
-        { title: 'Square', logos: currentGuide.logos.square },
-        { title: 'Rounded', logos: currentGuide.logos.rounded },
-        { title: 'Circle', logos: currentGuide.logos.circle }
-      ];
-      
-      for (const set of logoSets) {
-        if (set.logos.length > 0) {
-          doc.setFontSize(14);
-          doc.setFont("helvetica", "bold");
-          doc.text(set.title, 20, yPosition);
-          yPosition += 10;
-          
-          const logosToShow = set.logos.slice(0, 4);
-          let xPosition = 20;
-          
-          for (let i = 0; i < logosToShow.length; i++) {
-            const logo = logosToShow[i];
-            
-            const canvas = document.createElement('canvas');
-            canvas.width = 100;
-            canvas.height = 100;
-            const ctx = canvas.getContext('2d');
-            
-            if (ctx) {
-              ctx.fillStyle = logo.background;
-              ctx.fillRect(0, 0, 100, 100);
-              
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-              
-              await new Promise<void>((resolve) => {
-                img.onload = () => {
-                  const maxDim = 75;
-                  const scale = Math.min(maxDim / img.width, maxDim / img.height);
-                  const width = img.width * scale;
-                  const height = img.height * scale;
-                  const x = (100 - width) / 2;
-                  const y = (100 - height) / 2;
-                  
-                  ctx.drawImage(img, x, y, width, height);
-                  resolve();
-                };
-                img.src = logoBase64; // Use the base64 version
-              });
-              
-              const logoDataUrl = canvas.toDataURL('image/png');
-              doc.addImage(logoDataUrl, 'PNG', xPosition, yPosition, 30, 30);
-            }
-            
-            xPosition += 40;
-          }
-          
-          yPosition += 40;
-        }
-      }
-      
-      doc.setFontSize(10);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Generated on ${new Date().toLocaleDateString()}`, 20, 280);
-      
-      const filename = `${(currentGuide.name || 'Brand').replace(/\s+/g, '_')}_logo_pack.pdf`;
-      doc.save(filename);
-      
-      toast({
-        title: "Logo pack downloaded",
-        description: "Your complete logo pack has been saved as PDF.",
-      });
-      
-    } catch (error) {
-      console.error("Error generating logo pack:", error);
-      toast({
-        variant: "destructive",
-        title: "Export failed",
-        description: "There was an error generating your logo pack.",
-      });
-    }
   };
   
   return (
@@ -421,16 +253,6 @@ export function LogoSection() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                  
-                  <Button 
-                    size="sm" 
-                    onClick={handleDownloadLogoPack}
-                    disabled={!user}
-                    title={!user ? "Sign in required to download logo pack" : "Download logo pack"}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Logo Pack
-                  </Button>
                 </div>
               </div>
               

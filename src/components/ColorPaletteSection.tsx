@@ -271,6 +271,7 @@ export function ColorPaletteSection() {
                           onBlur={() => handleColorNameSave(category, index)}
                           onKeyDown={(e) => handleColorNameKeyPress(e, category, index)}
                           className="inline-block w-32 h-6 text-xs px-1"
+                          maxLength={20}
                           autoFocus
                         />
                       ) : (
@@ -279,7 +280,7 @@ export function ColorPaletteSection() {
                           onClick={() => handleHexClick(category, index)}
                           title="Click to edit color name"
                         >
-                          {color.hex}
+                          {getColorDisplayName(index, category)}
                         </span>
                       )}
                     </p>
