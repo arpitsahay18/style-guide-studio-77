@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { LogoVariation, LogoSet } from '@/types';
@@ -326,7 +325,6 @@ export function LogoSection() {
                 setShowCropper(false);
                 setShowUploader(true);
               }}
-              disabled={uploading}
             />
           )}
           
