@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { LogoVariation, LogoSet } from '@/types';
@@ -133,44 +134,21 @@ export function LogoSection() {
   };
   
   const handleCropComplete = async (croppedImage: string) => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Authentication required",
-        description: "Please sign in to upload logos.",
-      });
-      return;
-    }
-
-    setUploading(true);
-    try {
-      // Upload the cropped image to Firebase Storage
-      const logoUrl = await uploadBase64ToStorage(croppedImage, user.uid, 'logo.png');
-      
-      const updatedLogos: LogoSet = {
-        ...currentGuide.logos,
-        original: logoUrl
-      };
-      
-      updateLogos(updatedLogos);
-      setCroppedImage(logoUrl);
-      setShowCropper(false);
-      setShowVariationCreator(true);
-      
-      toast({
-        title: "Logo uploaded successfully",
-        description: "Your logo has been saved to the cloud.",
-      });
-    } catch (error) {
-      console.error('Error uploading logo:', error);
-      toast({
-        variant: "destructive",
-        title: "Upload failed",
-        description: "There was an error uploading your logo. Please try again.",
-      });
-    } finally {
-      setUploading(false);
-    }
+    // Store logo locally as base64 - no authentication required
+    const updatedLogos: LogoSet = {
+      ...currentGuide.logos,
+      original: croppedImage
+    };
+    
+    updateLogos(updatedLogos);
+    setCroppedImage(croppedImage);
+    setShowCropper(false);
+    setShowVariationCreator(true);
+    
+    toast({
+      title: "Logo uploaded successfully",
+      description: "Your logo has been saved locally. Sign in to create shareable links or download PDFs.",
+    });
   };
   
   const handleVariationsComplete = (variations: LogoVariation[]) => {
@@ -207,6 +185,15 @@ export function LogoSection() {
         variant: "destructive",
         title: "No logo available",
         description: "Please upload a logo first.",
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Sign in required",
+        description: "Please sign in to download logo packs.",
       });
       return;
     }
@@ -323,7 +310,7 @@ export function LogoSection() {
         <CardHeader>
           <CardTitle>Logo Implementation</CardTitle>
           <CardDescription>
-            Upload your logo and create variations for different use cases.
+            Upload your logo and create variations for different use cases. {!user && "Sign in to download PDFs or create shareable links."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -346,7 +333,7 @@ export function LogoSection() {
           {uploading && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Uploading logo to cloud storage...</p>
+              <p className="text-gray-600">Processing logo...</p>
             </div>
           )}
           
@@ -364,6 +351,7 @@ export function LogoSection() {
                   <h3 className="text-lg font-medium mb-2">Your Logo</h3>
                   <p className="text-sm text-muted-foreground">
                     View and manage your logo variations.
+                    {!user && " Sign in to download logo packs."}
                   </p>
                 </div>
                 
@@ -391,7 +379,12 @@ export function LogoSection() {
                     </AlertDialogContent>
                   </AlertDialog>
                   
-                  <Button size="sm" onClick={handleDownloadLogoPack}>
+                  <Button 
+                    size="sm" 
+                    onClick={handleDownloadLogoPack}
+                    disabled={!user}
+                    title={!user ? "Sign in required to download logo pack" : "Download logo pack"}
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Download Logo Pack
                   </Button>

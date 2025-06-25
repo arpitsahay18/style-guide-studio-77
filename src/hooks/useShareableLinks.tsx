@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -6,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { BrandGuide } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useBrandGuide } from '@/context/BrandGuideContext';
+import { uploadBase64ToStorage } from '@/utils/firebaseStorage';
 
 interface ShareableLink {
   id: string;
@@ -31,7 +31,35 @@ interface OptimizedBrandGuide {
   };
 }
 
-const optimizeBrandGuideForSharing = (brandGuide: BrandGuide, colorNames: any, typographyNames: any, typographyVisibility: any, previewText: string): OptimizedBrandGuide => {
+const optimizeBrandGuideForSharing = async (brandGuide: BrandGuide, colorNames: any, typographyNames: any, typographyVisibility: any, previewText: string, userId: string): Promise<OptimizedBrandGuide> => {
+  // Upload logo to Firebase Storage if it's a base64 data URL
+  let logoUrl = brandGuide.logos.original;
+  if (logoUrl && logoUrl.startsWith('data:')) {
+    console.log('Uploading logo to Firebase Storage for sharing...');
+    logoUrl = await uploadBase64ToStorage(logoUrl, userId, 'shared_logo.png');
+  }
+
+  // Upload variation logos if they are base64 data URLs
+  const uploadVariations = async (variations: any[]) => {
+    return Promise.all(variations.map(async (variation, index) => {
+      let src = variation.src;
+      if (src && src.startsWith('data:')) {
+        src = await uploadBase64ToStorage(src, userId, `variation_${index}.png`);
+      }
+      return {
+        src,
+        background: variation.background,
+        type: variation.type
+      };
+    }));
+  };
+
+  const [squareLogos, roundedLogos, circleLogos] = await Promise.all([
+    uploadVariations(brandGuide.logos.square),
+    uploadVariations(brandGuide.logos.rounded),
+    uploadVariations(brandGuide.logos.circle)
+  ]);
+
   // Create an optimized version with only essential data
   const optimized: OptimizedBrandGuide = {
     name: brandGuide.name,
@@ -49,22 +77,10 @@ const optimizeBrandGuideForSharing = (brandGuide: BrandGuide, colorNames: any, t
     },
     typography: brandGuide.typography,
     logos: {
-      original: brandGuide.logos.original,
-      square: brandGuide.logos.square.map(logo => ({
-        src: logo.src,
-        background: logo.background,
-        type: logo.type
-      })),
-      rounded: brandGuide.logos.rounded.map(logo => ({
-        src: logo.src,
-        background: logo.background,
-        type: logo.type
-      })),
-      circle: brandGuide.logos.circle.map(logo => ({
-        src: logo.src,
-        background: logo.background,
-        type: logo.type
-      }))
+      original: logoUrl,
+      square: squareLogos,
+      rounded: roundedLogos,
+      circle: circleLogos
     }
   };
 
@@ -160,13 +176,14 @@ export const useShareableLinks = () => {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 72);
 
-      // Optimize brand guide data
-      const optimizedBrandGuide = optimizeBrandGuideForSharing(
+      // Optimize brand guide data and upload any base64 logos to Firebase
+      const optimizedBrandGuide = await optimizeBrandGuideForSharing(
         brandGuide, 
         colorNames, 
         typographyNames, 
         typographyVisibility, 
-        previewText
+        previewText,
+        user.uid
       );
 
       const linkData = {
