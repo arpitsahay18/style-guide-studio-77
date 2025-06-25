@@ -1,0 +1,31 @@
+
+-- First, let's ensure we have the proper structure for shareable links in Firestore
+-- Note: This is a conceptual structure since Firestore doesn't use SQL, but represents the data model
+
+-- Collection: shareableLinks
+-- Document structure:
+-- {
+--   id: string (auto-generated),
+--   userId: string,
+--   linkId: string (unique identifier for the shareable URL),
+--   brandGuide: object (complete brand guide data),
+--   colorNames: object,
+--   typographyNames: object,
+--   typographyVisibility: object,
+--   previewText: string,
+--   createdAt: timestamp,
+--   expiresAt: timestamp (72 hours from creation)
+-- }
+
+-- Firestore Security Rules (to be applied in Firebase Console):
+-- rules_version = '2';
+-- service cloud.firestore {
+--   match /databases/{database}/documents {
+--     // Allow public read access to shareable links for viewing
+--     match /shareableLinks/{linkId} {
+--       allow read: if true;
+--       allow write: if request.auth != null && request.auth.uid == resource.data.userId;
+--       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+--     }
+--   }
+-- }
