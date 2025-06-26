@@ -15,15 +15,15 @@ import { useNavigate } from 'react-router-dom';
 import { BrandGuideWarning } from './BrandGuideWarning';
 import { useShareableLinks } from '@/hooks/useShareableLinks';
 import { useAuth } from '@/hooks/useAuth';
-import { ShareableLinkPopup } from './ShareableLinkPopup';
+import { ShareableLinkModal } from './ShareableLinkModal';
 
 export function ExportSection() {
   const navigate = useNavigate();
   const { currentGuide, activeSection } = useBrandGuide();
-  const { generateShareableLink, loading: linksLoading, copyLinkToClipboard } = useShareableLinks();
+  const { generateShareableLink, loading: linksLoading } = useShareableLinks();
   const { user } = useAuth();
-  const [generatedLink, setGeneratedLink] = useState<string>('');
-  const [showLinkPopup, setShowLinkPopup] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareableLink, setShareableLink] = useState('');
   
   const isGuideComplete = 
     currentGuide.colors.primary.length > 0 && 
@@ -41,13 +41,9 @@ export function ExportSection() {
 
     const link = await generateShareableLink(currentGuide);
     if (link) {
-      setGeneratedLink(link);
-      setShowLinkPopup(true);
+      setShareableLink(link);
+      setShowShareModal(true);
     }
-  };
-
-  const handleCopyLink = () => {
-    copyLinkToClipboard(generatedLink);
   };
   
   const showWarning = activeSection === 'export' && !isGuideComplete;
@@ -127,11 +123,10 @@ export function ExportSection() {
         </CardFooter>
       </Card>
 
-      <ShareableLinkPopup
-        open={showLinkPopup}
-        onOpenChange={setShowLinkPopup}
-        link={generatedLink}
-        onCopy={handleCopyLink}
+      <ShareableLinkModal
+        open={showShareModal}
+        onOpenChange={setShowShareModal}
+        link={shareableLink}
       />
     </div>
   );

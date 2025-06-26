@@ -1,7 +1,9 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
 import { BrandGuideRenderer } from '@/components/BrandGuideRenderer';
+import { ShareableLinkModal } from '@/components/ShareableLinkModal';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { Button } from '@/components/ui/button';
 import { FileDown, Share } from 'lucide-react';
@@ -29,6 +31,8 @@ const Preview = () => {
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [loading, setLoading] = useState(!!guideId);
   const [error, setError] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareableLink, setShareableLink] = useState('');
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Helper function to convert Firebase Storage URL to base64
@@ -52,6 +56,39 @@ const Preview = () => {
       };
       img.onerror = () => reject(new Error('Failed to load image'));
       img.src = url;
+    });
+  };
+
+  // Helper function to wait for all fonts to load
+  const waitForFontsToLoad = (): Promise<void> => {
+    return new Promise((resolve) => {
+      if ('fonts' in document) {
+        document.fonts.ready.then(() => {
+          resolve();
+        });
+      } else {
+        // Fallback for browsers without FontFaceSet API
+        setTimeout(resolve, 1000);
+      }
+    });
+  };
+
+  // Helper function to wait for all images to load
+  const waitForImagesToLoad = (container: HTMLElement): Promise<void> => {
+    return new Promise((resolve) => {
+      const images = container.querySelectorAll('img');
+      const imagePromises = Array.from(images).map((img) => {
+        return new Promise((imgResolve) => {
+          if (img.complete) {
+            imgResolve(true);
+          } else {
+            img.onload = () => imgResolve(true);
+            img.onerror = () => imgResolve(true); // Resolve even on error to prevent hanging
+          }
+        });
+      });
+      
+      Promise.all(imagePromises).then(() => resolve());
     });
   };
 
@@ -182,6 +219,10 @@ const Preview = () => {
       // Add hyperlink to the pill
       pdf.link(pillX, pillY, pillWidth, pillHeight, { url: 'https://www.google.com' });
 
+      // Wait for all fonts and images to load before capturing
+      await waitForFontsToLoad();
+      await waitForImagesToLoad(contentRef.current);
+
       // Convert Firebase Storage URLs to base64 before capturing
       const images = contentRef.current.querySelectorAll('img');
       const imagePromises = Array.from(images).map(async (img) => {
@@ -201,13 +242,14 @@ const Preview = () => {
       const styleElement = document.createElement('style');
       styleElement.textContent = `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        .pdf-content * {
+        .pdf-content {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
         .pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4 {
           font-weight: 700 !important;
         }
-        .pdf-content p, .pdf-content span {
+        .pdf-content p:not([style*="font-family"]), .pdf-content span:not([style*="font-family"]) {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
           font-weight: 400 !important;
         }
       `;
@@ -215,6 +257,9 @@ const Preview = () => {
       
       // Add class to content for PDF styling
       contentRef.current.classList.add('pdf-content');
+
+      // Wait a bit more for fonts to fully apply
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Capture the entire content with high resolution
       const canvas = await html2canvas(contentRef.current, {
@@ -307,42 +352,8 @@ const Preview = () => {
     try {
       const link = await generateShareableLink(currentGuide);
       if (link) {
-        // Fix clipboard functionality with proper error handling
-        try {
-          await navigator.clipboard.writeText(link);
-          toast({
-            title: "Link generated and copied!",
-            description: "The shareable link has been copied to your clipboard.",
-          });
-        } catch (clipboardError) {
-          console.error('Clipboard API failed, trying fallback:', clipboardError);
-          
-          // Fallback method using hidden input
-          const textArea = document.createElement('textarea');
-          textArea.value = link;
-          textArea.style.position = 'fixed';
-          textArea.style.left = '-999999px';
-          textArea.style.top = '-999999px';
-          document.body.appendChild(textArea);
-          textArea.focus();
-          textArea.select();
-          
-          try {
-            document.execCommand('copy');
-            toast({
-              title: "Link generated and copied!",
-              description: "The shareable link has been copied to your clipboard.",
-            });
-          } catch (fallbackError) {
-            console.error('Fallback copy method failed:', fallbackError);
-            toast({
-              title: "Link generated successfully",
-              description: `Link: ${link}`,
-            });
-          } finally {
-            document.body.removeChild(textArea);
-          }
-        }
+        setShareableLink(link);
+        setShowShareModal(true);
       }
     } finally {
       setIsGeneratingLink(false);
@@ -425,6 +436,12 @@ const Preview = () => {
           </div>
         </div>
       </div>
+
+      <ShareableLinkModal
+        open={showShareModal}
+        onOpenChange={setShowShareModal}
+        link={shareableLink}
+      />
     </MainLayout>
   );
 };
