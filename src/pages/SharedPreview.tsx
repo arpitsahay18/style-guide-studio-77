@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
@@ -263,7 +262,7 @@ const SharedPreview = () => {
                   className="h-24 mx-auto object-contain"
                   onError={(e) => {
                     console.error('Error loading logo:', sharedGuide.logos.original);
-                    e.target.style.display = 'none';
+                    (e.target as HTMLImageElement).style.display = 'none';
                   }}
                   onLoad={() => {
                     console.log('Logo loaded successfully:', sharedGuide.logos.original);
@@ -476,7 +475,7 @@ const SharedPreview = () => {
                   className="h-32 mx-auto object-contain mb-4"
                   onError={(e) => {
                     console.error('Error loading primary logo:', sharedGuide.logos.original);
-                    e.target.style.display = 'none';
+                    (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
                 <p className="text-gray-600">Primary Logo</p>
@@ -504,7 +503,7 @@ const SharedPreview = () => {
                                 className="max-w-full max-h-full object-contain"
                                 onError={(e) => {
                                   console.error('Error loading square logo:', logo.src);
-                                  e.target.style.display = 'none';
+                                  (e.target as HTMLImageElement).style.display = 'none';
                                 }}
                               />
                             </div>
@@ -532,7 +531,7 @@ const SharedPreview = () => {
                                 className="max-w-full max-h-full object-contain"
                                 onError={(e) => {
                                   console.error('Error loading rounded logo:', logo.src);
-                                  e.target.style.display = 'none';
+                                  (e.target as HTMLImageElement).style.display = 'none';
                                 }}
                               />
                             </div>
@@ -560,7 +559,7 @@ const SharedPreview = () => {
                                 className="max-w-full max-h-full object-contain"
                                 onError={(e) => {
                                   console.error('Error loading circle logo:', logo.src);
-                                  e.target.style.display = 'none';
+                                  (e.target as HTMLImageElement).style.display = 'none';
                                 }}
                               />
                             </div>
