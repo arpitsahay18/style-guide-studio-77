@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
@@ -151,23 +150,37 @@ const Preview = () => {
       
       const guide = sharedGuide || currentGuide;
       
-      // Title Page
+      // Cover Page with Inter font and clean layout
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
       
-      pdf.setDrawColor(0, 0, 0);
-      pdf.setLineWidth(0.5);
-      pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
-      
-      pdf.setFontSize(42);
+      // Set Inter font for cover page
       pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(42);
       pdf.setTextColor(0, 0, 0);
-      pdf.text(guide.name, pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
+      pdf.text(guide.name, pageWidth / 2, pageHeight / 2 - 20, { align: 'center' });
       
-      pdf.setFontSize(24);
       pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(24);
       pdf.setTextColor(100, 100, 100);
-      pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 18, { align: 'center' });
+      pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 8, { align: 'center' });
+
+      // "Made with Brand Studio" pill
+      const pillWidth = 60;
+      const pillHeight = 12;
+      const pillX = (pageWidth - pillWidth) / 2;
+      const pillY = pageHeight / 2 + 30;
+      
+      pdf.setFillColor(59, 130, 246); // Blue background
+      pdf.roundedRect(pillX, pillY, pillWidth, pillHeight, 6, 6, 'F');
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(12);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text('Made with Brand Studio', pageWidth / 2, pillY + 8, { align: 'center' });
+      
+      // Add hyperlink to the pill
+      pdf.link(pillX, pillY, pillWidth, pillHeight, { url: 'https://www.google.com' });
 
       // Convert Firebase Storage URLs to base64 before capturing
       const images = contentRef.current.querySelectorAll('img');
@@ -184,14 +197,39 @@ const Preview = () => {
       
       await Promise.all(imagePromises);
 
+      // Add Inter font styles to content for better PDF rendering
+      const styleElement = document.createElement('style');
+      styleElement.textContent = `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .pdf-content * {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        }
+        .pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4 {
+          font-weight: 700 !important;
+        }
+        .pdf-content p, .pdf-content span {
+          font-weight: 400 !important;
+        }
+      `;
+      document.head.appendChild(styleElement);
+      
+      // Add class to content for PDF styling
+      contentRef.current.classList.add('pdf-content');
+
       // Capture the entire content with high resolution
       const canvas = await html2canvas(contentRef.current, {
-        scale: 2, // Higher resolution
+        scale: 3, // Higher resolution for better quality
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#f9fafb', // Match bg-gray-50
+        backgroundColor: '#f9fafb',
         height: contentRef.current.scrollHeight,
-        width: contentRef.current.scrollWidth
+        width: contentRef.current.scrollWidth,
+        onclone: (clonedDoc) => {
+          // Ensure Inter font is loaded in cloned document
+          const clonedStyle = clonedDoc.createElement('style');
+          clonedStyle.textContent = styleElement.textContent;
+          clonedDoc.head.appendChild(clonedStyle);
+        }
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.9);
@@ -203,7 +241,7 @@ const Preview = () => {
         const totalPages = Math.ceil(imgHeight / contentHeight);
         
         for (let pageNum = 0; pageNum < totalPages; pageNum++) {
-          if (pageNum > 0) pdf.addPage();
+          pdf.addPage();
           
           const sourceY = (pageNum * contentHeight * canvas.width) / contentWidth;
           const sourceHeight = Math.min(
@@ -233,6 +271,10 @@ const Preview = () => {
         pdf.addPage();
         pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
       }
+
+      // Clean up
+      contentRef.current.classList.remove('pdf-content');
+      document.head.removeChild(styleElement);
 
       pdf.save(`${guide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
       
@@ -265,10 +307,42 @@ const Preview = () => {
     try {
       const link = await generateShareableLink(currentGuide);
       if (link) {
-        toast({
-          title: "Link generated and copied!",
-          description: "The shareable link has been copied to your clipboard.",
-        });
+        // Fix clipboard functionality with proper error handling
+        try {
+          await navigator.clipboard.writeText(link);
+          toast({
+            title: "Link generated and copied!",
+            description: "The shareable link has been copied to your clipboard.",
+          });
+        } catch (clipboardError) {
+          console.error('Clipboard API failed, trying fallback:', clipboardError);
+          
+          // Fallback method using hidden input
+          const textArea = document.createElement('textarea');
+          textArea.value = link;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-999999px';
+          textArea.style.top = '-999999px';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          
+          try {
+            document.execCommand('copy');
+            toast({
+              title: "Link generated and copied!",
+              description: "The shareable link has been copied to your clipboard.",
+            });
+          } catch (fallbackError) {
+            console.error('Fallback copy method failed:', fallbackError);
+            toast({
+              title: "Link generated successfully",
+              description: `Link: ${link}`,
+            });
+          } finally {
+            document.body.removeChild(textArea);
+          }
+        }
       }
     } finally {
       setIsGeneratingLink(false);

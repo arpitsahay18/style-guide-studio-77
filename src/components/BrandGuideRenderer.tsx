@@ -38,7 +38,53 @@ export function BrandGuideRenderer({
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     console.error('Error loading image:', e.currentTarget.src);
-    e.currentTarget.style.display = 'none';
+    (e.target as HTMLImageElement).style.display = 'none';
+  };
+
+  // Logo component with proper shape handling
+  const LogoDisplay = ({ logo, shape, index }: { logo: any; shape: 'square' | 'rounded' | 'circle'; index: number }) => {
+    const getContainerClass = () => {
+      const baseClass = "w-24 h-24 border-2 border-gray-200 flex items-center justify-center mb-3 mx-auto shadow-sm p-2";
+      switch (shape) {
+        case 'square':
+          return baseClass;
+        case 'rounded':
+          return `${baseClass} rounded-lg overflow-hidden`;
+        case 'circle':
+          return `${baseClass} rounded-full overflow-hidden`;
+        default:
+          return baseClass;
+      }
+    };
+
+    const getTypeLabel = () => {
+      return logo.type === 'color' ? 'Full Color' : 
+             logo.type === 'white' ? 'White' : 'Black';
+    };
+
+    const getBackgroundLabel = () => {
+      return logo.background === '#FFFFFF' ? ' White' : 
+             logo.background === '#000000' ? ' Black' : ' Color';
+    };
+
+    return (
+      <div className={`text-center bg-gray-50 rounded-lg p-4 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+        <div 
+          className={getContainerClass()}
+          style={{ backgroundColor: logo.background }}
+        >
+          <img 
+            src={logo.src} 
+            alt={`${shape} logo ${index + 1}`}
+            className="max-w-full max-h-full object-contain"
+            onError={handleImageError}
+          />
+        </div>
+        <p className="text-sm font-medium text-gray-600">
+          {getTypeLabel()} on{getBackgroundLabel()} Background
+        </p>
+      </div>
+    );
   };
 
   return (
@@ -373,25 +419,7 @@ export function BrandGuideRenderer({
                 <h4 className="text-2xl font-medium mb-6 text-gray-700">Square</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   {guide.logos.square.slice(0, 4).map((logo: any, index: number) => (
-                    <div key={index} className={`text-center bg-gray-50 rounded-lg p-4 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
-                      <div 
-                        className="w-24 h-24 border-2 border-gray-200 flex items-center justify-center mb-3 mx-auto shadow-sm p-2"
-                        style={{ backgroundColor: logo.background }}
-                      >
-                        <img 
-                          src={logo.src} 
-                          alt={`Square logo ${index + 1}`}
-                          className="max-w-full max-h-full object-contain"
-                          onError={handleImageError}
-                        />
-                      </div>
-                      <p className="text-sm font-medium text-gray-600">
-                        {logo.type === 'color' ? 'Full Color' : 
-                         logo.type === 'white' ? 'White' : 'Black'} on 
-                        {logo.background === '#FFFFFF' ? ' White' : 
-                         logo.background === '#000000' ? ' Black' : ' Color'} Background
-                      </p>
-                    </div>
+                    <LogoDisplay key={index} logo={logo} shape="square" index={index} />
                   ))}
                 </div>
               </div>
@@ -403,25 +431,7 @@ export function BrandGuideRenderer({
                 <h4 className="text-2xl font-medium mb-6 text-gray-700">Rounded</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   {guide.logos.rounded.slice(0, 4).map((logo: any, index: number) => (
-                    <div key={index} className={`text-center bg-gray-50 rounded-lg p-4 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
-                      <div 
-                        className="w-24 h-24 rounded-lg border-2 border-gray-200 flex items-center justify-center mb-3 mx-auto shadow-sm p-2"
-                        style={{ backgroundColor: logo.background }}
-                      >
-                        <img 
-                          src={logo.src} 
-                          alt={`Rounded logo ${index + 1}`}
-                          className="max-w-full max-h-full object-contain"
-                          onError={handleImageError}
-                        />
-                      </div>
-                      <p className="text-sm font-medium text-gray-600">
-                        {logo.type === 'color' ? 'Full Color' : 
-                         logo.type === 'white' ? 'White' : 'Black'} on 
-                        {logo.background === '#FFFFFF' ? ' White' : 
-                         logo.background === '#000000' ? ' Black' : ' Color'} Background
-                      </p>
-                    </div>
+                    <LogoDisplay key={index} logo={logo} shape="rounded" index={index} />
                   ))}
                 </div>
               </div>
@@ -433,25 +443,7 @@ export function BrandGuideRenderer({
                 <h4 className="text-2xl font-medium mb-6 text-gray-700">Circle</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   {guide.logos.circle.slice(0, 4).map((logo: any, index: number) => (
-                    <div key={index} className={`text-center bg-gray-50 rounded-lg p-4 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
-                      <div 
-                        className="w-24 h-24 rounded-full border-2 border-gray-200 flex items-center justify-center mb-3 mx-auto shadow-sm p-2"
-                        style={{ backgroundColor: logo.background }}
-                      >
-                        <img 
-                          src={logo.src} 
-                          alt={`Circle logo ${index + 1}`}
-                          className="max-w-full max-h-full object-contain"
-                          onError={handleImageError}
-                        />
-                      </div>
-                      <p className="text-sm font-medium text-gray-600">
-                        {logo.type === 'color' ? 'Full Color' : 
-                         logo.type === 'white' ? 'White' : 'Black'} on 
-                        {logo.background === '#FFFFFF' ? ' White' : 
-                         logo.background === '#000000' ? ' Black' : ' Color'} Background
-                      </p>
-                    </div>
+                    <LogoDisplay key={index} logo={logo} shape="circle" index={index} />
                   ))}
                 </div>
               </div>
