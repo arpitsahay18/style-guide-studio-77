@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
@@ -27,7 +28,6 @@ const SharedPreview = () => {
     try {
       console.log('Loading shared guide with linkId:', linkId);
       
-      // Use consistent collection name
       const q = query(
         collection(db, 'shareableLinks'),
         where('linkId', '==', linkId)
@@ -43,7 +43,7 @@ const SharedPreview = () => {
 
       const linkDoc = querySnapshot.docs[0];
       const linkData = linkDoc.data();
-      console.log('Found shareable link data:', linkData);
+      console.log('Raw shared link data:', linkData);
 
       // Check if link has expired
       const expiresAt = linkData.expiresAt?.toDate?.() || new Date(linkData.expiresAt);
@@ -62,7 +62,11 @@ const SharedPreview = () => {
         return;
       }
 
-      console.log('Setting shared guide data:', brandGuideData);
+      console.log('Extracted brand guide data:', brandGuideData);
+      console.log('Color names from link:', linkData.colorNames);
+      console.log('Typography names from link:', linkData.typographyNames);
+      console.log('Typography visibility from link:', linkData.typographyVisibility);
+      
       setSharedGuide({
         ...brandGuideData,
         colorNames: linkData.colorNames || {},
@@ -173,6 +177,17 @@ const SharedPreview = () => {
     }
   };
 
+  const getColorDisplayName = (color, index, category) => {
+    const colorKey = `${category}-${index}`;
+    const customName = sharedGuide.colorNames?.[colorKey] || sharedGuide.colorNames?.[color.hex];
+    return customName || `${category.charAt(0).toUpperCase() + category.slice(1)} ${index + 1}`;
+  };
+
+  const getTypographyDisplayName = (category, styleKey) => {
+    const nameKey = `${category}-${styleKey}`;
+    return sharedGuide.typographyNames?.[nameKey] || sharedGuide.typographyNames?.[styleKey] || styleKey;
+  };
+
   if (loading) {
     return (
       <MainLayout standalone>
@@ -216,6 +231,8 @@ const SharedPreview = () => {
     );
   }
 
+  console.log('Rendering shared guide with data:', sharedGuide);
+
   return (
     <MainLayout standalone>
       <div className="min-h-screen bg-white">
@@ -244,6 +261,13 @@ const SharedPreview = () => {
                   src={sharedGuide.logos.original} 
                   alt={`${sharedGuide.name} Logo`}
                   className="h-24 mx-auto object-contain"
+                  onError={(e) => {
+                    console.error('Error loading logo:', sharedGuide.logos.original);
+                    e.target.style.display = 'none';
+                  }}
+                  onLoad={() => {
+                    console.log('Logo loaded successfully:', sharedGuide.logos.original);
+                  }}
                 />
               </div>
             )}
@@ -252,10 +276,11 @@ const SharedPreview = () => {
           </div>
 
           {/* Color Palette */}
-          {(sharedGuide.colors?.primary?.length > 0 || sharedGuide.colors?.secondary?.length > 0) && (
+          {(sharedGuide.colors?.primary?.length > 0 || sharedGuide.colors?.secondary?.length > 0 || sharedGuide.colors?.neutral?.length > 0) && (
             <section className="pdf-section page-break-inside-avoid">
               <h2 className="text-3xl font-bold text-gray-900 mb-8">Color Palette</h2>
               
+              {/* Primary Colors */}
               {sharedGuide.colors.primary?.length > 0 && (
                 <div className="mb-8 page-break-inside-avoid">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4">Primary Colors</h3>
@@ -267,11 +292,43 @@ const SharedPreview = () => {
                           style={{ backgroundColor: color.hex }}
                         ></div>
                         <p className="font-medium text-gray-900">
-                          {sharedGuide.colorNames?.[color.hex] || `Primary ${index + 1}`}
+                          {getColorDisplayName(color, index, 'primary')}
                         </p>
                         <p className="text-sm text-gray-600 font-mono">{color.hex}</p>
-                        {color.rgb && (
-                          <p className="text-xs text-gray-500">RGB({color.rgb.r}, {color.rgb.g}, {color.rgb.b})</p>
+                        <p className="text-xs text-gray-500">{color.rgb}</p>
+                        <p className="text-xs text-gray-500">{color.cmyk}</p>
+                        
+                        {/* Tints and Shades */}
+                        {color.tints && color.tints.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-gray-700 mb-1">Tints</p>
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {color.tints.slice(0, 5).map((tint, tintIndex) => (
+                                <div
+                                  key={tintIndex}
+                                  className="w-4 h-4 rounded border border-gray-200"
+                                  style={{ backgroundColor: tint }}
+                                  title={tint}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {color.shades && color.shades.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-gray-700 mb-1">Shades</p>
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {color.shades.slice(0, 5).map((shade, shadeIndex) => (
+                                <div
+                                  key={shadeIndex}
+                                  className="w-4 h-4 rounded border border-gray-200"
+                                  style={{ backgroundColor: shade }}
+                                  title={shade}
+                                />
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
                     ))}
@@ -279,8 +336,9 @@ const SharedPreview = () => {
                 </div>
               )}
 
+              {/* Secondary Colors */}
               {sharedGuide.colors.secondary?.length > 0 && (
-                <div className="page-break-inside-avoid">
+                <div className="mb-8 page-break-inside-avoid">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4">Secondary Colors</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {sharedGuide.colors.secondary.map((color, index) => (
@@ -290,12 +348,67 @@ const SharedPreview = () => {
                           style={{ backgroundColor: color.hex }}
                         ></div>
                         <p className="font-medium text-gray-900">
-                          {sharedGuide.colorNames?.[color.hex] || `Secondary ${index + 1}`}
+                          {getColorDisplayName(color, index, 'secondary')}
                         </p>
                         <p className="text-sm text-gray-600 font-mono">{color.hex}</p>
-                        {color.rgb && (
-                          <p className="text-xs text-gray-500">RGB({color.rgb.r}, {color.rgb.g}, {color.rgb.b})</p>
+                        <p className="text-xs text-gray-500">{color.rgb}</p>
+                        <p className="text-xs text-gray-500">{color.cmyk}</p>
+                        
+                        {/* Tints and Shades */}
+                        {color.tints && color.tints.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-gray-700 mb-1">Tints</p>
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {color.tints.slice(0, 5).map((tint, tintIndex) => (
+                                <div
+                                  key={tintIndex}
+                                  className="w-4 h-4 rounded border border-gray-200"
+                                  style={{ backgroundColor: tint }}
+                                  title={tint}
+                                />
+                              ))}
+                            </div>
+                          </div>
                         )}
+                        
+                        {color.shades && color.shades.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-gray-700 mb-1">Shades</p>
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {color.shades.slice(0, 5).map((shade, shadeIndex) => (
+                                <div
+                                  key={shadeIndex}
+                                  className="w-4 h-4 rounded border border-gray-200"
+                                  style={{ backgroundColor: shade }}
+                                  title={shade}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Neutral Colors */}
+              {sharedGuide.colors.neutral?.length > 0 && (
+                <div className="page-break-inside-avoid">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Neutral Colors</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {sharedGuide.colors.neutral.map((color, index) => (
+                      <div key={index} className="text-center page-break-inside-avoid">
+                        <div 
+                          className="w-full h-24 rounded-lg border border-gray-200 mb-2"
+                          style={{ backgroundColor: color.hex }}
+                        ></div>
+                        <p className="font-medium text-gray-900">
+                          {getColorDisplayName(color, index, 'neutral')}
+                        </p>
+                        <p className="text-sm text-gray-600 font-mono">{color.hex}</p>
+                        <p className="text-xs text-gray-500">{color.rgb}</p>
+                        <p className="text-xs text-gray-500">{color.cmyk}</p>
                       </div>
                     ))}
                   </div>
@@ -313,40 +426,37 @@ const SharedPreview = () => {
                 <div key={category} className="mb-8 page-break-inside-avoid">
                   <h3 className="text-xl font-semibold text-gray-800 mb-4 capitalize">{category}</h3>
                   <div className="space-y-6">
-                    {Object.entries(fonts).map(([fontName, fontData]) => (
-                      <div key={fontName} className="border border-gray-200 rounded-lg p-6 page-break-inside-avoid">
-                        <h4 className="text-lg font-medium text-gray-900 mb-4">
-                          {sharedGuide.typographyNames?.[fontName] || fontName}
-                        </h4>
-                        <div className="space-y-4">
-                          {sharedGuide.typographyVisibility?.[category]?.map((size) => {
-                            const sizeConfig = fontData[size];
-                            if (!sizeConfig) return null;
-                            
-                            return (
-                              <div key={size} className="flex items-center justify-between page-break-inside-avoid">
-                                <div className="flex-1">
-                                  <p 
-                                    style={{ 
-                                      fontFamily: fontData.family,
-                                      fontSize: sizeConfig.fontSize,
-                                      fontWeight: sizeConfig.fontWeight,
-                                      lineHeight: sizeConfig.lineHeight
-                                    }}
-                                  >
-                                    {sharedGuide.previewText}
-                                  </p>
-                                </div>
-                                <div className="text-right text-sm text-gray-600 ml-4">
-                                  <p className="capitalize">{size}</p>
-                                  <p>{sizeConfig.fontSize}</p>
-                                </div>
-                              </div>
-                            );
-                          })}
+                    {sharedGuide.typographyVisibility?.[category]?.map((size) => {
+                      const sizeConfig = Object.values(fonts)[0]?.[size]; // Get first font's size config
+                      if (!sizeConfig) return null;
+                      
+                      return (
+                        <div key={size} className="border border-gray-200 rounded-lg p-6 page-break-inside-avoid">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-lg font-medium text-gray-900">
+                              {getTypographyDisplayName(category, size)}
+                            </h4>
+                            <div className="text-right text-sm text-gray-600">
+                              <p className="capitalize">{size}</p>
+                              <p>{sizeConfig.fontSize}</p>
+                              <p>Weight: {sizeConfig.fontWeight}</p>
+                            </div>
+                          </div>
+                          <div 
+                            className="text-gray-900"
+                            style={{ 
+                              fontFamily: sizeConfig.fontFamily,
+                              fontSize: sizeConfig.fontSize,
+                              fontWeight: sizeConfig.fontWeight,
+                              lineHeight: sizeConfig.lineHeight,
+                              letterSpacing: sizeConfig.letterSpacing
+                            }}
+                          >
+                            {sharedGuide.previewText}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -357,14 +467,111 @@ const SharedPreview = () => {
           {sharedGuide.logos?.original && (
             <section className="pdf-section page-break-inside-avoid">
               <h2 className="text-3xl font-bold text-gray-900 mb-8">Logo</h2>
-              <div className="bg-gray-50 rounded-lg p-8 text-center">
+              
+              {/* Primary Logo */}
+              <div className="bg-gray-50 rounded-lg p-8 text-center mb-8">
                 <img 
                   src={sharedGuide.logos.original} 
                   alt={`${sharedGuide.name} Logo`}
                   className="h-32 mx-auto object-contain mb-4"
+                  onError={(e) => {
+                    console.error('Error loading primary logo:', sharedGuide.logos.original);
+                    e.target.style.display = 'none';
+                  }}
                 />
                 <p className="text-gray-600">Primary Logo</p>
               </div>
+
+              {/* Logo Variations */}
+              {(sharedGuide.logos.square?.length > 0 || sharedGuide.logos.rounded?.length > 0 || sharedGuide.logos.circle?.length > 0) && (
+                <div className="space-y-8">
+                  <h3 className="text-xl font-semibold text-gray-800">Logo Variations</h3>
+                  
+                  {/* Square Variations */}
+                  {sharedGuide.logos.square?.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-medium text-gray-700 mb-4">Square Format</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {sharedGuide.logos.square.map((logo, index) => (
+                          <div key={index} className="text-center">
+                            <div 
+                              className="w-full h-32 rounded border border-gray-200 flex items-center justify-center mb-2 p-4"
+                              style={{ backgroundColor: logo.background }}
+                            >
+                              <img 
+                                src={logo.src} 
+                                alt={`Square Logo ${index + 1}`}
+                                className="max-w-full max-h-full object-contain"
+                                onError={(e) => {
+                                  console.error('Error loading square logo:', logo.src);
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                            <p className="text-sm text-gray-600 capitalize">{logo.type}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rounded Variations */}
+                  {sharedGuide.logos.rounded?.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-medium text-gray-700 mb-4">Rounded Format</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {sharedGuide.logos.rounded.map((logo, index) => (
+                          <div key={index} className="text-center">
+                            <div 
+                              className="w-full h-32 rounded-lg border border-gray-200 flex items-center justify-center mb-2 p-4"
+                              style={{ backgroundColor: logo.background }}
+                            >
+                              <img 
+                                src={logo.src} 
+                                alt={`Rounded Logo ${index + 1}`}
+                                className="max-w-full max-h-full object-contain"
+                                onError={(e) => {
+                                  console.error('Error loading rounded logo:', logo.src);
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                            <p className="text-sm text-gray-600 capitalize">{logo.type}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Circle Variations */}
+                  {sharedGuide.logos.circle?.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-medium text-gray-700 mb-4">Circle Format</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {sharedGuide.logos.circle.map((logo, index) => (
+                          <div key={index} className="text-center">
+                            <div 
+                              className="w-full h-32 rounded-full border border-gray-200 flex items-center justify-center mb-2 p-4"
+                              style={{ backgroundColor: logo.background }}
+                            >
+                              <img 
+                                src={logo.src} 
+                                alt={`Circle Logo ${index + 1}`}
+                                className="max-w-full max-h-full object-contain"
+                                onError={(e) => {
+                                  console.error('Error loading circle logo:', logo.src);
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                            <p className="text-sm text-gray-600 capitalize">{logo.type}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
           )}
 

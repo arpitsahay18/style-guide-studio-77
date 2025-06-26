@@ -19,8 +19,27 @@ interface ShareableLink {
 interface OptimizedBrandGuide {
   name: string;
   colors: {
-    primary: Array<{ hex: string; rgb: string; cmyk: string }>;
-    secondary: Array<{ hex: string; rgb: string; cmyk: string }>;
+    primary: Array<{ 
+      hex: string; 
+      rgb: string; 
+      cmyk: string;
+      tints: string[];
+      shades: string[];
+    }>;
+    secondary: Array<{ 
+      hex: string; 
+      rgb: string; 
+      cmyk: string;
+      tints: string[];
+      shades: string[];
+    }>;
+    neutral: Array<{ 
+      hex: string; 
+      rgb: string; 
+      cmyk: string;
+      tints: string[];
+      shades: string[];
+    }>;
   };
   typography: any;
   logos: {
@@ -32,19 +51,37 @@ interface OptimizedBrandGuide {
 }
 
 const optimizeBrandGuideForSharing = async (brandGuide: BrandGuide, colorNames: any, typographyNames: any, typographyVisibility: any, previewText: string, userId: string): Promise<OptimizedBrandGuide> => {
+  console.log('Optimizing brand guide for sharing...');
+  console.log('Original brand guide:', brandGuide);
+  console.log('Color names:', colorNames);
+  console.log('Typography names:', typographyNames);
+  
   // Upload logo to Firebase Storage if it's a base64 data URL
   let logoUrl = brandGuide.logos.original;
   if (logoUrl && logoUrl.startsWith('data:')) {
-    console.log('Uploading logo to Firebase Storage for sharing...');
-    logoUrl = await uploadBase64ToStorage(logoUrl, userId, 'shared_logo.png');
+    console.log('Uploading main logo to Firebase Storage for sharing...');
+    try {
+      logoUrl = await uploadBase64ToStorage(logoUrl, userId, 'shared_logo.png');
+      console.log('Main logo uploaded successfully:', logoUrl);
+    } catch (error) {
+      console.error('Error uploading main logo:', error);
+    }
   }
 
   // Upload variation logos if they are base64 data URLs
   const uploadVariations = async (variations: any[]) => {
+    if (!variations || variations.length === 0) return [];
+    
     return Promise.all(variations.map(async (variation, index) => {
       let src = variation.src;
       if (src && src.startsWith('data:')) {
-        src = await uploadBase64ToStorage(src, userId, `variation_${index}.png`);
+        try {
+          console.log(`Uploading variation ${index} to Firebase Storage...`);
+          src = await uploadBase64ToStorage(src, userId, `variation_${index}_${Date.now()}.png`);
+          console.log(`Variation ${index} uploaded successfully:`, src);
+        } catch (error) {
+          console.error(`Error uploading variation ${index}:`, error);
+        }
       }
       return {
         src,
@@ -55,24 +92,35 @@ const optimizeBrandGuideForSharing = async (brandGuide: BrandGuide, colorNames: 
   };
 
   const [squareLogos, roundedLogos, circleLogos] = await Promise.all([
-    uploadVariations(brandGuide.logos.square),
-    uploadVariations(brandGuide.logos.rounded),
-    uploadVariations(brandGuide.logos.circle)
+    uploadVariations(brandGuide.logos.square || []),
+    uploadVariations(brandGuide.logos.rounded || []),
+    uploadVariations(brandGuide.logos.circle || [])
   ]);
 
-  // Create an optimized version with only essential data
+  // Create an optimized version with ALL essential data
   const optimized: OptimizedBrandGuide = {
     name: brandGuide.name,
     colors: {
-      primary: brandGuide.colors.primary.map(color => ({
+      primary: (brandGuide.colors.primary || []).map(color => ({
         hex: color.hex,
         rgb: color.rgb,
-        cmyk: color.cmyk
+        cmyk: color.cmyk,
+        tints: color.tints || [],
+        shades: color.shades || []
       })),
-      secondary: brandGuide.colors.secondary.map(color => ({
+      secondary: (brandGuide.colors.secondary || []).map(color => ({
         hex: color.hex,
         rgb: color.rgb,
-        cmyk: color.cmyk
+        cmyk: color.cmyk,
+        tints: color.tints || [],
+        shades: color.shades || []
+      })),
+      neutral: (brandGuide.colors.neutral || []).map(color => ({
+        hex: color.hex,
+        rgb: color.rgb,
+        cmyk: color.cmyk,
+        tints: color.tints || [],
+        shades: color.shades || []
       }))
     },
     typography: brandGuide.typography,
@@ -84,6 +132,7 @@ const optimizeBrandGuideForSharing = async (brandGuide: BrandGuide, colorNames: 
     }
   };
 
+  console.log('Optimized brand guide:', optimized);
   return optimized;
 };
 
@@ -115,7 +164,6 @@ export const useShareableLinks = () => {
     try {
       console.log('Fetching shareable links for user:', user.uid);
       
-      // Use consistent collection name
       const q = query(
         collection(db, 'shareableLinks'),
         where('userId', '==', user.uid)
@@ -181,6 +229,11 @@ export const useShareableLinks = () => {
     try {
       setLoading(true);
       console.log('Generating shareable link for user:', user.uid);
+      console.log('Current brand guide data:', brandGuide);
+      console.log('Current color names:', colorNames);
+      console.log('Current typography names:', typographyNames);
+      console.log('Current typography visibility:', typographyVisibility);
+      console.log('Current preview text:', previewText);
       
       // Generate unique link ID
       const linkId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -215,14 +268,15 @@ export const useShareableLinks = () => {
         expiresAt: Timestamp.fromDate(expiresAt)
       };
 
+      console.log('Final link data to be saved:', linkData);
+
       // Check data size before saving
       if (!checkDataSize(linkData)) {
         throw new Error('Brand guide data is too large for sharing. Please reduce the size of your assets.');
       }
 
-      console.log('Creating shareable link with optimized data...');
+      console.log('Creating shareable link with complete data...');
 
-      // Use consistent collection name
       await addDoc(collection(db, 'shareableLinks'), linkData);
       
       const shareableUrl = `${window.location.origin}/s/${linkId}`;
@@ -266,7 +320,6 @@ export const useShareableLinks = () => {
 
   const deleteLink = async (linkId: string) => {
     try {
-      // Use consistent collection name
       await deleteDoc(doc(db, 'shareableLinks', linkId));
       toast({
         title: "Link deleted",
