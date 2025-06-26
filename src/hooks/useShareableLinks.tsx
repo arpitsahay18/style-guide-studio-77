@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -116,11 +115,10 @@ export const useShareableLinks = () => {
     try {
       console.log('Fetching shareable links for user:', user.uid);
       
-      // Use the correct collection name without filtering by expiry first
+      // Use consistent collection name
       const q = query(
-        collection(db, 'shareable_links'),
-        where('userId', '==', user.uid),
-        orderBy('createdAt', 'desc')
+        collection(db, 'shareableLinks'),
+        where('userId', '==', user.uid)
       );
       
       const querySnapshot = await getDocs(q);
@@ -129,7 +127,7 @@ export const useShareableLinks = () => {
       const fetchedLinks = querySnapshot.docs
         .map(doc => {
           const data = doc.data();
-          const expiresAt = data.expiresAt.toDate();
+          const expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
           
           // Filter out expired links
           if (expiresAt <= new Date()) {
@@ -140,7 +138,7 @@ export const useShareableLinks = () => {
             id: doc.id,
             linkId: data.linkId,
             url: `${window.location.origin}/s/${data.linkId}`,
-            createdAt: data.createdAt.toDate(),
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
             expiresAt: expiresAt,
             brandGuideName: data.brandGuide?.name || 'Untitled Brand Guide'
           };
@@ -151,27 +149,11 @@ export const useShareableLinks = () => {
       console.log('Successfully fetched links:', fetchedLinks.length);
     } catch (error: any) {
       console.error('Error fetching links:', error);
-      
-      // More specific error handling
-      if (error.code === 'permission-denied') {
-        toast({
-          variant: "destructive",
-          title: "Permission denied",
-          description: "Unable to access shareable links. Please check your Firebase configuration.",
-        });
-      } else if (error.code === 'failed-precondition') {
-        toast({
-          variant: "destructive",
-          title: "Database configuration error",
-          description: "Missing database indexes. Please contact support.",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error fetching links",
-          description: "Could not load your shareable links. Please try again.",
-        });
-      }
+      toast({
+        variant: "destructive",
+        title: "Error fetching links",
+        description: "Could not load your shareable links. Please check your Firebase configuration.",
+      });
     } finally {
       setLoading(false);
     }
@@ -240,8 +222,8 @@ export const useShareableLinks = () => {
 
       console.log('Creating shareable link with optimized data...');
 
-      // Use the correct collection name
-      await addDoc(collection(db, 'shareable_links'), linkData);
+      // Use consistent collection name
+      await addDoc(collection(db, 'shareableLinks'), linkData);
       
       const shareableUrl = `${window.location.origin}/s/${linkId}`;
       
@@ -261,7 +243,13 @@ export const useShareableLinks = () => {
         toast({
           variant: "destructive",
           title: "Permission denied",
-          description: "Unable to create shareable link. Please check your Firebase permissions or try signing out and back in.",
+          description: "Unable to create shareable link. Please check your Firebase permissions.",
+        });
+      } else if (error.code === 'failed-precondition') {
+        toast({
+          variant: "destructive",
+          title: "Database configuration error",
+          description: "Missing database indexes. Please follow the setup instructions provided.",
         });
       } else {
         toast({
@@ -278,8 +266,8 @@ export const useShareableLinks = () => {
 
   const deleteLink = async (linkId: string) => {
     try {
-      // Use the correct collection name
-      await deleteDoc(doc(db, 'shareable_links', linkId));
+      // Use consistent collection name
+      await deleteDoc(doc(db, 'shareableLinks', linkId));
       toast({
         title: "Link deleted",
         description: "The shareable link has been removed.",
@@ -287,20 +275,11 @@ export const useShareableLinks = () => {
       await fetchLinks();
     } catch (error: any) {
       console.error('Error deleting link:', error);
-      
-      if (error.code === 'permission-denied') {
-        toast({
-          variant: "destructive",
-          title: "Permission denied",
-          description: "Unable to delete link. Please check your permissions.",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Failed to delete link",
-          description: "There was an error removing the link.",
-        });
-      }
+      toast({
+        variant: "destructive",
+        title: "Failed to delete link",
+        description: "There was an error removing the link.",
+      });
     }
   };
 

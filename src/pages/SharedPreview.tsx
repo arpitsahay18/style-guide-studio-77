@@ -27,6 +27,7 @@ const SharedPreview = () => {
     try {
       console.log('Loading shared guide with linkId:', linkId);
       
+      // Use consistent collection name
       const q = query(
         collection(db, 'shareableLinks'),
         where('linkId', '==', linkId)
