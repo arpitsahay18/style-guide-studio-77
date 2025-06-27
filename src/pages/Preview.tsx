@@ -36,27 +36,19 @@ const Preview = () => {
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Helper function to convert Firebase Storage URL to base64
-  const convertImageToBase64 = (url: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          const dataURL = canvas.toDataURL('image/png');
-          resolve(dataURL);
-        } else {
-          reject(new Error('Failed to get canvas context'));
-        }
-      };
-      img.onerror = () => reject(new Error('Failed to load image'));
-      img.src = url;
-    });
+  const convertImageToBase64 = async (url: string): Promise<string> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Failed to convert image to base64:', error);
+      return url; // fallback to original URL
+    }
   };
 
   // Helper function to wait for all fonts to load
@@ -65,11 +57,11 @@ const Preview = () => {
       if ('fonts' in document) {
         document.fonts.ready.then(() => {
           // Add extra wait time for Google Fonts
-          setTimeout(resolve, 1000);
+          setTimeout(resolve, 1500);
         });
       } else {
         // Fallback for browsers without FontFaceSet API
-        setTimeout(resolve, 2000);
+        setTimeout(resolve, 2500);
       }
     });
   };
@@ -86,14 +78,14 @@ const Preview = () => {
             img.onload = () => imgResolve(true);
             img.onerror = () => imgResolve(true);
             // Timeout fallback
-            setTimeout(() => imgResolve(true), 3000);
+            setTimeout(() => imgResolve(true), 5000);
           }
         });
       });
       
       Promise.all(imagePromises).then(() => {
         // Add extra wait time for layout stabilization
-        setTimeout(resolve, 500);
+        setTimeout(resolve, 1000);
       });
     });
   };
@@ -173,7 +165,7 @@ const Preview = () => {
   const handleExportPDF = async () => {
     if (!contentRef.current) return;
 
-    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 12000);
+    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 15000);
 
     try {
       const pdf = new jsPDF({
@@ -237,7 +229,7 @@ const Preview = () => {
       
       await Promise.all(imagePromises);
 
-      // Enhanced PDF styling with better layout constraints
+      // Enhanced PDF styling with better layout constraints and page breaks
       const styleElement = document.createElement('style');
       styleElement.textContent = `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -255,9 +247,15 @@ const Preview = () => {
         }
         .pdf-section {
           page-break-inside: avoid;
+          break-inside: avoid;
           margin-bottom: 30px;
           max-width: 100% !important;
           overflow: hidden !important;
+        }
+        .avoid-break {
+          page-break-inside: avoid;
+          break-inside: avoid;
+          -webkit-column-break-inside: avoid;
         }
         .pdf-section:last-child {
           margin-bottom: 0;
@@ -321,20 +319,20 @@ const Preview = () => {
         }
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      // Improved multi-page handling with better overlap calculation
+      // Improved multi-page handling with better overlap calculation and content preservation
       const totalPages = Math.ceil(imgHeight / contentHeight);
-      const pageOverlap = 5; // Reduced overlap for better content flow
+      const pageOverlap = 8; // Slightly increased overlap for better content continuity
       
       for (let pageNum = 0; pageNum < totalPages; pageNum++) {
         pdf.addPage();
         
-        // Calculate source position with improved logic
+        // Calculate source position with improved logic to prevent content cutoff
         const effectiveContentHeight = contentHeight - (pageNum > 0 ? pageOverlap : 0);
-        const sourceY = Math.max(0, (pageNum * effectiveContentHeight * canvas.width) / contentWidth);
+        const sourceY = Math.max(0, (pageNum * (contentHeight - pageOverlap) * canvas.width) / contentWidth);
         const maxSourceY = Math.max(0, canvas.height - ((contentHeight * canvas.width) / contentWidth));
         const adjustedSourceY = Math.min(sourceY, maxSourceY);
         
@@ -343,7 +341,7 @@ const Preview = () => {
           canvas.height - adjustedSourceY
         );
         
-        if (sourceHeight > 50) { // Only render if there's meaningful content
+        if (sourceHeight > 100) { // Only render if there's meaningful content
           const tempCanvas = document.createElement('canvas');
           tempCanvas.width = canvas.width;
           tempCanvas.height = sourceHeight;
@@ -356,10 +354,11 @@ const Preview = () => {
               0, 0, canvas.width, sourceHeight
             );
             
-            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.92);
+            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
             const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
+            const yOffset = pageNum > 0 ? margin - (pageOverlap / 2) : margin;
             
-            pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
+            pdf.addImage(pageImgData, 'JPEG', margin, yOffset, imgWidth, pageImgHeight);
           }
         }
       }

@@ -51,7 +51,7 @@ function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreator
   const generateVariations = () => {
     const variations: LogoVariation[] = [];
     
-    // Updated background colors to match BrandGuideRenderer
+    // Updated background colors - white, black, blue, light pink
     const backgroundColors = [
       '#FFFFFF', // White
       '#000000', // Black  
@@ -98,6 +98,48 @@ function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreator
     </div>
   );
 }
+
+// Unified logo display component with consistent background colors and cropping
+const LogoDisplay = ({ logo, shape, index }: { logo: any; shape: 'square' | 'rounded' | 'circle'; index: number }) => {
+  const backgroundColors = [
+    { color: '#FFFFFF', bgClass: 'bg-white', borderClass: 'border-2 border-gray-200', label: 'White' },
+    { color: '#000000', bgClass: 'bg-black', borderClass: '', label: 'Black' },
+    { color: '#3E3BFF', bgClass: 'bg-blue-600', borderClass: '', label: 'Blue' },
+    { color: '#FFEAEA', bgClass: 'bg-pink-100', borderClass: '', label: 'Light Pink' }
+  ];
+
+  const backgroundConfig = backgroundColors[index % backgroundColors.length];
+
+  const getShapeClasses = () => {
+    switch (shape) {
+      case 'square':
+        return 'rounded-none';
+      case 'rounded':
+        return 'rounded-lg';
+      case 'circle':
+        return 'rounded-full';
+      default:
+        return 'rounded-none';
+    }
+  };
+
+  return (
+    <div className="text-center bg-gray-50 rounded-lg p-4 avoid-break">
+      <div className={`flex items-center justify-center p-4 rounded-lg shadow-sm mb-3 mx-auto ${backgroundConfig.bgClass} ${backgroundConfig.borderClass}`}>
+        <div className={`w-24 h-24 overflow-hidden ${getShapeClasses()}`}>
+          <img 
+            src={logo.src} 
+            alt={`${shape} logo ${index + 1}`}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      </div>
+      <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+        Full Color on {backgroundConfig.label} Background
+      </p>
+    </div>
+  );
+};
 
 export function LogoSection() {
   const { currentGuide, updateLogos } = useBrandGuide();
@@ -291,10 +333,11 @@ export function LogoSection() {
                 <TabsContent value="square" className="animate-fade-in">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {currentGuide.logos.square.map((logo, index) => (
-                      <LogoPreview 
+                      <LogoDisplay 
                         key={index}
                         logo={logo}
                         shape="square"
+                        index={index}
                       />
                     ))}
                   </div>
@@ -303,10 +346,11 @@ export function LogoSection() {
                 <TabsContent value="rounded" className="animate-fade-in">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {currentGuide.logos.rounded.map((logo, index) => (
-                      <LogoPreview 
+                      <LogoDisplay 
                         key={index}
                         logo={logo}
                         shape="rounded"
+                        index={index}
                       />
                     ))}
                   </div>
@@ -315,10 +359,11 @@ export function LogoSection() {
                 <TabsContent value="circle" className="animate-fade-in">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {currentGuide.logos.circle.map((logo, index) => (
-                      <LogoPreview 
+                      <LogoDisplay 
                         key={index}
                         logo={logo}
                         shape="circle"
+                        index={index}
                       />
                     ))}
                   </div>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrandGuide, TypographyStyle } from '@/types';
 
@@ -66,7 +65,7 @@ export function BrandGuideRenderer({
     };
 
     return (
-      <div className={`text-center bg-gray-50 rounded-lg p-4 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+      <div className={`text-center bg-gray-50 rounded-lg p-4 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
         <div className={`flex items-center justify-center p-4 rounded-lg shadow-sm mb-3 mx-auto ${backgroundConfig.bgClass} ${backgroundConfig.borderClass}`}>
           <div className={`w-24 h-24 overflow-hidden ${getShapeClasses()}`}>
             <img 
@@ -87,14 +86,14 @@ export function BrandGuideRenderer({
   return (
     <div className="space-y-16" style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Typography Section */}
-      <section className={`pdf-section bg-white rounded-lg shadow-sm p-8 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+      <section className={`pdf-section bg-white rounded-lg shadow-sm p-8 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
         <h2 className="text-4xl font-bold mb-12 text-gray-900 border-b pb-4" style={{ fontFamily: 'Inter, sans-serif' }}>Typography</h2>
         
         {/* Display Typography */}
         {Object.entries(guide.typography.display).some(([key]) => 
           typographyVisibility.display?.includes(key)
         ) && (
-          <div className={`mb-12 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+          <div className={`mb-12 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
             <h3 className="text-3xl font-semibold mb-8 text-gray-800" style={{ fontFamily: 'Inter, sans-serif' }}>Display Typography</h3>
             <div className="space-y-8">
               {Object.entries(guide.typography.display)
@@ -103,7 +102,7 @@ export function BrandGuideRenderer({
                   const typedStyle = style as TypographyStyle;
                   const styleName = typographyNames[`display-${key}`] || `Display ${key.charAt(0).toUpperCase() + key.slice(1)}`;
                   return (
-                    <div key={key} className={`border-l-4 border-blue-500 pl-6 py-4 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+                    <div key={key} className={`border-l-4 border-blue-500 pl-6 py-4 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
                         <div className="lg:col-span-1">
                           <h4 className="text-lg font-semibold text-gray-700 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>{styleName}</h4>
@@ -130,7 +129,7 @@ export function BrandGuideRenderer({
         {Object.entries(guide.typography.heading).some(([key]) => 
           typographyVisibility.heading?.includes(key)
         ) && (
-          <div className={`mb-12 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+          <div className={`mb-12 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
             <h3 className="text-3xl font-semibold mb-8 text-gray-800" style={{ fontFamily: 'Inter, sans-serif' }}>Headings</h3>
             <div className="space-y-8">
               {Object.entries(guide.typography.heading)
@@ -139,7 +138,7 @@ export function BrandGuideRenderer({
                   const typedStyle = style as TypographyStyle;
                   const styleName = typographyNames[`heading-${key}`] || `Heading ${key.toUpperCase()}`;
                   return (
-                    <div key={key} className={`border-l-4 border-green-500 pl-6 py-4 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+                    <div key={key} className={`border-l-4 border-green-500 pl-6 py-4 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
                         <div className="lg:col-span-1">
                           <h4 className="text-lg font-semibold text-gray-700 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>{styleName}</h4>
@@ -166,7 +165,7 @@ export function BrandGuideRenderer({
         {Object.entries(guide.typography.body).some(([key]) => 
           typographyVisibility.body?.includes(key)
         ) && (
-          <div className={`mb-12 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+          <div className={`mb-12 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
             <h3 className="text-3xl font-semibold mb-8 text-gray-800" style={{ fontFamily: 'Inter, sans-serif' }}>Body Text</h3>
             <div className="space-y-8">
               {Object.entries(guide.typography.body)
@@ -175,7 +174,7 @@ export function BrandGuideRenderer({
                   const typedStyle = style as TypographyStyle;
                   const styleName = typographyNames[`body-${key}`] || `Body ${key.charAt(0).toUpperCase() + key.slice(1)}`;
                   return (
-                    <div key={key} className={`border-l-4 border-purple-500 pl-6 py-4 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+                    <div key={key} className={`border-l-4 border-purple-500 pl-6 py-4 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
                         <div className="lg:col-span-1">
                           <h4 className="text-lg font-semibold text-gray-700 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>{styleName}</h4>
@@ -200,18 +199,18 @@ export function BrandGuideRenderer({
       </section>
 
       {/* Colors Section */}
-      <section className={`pdf-section bg-white rounded-lg shadow-sm p-8 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+      <section className={`pdf-section bg-white rounded-lg shadow-sm p-8 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
         <h2 className="text-4xl font-bold mb-12 text-gray-900 border-b pb-4" style={{ fontFamily: 'Inter, sans-serif' }}>Color Palette</h2>
         
         {/* Primary Colors */}
         {guide.colors.primary && guide.colors.primary.length > 0 && (
-          <div className={`mb-12 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+          <div className={`mb-12 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
             <h3 className="text-3xl font-semibold mb-8 text-gray-800" style={{ fontFamily: 'Inter, sans-serif' }}>Primary Colors</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full">
               {guide.colors.primary.map((color: any, index: number) => {
                 const colorName = colorNames[`primary-${index}`] || color.hex;
                 return (
-                  <div key={index} className={`bg-gray-50 rounded-lg p-6 min-w-0 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+                  <div key={index} className={`bg-gray-50 rounded-lg p-6 min-w-0 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                     <div 
                       className="w-full h-24 rounded-lg border shadow-sm mb-4"
                       style={{ backgroundColor: color.hex }}
@@ -265,13 +264,13 @@ export function BrandGuideRenderer({
 
         {/* Secondary Colors */}
         {guide.colors.secondary && guide.colors.secondary.length > 0 && (
-          <div className={`mb-12 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+          <div className={`mb-12 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
             <h3 className="text-3xl font-semibold mb-8 text-gray-800" style={{ fontFamily: 'Inter, sans-serif' }}>Secondary Colors</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full">
               {guide.colors.secondary.map((color: any, index: number) => {
                 const colorName = colorNames[`secondary-${index}`] || color.hex;
                 return (
-                  <div key={index} className={`bg-gray-50 rounded-lg p-6 min-w-0 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+                  <div key={index} className={`bg-gray-50 rounded-lg p-6 min-w-0 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                     <div 
                       className="w-full h-24 rounded-lg border shadow-sm mb-4"
                       style={{ backgroundColor: color.hex }}
@@ -325,13 +324,13 @@ export function BrandGuideRenderer({
 
         {/* Neutral Colors */}
         {guide.colors.neutral && guide.colors.neutral.length > 0 && (
-          <div className={`mb-12 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+          <div className={`mb-12 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
             <h3 className="text-3xl font-semibold mb-8 text-gray-800" style={{ fontFamily: 'Inter, sans-serif' }}>Neutral Colors</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full">
               {guide.colors.neutral.map((color: any, index: number) => {
                 const colorName = colorNames[`neutral-${index}`] || color.hex;
                 return (
-                  <div key={index} className={`bg-gray-50 rounded-lg p-6 min-w-0 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+                  <div key={index} className={`bg-gray-50 rounded-lg p-6 min-w-0 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                     <div 
                       className="w-full h-24 rounded-lg border shadow-sm mb-4"
                       style={{ backgroundColor: color.hex }}
@@ -386,11 +385,11 @@ export function BrandGuideRenderer({
 
       {/* Logo Section */}
       {guide.logos.original && (
-        <section className={`pdf-section bg-white rounded-lg shadow-sm p-8 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+        <section className={`pdf-section bg-white rounded-lg shadow-sm p-8 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
           <h2 className="text-4xl font-bold mb-12 text-gray-900 border-b pb-4" style={{ fontFamily: 'Inter, sans-serif' }}>Logo</h2>
           
           {/* Primary Logo */}
-          <div className={`mb-12 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+          <div className={`mb-12 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
             <h3 className="text-3xl font-semibold mb-8 text-gray-800" style={{ fontFamily: 'Inter, sans-serif' }}>Primary Logo</h3>
             <div className="flex justify-center">
               <div className="bg-gray-50 rounded-lg p-8 shadow-sm">
@@ -407,12 +406,12 @@ export function BrandGuideRenderer({
           </div>
 
           {/* Logo Variations */}
-          <div className={`mb-12 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+          <div className={`mb-12 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
             <h3 className="text-3xl font-semibold mb-8 text-gray-800" style={{ fontFamily: 'Inter, sans-serif' }}>Logo Variations</h3>
             
             {/* Square Logos */}
             {guide.logos.square && guide.logos.square.length > 0 && (
-              <div className={`mb-10 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+              <div className={`mb-10 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                 <h4 className="text-2xl font-medium mb-6 text-gray-700" style={{ fontFamily: 'Inter, sans-serif' }}>Square</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-full">
                   {guide.logos.square.slice(0, 4).map((logo: any, index: number) => (
@@ -424,7 +423,7 @@ export function BrandGuideRenderer({
 
             {/* Rounded Logos */}
             {guide.logos.rounded && guide.logos.rounded.length > 0 && (
-              <div className={`mb-10 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+              <div className={`mb-10 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                 <h4 className="text-2xl font-medium mb-6 text-gray-700" style={{ fontFamily: 'Inter, sans-serif' }}>Rounded</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-full">
                   {guide.logos.rounded.slice(0, 4).map((logo: any, index: number) => (
@@ -436,7 +435,7 @@ export function BrandGuideRenderer({
 
             {/* Circle Logos */}
             {guide.logos.circle && guide.logos.circle.length > 0 && (
-              <div className={`mb-10 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+              <div className={`mb-10 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                 <h4 className="text-2xl font-medium mb-6 text-gray-700" style={{ fontFamily: 'Inter, sans-serif' }}>Circle</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-full">
                   {guide.logos.circle.slice(0, 4).map((logo: any, index: number) => (
