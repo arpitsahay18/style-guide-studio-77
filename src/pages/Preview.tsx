@@ -35,59 +35,150 @@ const Preview = () => {
   const [shareableLink, setShareableLink] = useState('');
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Helper function to convert Firebase Storage URL to base64
+  // Enhanced font loading with explicit font face creation
+  const loadFontsForPDF = async (guide: any): Promise<void> => {
+    const fontFamilies = new Set<string>();
+    
+    // Collect all unique font families from typography
+    Object.values(guide.typography.display || {}).forEach((style: any) => {
+      if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
+        const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+        fontFamilies.add(fontName);
+      }
+    });
+    
+    Object.values(guide.typography.heading || {}).forEach((style: any) => {
+      if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
+        const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+        fontFamilies.add(fontName);
+      }
+    });
+    
+    Object.values(guide.typography.body || {}).forEach((style: any) => {
+      if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
+        const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+        fontFamilies.add(fontName);
+      }
+    });
+
+    // Load fonts explicitly
+    const fontPromises = Array.from(fontFamilies).map(async (fontFamily) => {
+      return new Promise<void>((resolve) => {
+        const formattedFontFamily = fontFamily.replace(/\s+/g, '+');
+        
+        // Check if font link already exists
+        const existingLink = document.querySelector(`link[href*="${formattedFontFamily}"]`);
+        if (existingLink) {
+          resolve();
+          return;
+        }
+        
+        // Create and load font
+        const link = document.createElement('link');
+        link.href = `https://fonts.googleapis.com/css2?family=${formattedFontFamily}:wght@300;400;500;600;700&display=swap`;
+        link.rel = 'stylesheet';
+        
+        link.onload = () => {
+          // Wait for font to be actually available
+          setTimeout(() => resolve(), 500);
+        };
+        
+        link.onerror = () => {
+          console.warn(`Failed to load font: ${fontFamily}`);
+          resolve(); // Don't block PDF generation
+        };
+        
+        document.head.appendChild(link);
+        
+        // Fallback timeout
+        setTimeout(() => resolve(), 3000);
+      });
+    });
+    
+    await Promise.all(fontPromises);
+    
+    // Additional wait for font rendering
+    if ('fonts' in document) {
+      try {
+        await document.fonts.ready;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.warn('Font loading check failed:', error);
+      }
+    }
+  };
+
+  // Enhanced image conversion with better error handling
   const convertImageToBase64 = async (url: string): Promise<string> => {
     try {
-      const response = await fetch(url);
+      // Handle both Firebase URLs and regular URLs
+      const response = await fetch(url, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const blob = await response.blob();
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to convert image to base64'));
         reader.readAsDataURL(blob);
       });
     } catch (error) {
       console.error('Failed to convert image to base64:', error);
-      return url; // fallback to original URL
+      return url; // Return original URL as fallback
     }
   };
 
-  // Helper function to wait for all fonts to load
-  const waitForFontsToLoad = (): Promise<void> => {
-    return new Promise((resolve) => {
-      if ('fonts' in document) {
-        document.fonts.ready.then(() => {
-          // Add extra wait time for Google Fonts
-          setTimeout(resolve, 1500);
-        });
-      } else {
-        // Fallback for browsers without FontFaceSet API
-        setTimeout(resolve, 2500);
+  // Enhanced image loading with retry logic
+  const waitForImagesToLoad = async (container: HTMLElement): Promise<void> => {
+    const images = container.querySelectorAll('img');
+    const imagePromises = Array.from(images).map(async (img) => {
+      // Convert Firebase URLs to base64
+      if (img.src.startsWith('https://firebasestorage.googleapis.com')) {
+        try {
+          const base64 = await convertImageToBase64(img.src);
+          img.src = base64;
+        } catch (error) {
+          console.error('Failed to convert image:', error);
+        }
       }
-    });
-  };
-
-  // Helper function to wait for all images to load
-  const waitForImagesToLoad = (container: HTMLElement): Promise<void> => {
-    return new Promise((resolve) => {
-      const images = container.querySelectorAll('img');
-      const imagePromises = Array.from(images).map((img) => {
-        return new Promise((imgResolve) => {
-          if (img.complete && img.naturalHeight !== 0) {
-            imgResolve(true);
-          } else {
-            img.onload = () => imgResolve(true);
-            img.onerror = () => imgResolve(true);
-            // Timeout fallback
-            setTimeout(() => imgResolve(true), 5000);
-          }
-        });
-      });
       
-      Promise.all(imagePromises).then(() => {
-        // Add extra wait time for layout stabilization
-        setTimeout(resolve, 1000);
+      return new Promise<void>((resolve) => {
+        if (img.complete && img.naturalHeight !== 0) {
+          resolve();
+        } else {
+          const handleLoad = () => {
+            img.removeEventListener('load', handleLoad);
+            img.removeEventListener('error', handleError);
+            resolve();
+          };
+          
+          const handleError = () => {
+            img.removeEventListener('load', handleLoad);
+            img.removeEventListener('error', handleError);
+            console.warn('Image failed to load:', img.src);
+            resolve();
+          };
+          
+          img.addEventListener('load', handleLoad);
+          img.addEventListener('error', handleError);
+          
+          // Timeout fallback
+          setTimeout(() => {
+            img.removeEventListener('load', handleLoad);
+            img.removeEventListener('error', handleError);
+            resolve();
+          }, 5000);
+        }
       });
     });
+    
+    await Promise.all(imagePromises);
   };
 
   const loadSharedGuide = async () => {
@@ -165,9 +256,15 @@ const Preview = () => {
   const handleExportPDF = async () => {
     if (!contentRef.current) return;
 
-    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 15000);
+    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 20000);
 
     try {
+      const guide = sharedGuide || currentGuide;
+      
+      // Step 1: Load all fonts
+      await loadFontsForPDF(guide);
+      
+      // Step 2: Setup PDF
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -180,9 +277,7 @@ const Preview = () => {
       const contentWidth = pageWidth - (margin * 2);
       const contentHeight = pageHeight - (margin * 2);
       
-      const guide = sharedGuide || currentGuide;
-      
-      // Cover Page
+      // Step 3: Create cover page
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
       
@@ -208,98 +303,121 @@ const Preview = () => {
       pdf.setFontSize(12);
       pdf.setTextColor(255, 255, 255);
       pdf.text('Made with Brand Studio', pageWidth / 2, pillY + 8, { align: 'center' });
-      pdf.link(pillX, pillY, pillWidth, pillHeight, { url: 'https://www.google.com' });
 
-      // Enhanced content preparation for PDF
-      await waitForFontsToLoad();
-      await waitForImagesToLoad(contentRef.current);
-
-      // Convert Firebase Storage URLs to base64
-      const images = contentRef.current.querySelectorAll('img');
-      const imagePromises = Array.from(images).map(async (img) => {
-        if (img.src.startsWith('https://firebasestorage.googleapis.com')) {
-          try {
-            const base64 = await convertImageToBase64(img.src);
-            img.src = base64;
-          } catch (error) {
-            console.error('Failed to convert image to base64:', error);
-          }
-        }
-      });
-      
-      await Promise.all(imagePromises);
-
-      // Enhanced PDF styling with better layout constraints and page breaks
+      // Step 4: Prepare content for PDF with enhanced styling
       const styleElement = document.createElement('style');
       styleElement.textContent = `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
         .pdf-content {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
           max-width: 180mm !important;
           overflow-x: hidden !important;
+          background: white !important;
         }
+        
         .pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4 {
           font-weight: 700 !important;
+          page-break-after: avoid !important;
         }
-        .pdf-content p:not([style*="font-family"]), .pdf-content span:not([style*="font-family"]) {
+        
+        .pdf-content p:not([style*="font-family"]), 
+        .pdf-content span:not([style*="font-family"]) {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
           font-weight: 400 !important;
         }
+        
         .pdf-section {
-          page-break-inside: avoid;
-          break-inside: avoid;
-          margin-bottom: 30px;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          margin-bottom: 30px !important;
           max-width: 100% !important;
           overflow: hidden !important;
         }
+        
         .avoid-break {
-          page-break-inside: avoid;
-          break-inside: avoid;
-          -webkit-column-break-inside: avoid;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          -webkit-column-break-inside: avoid !important;
         }
-        .pdf-section:last-child {
-          margin-bottom: 0;
-        }
+        
         .grid {
           display: grid !important;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
           gap: 1rem !important;
           width: 100% !important;
           max-width: 100% !important;
         }
+        
         .grid > * {
           min-width: 0 !important;
           max-width: 100% !important;
         }
-        .break-all {
-          word-break: break-all !important;
-          overflow-wrap: break-word !important;
+        
+        /* Logo specific styles */
+        .logo-variations {
+          page-break-inside: avoid !important;
         }
-        .truncate {
-          overflow: hidden !important;
-          text-overflow: ellipsis !important;
-          white-space: nowrap !important;
+        
+        .logo-display {
+          page-break-inside: avoid !important;
+          display: inline-block !important;
+          width: 100% !important;
         }
-        .flex-wrap {
-          flex-wrap: wrap !important;
+        
+        /* Ensure images are properly sized */
+        img {
+          max-width: 100% !important;
+          height: auto !important;
         }
-        .min-w-[32px] {
-          min-width: 32px !important;
+        
+        /* Typography preview styles */
+        [style*="font-family"] {
+          font-family: inherit !important;
         }
       `;
+      
+      // Load fonts in the style element
+      const guide_fonts = new Set<string>();
+      Object.values(guide.typography.display || {}).forEach((style: any) => {
+        if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
+          const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+          guide_fonts.add(fontName);
+        }
+      });
+      Object.values(guide.typography.heading || {}).forEach((style: any) => {
+        if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
+          const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+          guide_fonts.add(fontName);
+        }
+      });
+      Object.values(guide.typography.body || {}).forEach((style: any) => {
+        if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
+          const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+          guide_fonts.add(fontName);
+        }
+      });
+      
+      // Add font imports to CSS
+      const fontImports = Array.from(guide_fonts).map(font => 
+        `@import url('https://fonts.googleapis.com/css2?family=${font.replace(/\s+/g, '+')}:wght@300;400;500;600;700&display=swap');`
+      ).join('\n');
+      
+      styleElement.textContent = fontImports + '\n' + styleElement.textContent;
       document.head.appendChild(styleElement);
       
       contentRef.current.classList.add('pdf-content');
 
-      // Extended wait for complete layout stabilization
+      // Step 5: Wait for content to stabilize
+      await waitForImagesToLoad(contentRef.current);
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Enhanced html2canvas settings for better PDF quality
+      // Step 6: Render with html2canvas
       const canvas = await html2canvas(contentRef.current, {
         scale: 2.5,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#f9fafb',
+        backgroundColor: 'white',
         height: contentRef.current.scrollHeight,
         width: contentRef.current.scrollWidth,
         logging: false,
@@ -310,38 +428,33 @@ const Preview = () => {
           clonedStyle.textContent = styleElement.textContent;
           clonedDoc.head.appendChild(clonedStyle);
           
-          // Ensure all images are loaded in cloned document
+          // Ensure all images are properly sized in cloned document
           const clonedImages = clonedDoc.querySelectorAll('img');
           clonedImages.forEach((img) => {
             img.style.maxWidth = '100%';
             img.style.height = 'auto';
+            img.style.objectFit = 'cover';
           });
         }
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      // Step 7: Add content to PDF with improved pagination
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      // Improved multi-page handling with better overlap calculation and content preservation
-      const totalPages = Math.ceil(imgHeight / contentHeight);
-      const pageOverlap = 8; // Slightly increased overlap for better content continuity
+      // Calculate pages more accurately
+      const effectivePageHeight = contentHeight - 5; // Small margin for safety
+      const totalPages = Math.ceil(imgHeight / effectivePageHeight);
       
       for (let pageNum = 0; pageNum < totalPages; pageNum++) {
         pdf.addPage();
         
-        // Calculate source position with improved logic to prevent content cutoff
-        const effectiveContentHeight = contentHeight - (pageNum > 0 ? pageOverlap : 0);
-        const sourceY = Math.max(0, (pageNum * (contentHeight - pageOverlap) * canvas.width) / contentWidth);
-        const maxSourceY = Math.max(0, canvas.height - ((contentHeight * canvas.width) / contentWidth));
-        const adjustedSourceY = Math.min(sourceY, maxSourceY);
+        const sourceY = pageNum * effectivePageHeight * (canvas.width / contentWidth);
+        const remainingHeight = canvas.height - sourceY;
+        const sourceHeight = Math.min(effectivePageHeight * (canvas.width / contentWidth), remainingHeight);
         
-        const sourceHeight = Math.min(
-          (contentHeight * canvas.width) / contentWidth,
-          canvas.height - adjustedSourceY
-        );
-        
-        if (sourceHeight > 100) { // Only render if there's meaningful content
+        if (sourceHeight > 50) { // Only add if there's meaningful content
           const tempCanvas = document.createElement('canvas');
           tempCanvas.width = canvas.width;
           tempCanvas.height = sourceHeight;
@@ -350,29 +463,29 @@ const Preview = () => {
           if (tempCtx) {
             tempCtx.drawImage(
               canvas,
-              0, adjustedSourceY, canvas.width, sourceHeight,
+              0, sourceY, canvas.width, sourceHeight,
               0, 0, canvas.width, sourceHeight
             );
             
-            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
+            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.98);
             const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
-            const yOffset = pageNum > 0 ? margin - (pageOverlap / 2) : margin;
             
-            pdf.addImage(pageImgData, 'JPEG', margin, yOffset, imgWidth, pageImgHeight);
+            pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
           }
         }
       }
 
-      // Clean up
+      // Step 8: Cleanup
       contentRef.current.classList.remove('pdf-content');
       document.head.removeChild(styleElement);
       dismissProgress();
 
+      // Step 9: Save PDF
       pdf.save(`${guide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
       
       toast({
         title: "PDF Generated Successfully",
-        description: "Your brand guide has been downloaded.",
+        description: "Your brand guide has been downloaded with all content included.",
       });
 
     } catch (error) {

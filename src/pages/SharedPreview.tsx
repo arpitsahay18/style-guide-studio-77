@@ -20,6 +20,79 @@ const SharedPreview = () => {
   const [error, setError] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Enhanced font loading specifically for shared guides
+  const loadFontsForSharedGuide = async (guide: any): Promise<void> => {
+    const fontFamilies = new Set<string>();
+    
+    // Collect all unique font families from typography
+    Object.values(guide.typography.display || {}).forEach((style: any) => {
+      if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
+        const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+        fontFamilies.add(fontName);
+      }
+    });
+    
+    Object.values(guide.typography.heading || {}).forEach((style: any) => {
+      if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
+        const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+        fontFamilies.add(fontName);
+      }
+    });
+    
+    Object.values(guide.typography.body || {}).forEach((style: any) => {
+      if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
+        const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+        fontFamilies.add(fontName);
+      }
+    });
+
+    // Load fonts with explicit DOM injection
+    const fontPromises = Array.from(fontFamilies).map(async (fontFamily) => {
+      return new Promise<void>((resolve) => {
+        const formattedFontFamily = fontFamily.replace(/\s+/g, '+');
+        
+        // Check if font link already exists
+        const existingLink = document.querySelector(`link[href*="${formattedFontFamily}"]`);
+        if (existingLink) {
+          resolve();
+          return;
+        }
+        
+        // Create and load font
+        const link = document.createElement('link');
+        link.href = `https://fonts.googleapis.com/css2?family=${formattedFontFamily}:wght@300;400;500;600;700&display=swap`;
+        link.rel = 'stylesheet';
+        
+        link.onload = () => {
+          console.log(`Loaded font for shared guide: ${fontFamily}`);
+          setTimeout(() => resolve(), 500);
+        };
+        
+        link.onerror = () => {
+          console.warn(`Failed to load font for shared guide: ${fontFamily}`);
+          resolve();
+        };
+        
+        document.head.appendChild(link);
+        
+        // Fallback timeout
+        setTimeout(() => resolve(), 3000);
+      });
+    });
+    
+    await Promise.all(fontPromises);
+    
+    // Wait for fonts to be ready
+    if ('fonts' in document) {
+      try {
+        await document.fonts.ready;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.warn('Font loading check failed:', error);
+      }
+    }
+  };
+
   // Helper function to convert Firebase Storage URL to base64
   const convertImageToBase64 = async (url: string): Promise<string> => {
     try {
@@ -116,7 +189,7 @@ const SharedPreview = () => {
       }
       
       console.log('Setting shared guide data:', brandGuideData);
-      setSharedGuide({
+      const guideData = {
         guide: brandGuideData,
         colorNames: linkData.colorNames || {},
         typographyNames: linkData.typographyNames || {},
@@ -126,7 +199,12 @@ const SharedPreview = () => {
           body: ['large', 'medium', 'small']
         },
         previewText: linkData.previewText || 'The quick brown fox jumps over the lazy dog'
-      });
+      };
+      
+      setSharedGuide(guideData);
+      
+      // Load fonts after setting the guide data
+      await loadFontsForSharedGuide(brandGuideData);
       
     } catch (error) {
       console.error('Error loading shared guide:', error);
@@ -148,9 +226,12 @@ const SharedPreview = () => {
   const handleExportPDF = async () => {
     if (!contentRef.current || !sharedGuide) return;
 
-    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 15000);
+    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 20000);
 
     try {
+      // Ensure fonts are loaded
+      await loadFontsForSharedGuide(sharedGuide.guide);
+      
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -210,9 +291,37 @@ const SharedPreview = () => {
       
       await Promise.all(imagePromises);
 
-      // Enhanced PDF styling with better layout constraints and page breaks
+      // Enhanced PDF styling with font loading
       const styleElement = document.createElement('style');
+      
+      // Collect fonts from the guide
+      const guide_fonts = new Set<string>();
+      Object.values(sharedGuide.guide.typography.display || {}).forEach((style: any) => {
+        if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
+          const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+          guide_fonts.add(fontName);
+        }
+      });
+      Object.values(sharedGuide.guide.typography.heading || {}).forEach((style: any) => {
+        if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
+          const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+          guide_fonts.add(fontName);
+        }
+      });
+      Object.values(sharedGuide.guide.typography.body || {}).forEach((style: any) => {
+        if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
+          const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+          guide_fonts.add(fontName);
+        }
+      });
+      
+      // Generate font imports
+      const fontImports = Array.from(guide_fonts).map(font => 
+        `@import url('https://fonts.googleapis.com/css2?family=${font.replace(/\s+/g, '+')}:wght@300;400;500;600;700&display=swap');`
+      ).join('\n');
+      
       styleElement.textContent = `
+        ${fontImports}
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         .pdf-content {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -304,25 +413,18 @@ const SharedPreview = () => {
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      // Improved multi-page handling with better overlap calculation and content preservation
-      const totalPages = Math.ceil(imgHeight / contentHeight);
-      const pageOverlap = 8; // Slightly increased overlap for better content continuity
+      // Improved multi-page handling
+      const effectivePageHeight = contentHeight - 5;
+      const totalPages = Math.ceil(imgHeight / effectivePageHeight);
       
       for (let pageNum = 0; pageNum < totalPages; pageNum++) {
         pdf.addPage();
         
-        // Calculate source position with improved logic to prevent content cutoff
-        const effectiveContentHeight = contentHeight - (pageNum > 0 ? pageOverlap : 0);
-        const sourceY = Math.max(0, (pageNum * (contentHeight - pageOverlap) * canvas.width) / contentWidth);
-        const maxSourceY = Math.max(0, canvas.height - ((contentHeight * canvas.width) / contentWidth));
-        const adjustedSourceY = Math.min(sourceY, maxSourceY);
+        const sourceY = pageNum * effectivePageHeight * (canvas.width / contentWidth);
+        const remainingHeight = canvas.height - sourceY;
+        const sourceHeight = Math.min(effectivePageHeight * (canvas.width / contentWidth), remainingHeight);
         
-        const sourceHeight = Math.min(
-          (contentHeight * canvas.width) / contentWidth,
-          canvas.height - adjustedSourceY
-        );
-        
-        if (sourceHeight > 100) { // Only render if there's meaningful content
+        if (sourceHeight > 50) {
           const tempCanvas = document.createElement('canvas');
           tempCanvas.width = canvas.width;
           tempCanvas.height = sourceHeight;
@@ -331,15 +433,14 @@ const SharedPreview = () => {
           if (tempCtx) {
             tempCtx.drawImage(
               canvas,
-              0, adjustedSourceY, canvas.width, sourceHeight,
+              0, sourceY, canvas.width, sourceHeight,
               0, 0, canvas.width, sourceHeight
             );
             
             const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
             const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
-            const yOffset = pageNum > 0 ? margin - (pageOverlap / 2) : margin;
             
-            pdf.addImage(pageImgData, 'JPEG', margin, yOffset, imgWidth, pageImgHeight);
+            pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
           }
         }
       }
