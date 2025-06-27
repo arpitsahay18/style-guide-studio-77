@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
@@ -14,6 +13,7 @@ import { useShareableLinks } from '@/hooks/useShareableLinks';
 import { useAuth } from '@/hooks/useAuth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { showProgressToast } from '@/components/ui/progress-toast';
 
 const Preview = () => {
   const { guideId } = useParams();
@@ -64,11 +64,12 @@ const Preview = () => {
     return new Promise((resolve) => {
       if ('fonts' in document) {
         document.fonts.ready.then(() => {
-          resolve();
+          // Add extra wait time for Google Fonts
+          setTimeout(resolve, 1000);
         });
       } else {
         // Fallback for browsers without FontFaceSet API
-        setTimeout(resolve, 1000);
+        setTimeout(resolve, 2000);
       }
     });
   };
@@ -79,16 +80,21 @@ const Preview = () => {
       const images = container.querySelectorAll('img');
       const imagePromises = Array.from(images).map((img) => {
         return new Promise((imgResolve) => {
-          if (img.complete) {
+          if (img.complete && img.naturalHeight !== 0) {
             imgResolve(true);
           } else {
             img.onload = () => imgResolve(true);
-            img.onerror = () => imgResolve(true); // Resolve even on error to prevent hanging
+            img.onerror = () => imgResolve(true);
+            // Timeout fallback
+            setTimeout(() => imgResolve(true), 3000);
           }
         });
       });
       
-      Promise.all(imagePromises).then(() => resolve());
+      Promise.all(imagePromises).then(() => {
+        // Add extra wait time for layout stabilization
+        setTimeout(resolve, 500);
+      });
     });
   };
 
@@ -167,12 +173,9 @@ const Preview = () => {
   const handleExportPDF = async () => {
     if (!contentRef.current) return;
 
-    try {
-      toast({
-        title: "Preparing your PDF...",
-        description: "Converting your brand guide to PDF format. This may take a moment.",
-      });
+    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 8000);
 
+    try {
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -187,11 +190,10 @@ const Preview = () => {
       
       const guide = sharedGuide || currentGuide;
       
-      // Cover Page with Inter font and clean layout
+      // Cover Page
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
       
-      // Set Inter font for cover page
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(42);
       pdf.setTextColor(0, 0, 0);
@@ -202,28 +204,25 @@ const Preview = () => {
       pdf.setTextColor(100, 100, 100);
       pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 8, { align: 'center' });
 
-      // "Made with Brand Studio" pill
       const pillWidth = 60;
       const pillHeight = 12;
       const pillX = (pageWidth - pillWidth) / 2;
       const pillY = pageHeight / 2 + 30;
       
-      pdf.setFillColor(59, 130, 246); // Blue background
+      pdf.setFillColor(59, 130, 246);
       pdf.roundedRect(pillX, pillY, pillWidth, pillHeight, 6, 6, 'F');
       
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(12);
       pdf.setTextColor(255, 255, 255);
       pdf.text('Made with Brand Studio', pageWidth / 2, pillY + 8, { align: 'center' });
-      
-      // Add hyperlink to the pill
       pdf.link(pillX, pillY, pillWidth, pillHeight, { url: 'https://www.google.com' });
 
-      // Wait for all fonts and images to load before capturing
+      // Wait for all content to load
       await waitForFontsToLoad();
       await waitForImagesToLoad(contentRef.current);
 
-      // Convert Firebase Storage URLs to base64 before capturing
+      // Convert Firebase Storage URLs to base64
       const images = contentRef.current.querySelectorAll('img');
       const imagePromises = Array.from(images).map(async (img) => {
         if (img.src.startsWith('https://firebasestorage.googleapis.com')) {
@@ -238,7 +237,7 @@ const Preview = () => {
       
       await Promise.all(imagePromises);
 
-      // Add Inter font styles to content for better PDF rendering
+      // Add Inter font styles
       const styleElement = document.createElement('style');
       styleElement.textContent = `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -252,28 +251,33 @@ const Preview = () => {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
           font-weight: 400 !important;
         }
+        .pdf-section {
+          page-break-inside: avoid;
+          margin-bottom: 30px;
+        }
+        .pdf-section:last-child {
+          margin-bottom: 0;
+        }
       `;
       document.head.appendChild(styleElement);
       
-      // Add class to content for PDF styling
       contentRef.current.classList.add('pdf-content');
 
-      // Wait a bit more for fonts to fully apply
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Extra wait for fonts and layout
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Capture the entire content with higher resolution and better settings
+      // Capture with improved settings
       const canvas = await html2canvas(contentRef.current, {
-        scale: 2, // Higher resolution
+        scale: 3,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#f9fafb',
         height: contentRef.current.scrollHeight,
         width: contentRef.current.scrollWidth,
         logging: false,
-        windowWidth: 1200,
+        windowWidth: 1400,
         windowHeight: contentRef.current.scrollHeight,
         onclone: (clonedDoc) => {
-          // Ensure Inter font is loaded in cloned document
           const clonedStyle = clonedDoc.createElement('style');
           clonedStyle.textContent = styleElement.textContent;
           clonedDoc.head.appendChild(clonedStyle);
@@ -284,17 +288,20 @@ const Preview = () => {
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      // Calculate how many pages we need
+      // Improved multi-page handling
       const totalPages = Math.ceil(imgHeight / contentHeight);
+      const pageOverlap = 10; // mm overlap to prevent content cutoff
       
-      // Split content across multiple pages with better handling
       for (let pageNum = 0; pageNum < totalPages; pageNum++) {
         pdf.addPage();
         
-        const sourceY = (pageNum * contentHeight * canvas.width) / contentWidth;
+        const sourceY = Math.max(0, (pageNum * (contentHeight - pageOverlap) * canvas.width) / contentWidth);
+        const maxSourceY = canvas.height - ((contentHeight * canvas.width) / contentWidth);
+        const adjustedSourceY = Math.min(sourceY, maxSourceY);
+        
         const sourceHeight = Math.min(
           (contentHeight * canvas.width) / contentWidth,
-          canvas.height - sourceY
+          canvas.height - adjustedSourceY
         );
         
         if (sourceHeight > 0) {
@@ -306,7 +313,7 @@ const Preview = () => {
           if (tempCtx) {
             tempCtx.drawImage(
               canvas,
-              0, sourceY, canvas.width, sourceHeight,
+              0, adjustedSourceY, canvas.width, sourceHeight,
               0, 0, canvas.width, sourceHeight
             );
             
@@ -321,6 +328,7 @@ const Preview = () => {
       // Clean up
       contentRef.current.classList.remove('pdf-content');
       document.head.removeChild(styleElement);
+      dismissProgress();
 
       pdf.save(`${guide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
       
@@ -331,6 +339,7 @@ const Preview = () => {
 
     } catch (error) {
       console.error('Error generating PDF:', error);
+      dismissProgress();
       toast({
         variant: "destructive",
         title: "Error Generating PDF",

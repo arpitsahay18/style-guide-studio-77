@@ -69,7 +69,7 @@ export function ShareableLinkModal({ open, onOpenChange, link }: ShareableLinkMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-full max-w-[90vw] sm:max-w-md mx-auto">
         <DialogHeader>
           <DialogTitle>Your shareable link is ready!</DialogTitle>
           <DialogDescription>
@@ -79,12 +79,14 @@ export function ShareableLinkModal({ open, onOpenChange, link }: ShareableLinkMo
         <div className="flex flex-col gap-4">
           <div className="flex items-center space-x-2">
             <div className="grid flex-1 gap-2">
-              <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background">
-                <span className="truncate text-muted-foreground">{link}</span>
+              <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background overflow-hidden">
+                <span className="truncate text-muted-foreground text-xs sm:text-sm whitespace-nowrap overflow-x-auto">
+                  {link}
+                </span>
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button 
               onClick={handleCopyLink}
               className="flex-1"

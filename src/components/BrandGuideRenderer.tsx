@@ -43,22 +43,33 @@ export function BrandGuideRenderer({
 
   // Logo component with proper shape cropping and background colors
   const LogoDisplay = ({ logo, shape, index }: { logo: any; shape: 'square' | 'rounded' | 'circle'; index: number }) => {
-    const getContainerClass = () => {
-      const baseClass = "w-24 h-24 flex items-center justify-center mb-3 mx-auto shadow-sm";
-      switch (shape) {
-        case 'square':
-          return `${baseClass} overflow-hidden`;
-        case 'rounded':
-          return `${baseClass} rounded-lg overflow-hidden`;
-        case 'circle':
-          return `${baseClass} rounded-full overflow-hidden`;
+    const getBackgroundColor = () => {
+      switch (logo.background) {
+        case '#FFFFFF':
+        case '#ffffff':
+          return 'bg-white border-2 border-gray-200';
+        case '#000000':
+        case '#000':
+          return 'bg-black';
+        case '#3E3BFF':
+          return 'bg-blue-600';
         default:
-          return `${baseClass} overflow-hidden`;
+          return 'bg-gray-100';
       }
     };
 
-    const getImageClass = () => {
-      return "w-full h-full object-cover";
+    const getImageContainerClass = () => {
+      const baseClass = "w-24 h-24 overflow-hidden";
+      switch (shape) {
+        case 'square':
+          return `${baseClass}`;
+        case 'rounded':
+          return `${baseClass} rounded-lg`;
+        case 'circle':
+          return `${baseClass} rounded-full`;
+        default:
+          return `${baseClass}`;
+      }
     };
 
     const getTypeLabel = () => {
@@ -67,28 +78,25 @@ export function BrandGuideRenderer({
     };
 
     const getBackgroundLabel = () => {
-      return logo.background === '#FFFFFF' ? ' White' : 
-             logo.background === '#000000' ? ' Black' : ' Color';
+      return logo.background === '#FFFFFF' || logo.background === '#ffffff' ? 'White' : 
+             logo.background === '#000000' || logo.background === '#000' ? 'Black' : 
+             logo.background === '#3E3BFF' ? 'Blue' : 'Gray';
     };
-
-    // Add border for white backgrounds to make them visible
-    const needsBorder = logo.background === '#FFFFFF' || logo.background === '#ffffff';
 
     return (
       <div className={`text-center bg-gray-50 rounded-lg p-4 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
-        <div 
-          className={`${getContainerClass()} ${needsBorder ? 'border-2 border-gray-200' : ''}`}
-          style={{ backgroundColor: logo.background }}
-        >
-          <img 
-            src={logo.src} 
-            alt={`${shape} logo ${index + 1}`}
-            className={getImageClass()}
-            onError={handleImageError}
-          />
+        <div className={`flex items-center justify-center p-4 rounded-lg shadow-sm mb-3 mx-auto ${getBackgroundColor()}`}>
+          <div className={getImageContainerClass()}>
+            <img 
+              src={logo.src} 
+              alt={`${shape} logo ${index + 1}`}
+              className="w-full h-full object-cover"
+              onError={handleImageError}
+            />
+          </div>
         </div>
         <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>
-          {getTypeLabel()} on{getBackgroundLabel()} Background
+          {getTypeLabel()} on {getBackgroundLabel()} Background
         </p>
       </div>
     );
