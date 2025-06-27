@@ -173,7 +173,7 @@ const Preview = () => {
   const handleExportPDF = async () => {
     if (!contentRef.current) return;
 
-    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 8000);
+    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 12000);
 
     try {
       const pdf = new jsPDF({
@@ -218,7 +218,7 @@ const Preview = () => {
       pdf.text('Made with Brand Studio', pageWidth / 2, pillY + 8, { align: 'center' });
       pdf.link(pillX, pillY, pillWidth, pillHeight, { url: 'https://www.google.com' });
 
-      // Wait for all content to load
+      // Enhanced content preparation for PDF
       await waitForFontsToLoad();
       await waitForImagesToLoad(contentRef.current);
 
@@ -237,12 +237,14 @@ const Preview = () => {
       
       await Promise.all(imagePromises);
 
-      // Add Inter font styles
+      // Enhanced PDF styling with better layout constraints
       const styleElement = document.createElement('style');
       styleElement.textContent = `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         .pdf-content {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+          max-width: 180mm !important;
+          overflow-x: hidden !important;
         }
         .pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4 {
           font-weight: 700 !important;
@@ -254,49 +256,86 @@ const Preview = () => {
         .pdf-section {
           page-break-inside: avoid;
           margin-bottom: 30px;
+          max-width: 100% !important;
+          overflow: hidden !important;
         }
         .pdf-section:last-child {
           margin-bottom: 0;
+        }
+        .grid {
+          display: grid !important;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+          gap: 1rem !important;
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+        .grid > * {
+          min-width: 0 !important;
+          max-width: 100% !important;
+        }
+        .break-all {
+          word-break: break-all !important;
+          overflow-wrap: break-word !important;
+        }
+        .truncate {
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+        }
+        .flex-wrap {
+          flex-wrap: wrap !important;
+        }
+        .min-w-[32px] {
+          min-width: 32px !important;
         }
       `;
       document.head.appendChild(styleElement);
       
       contentRef.current.classList.add('pdf-content');
 
-      // Extra wait for fonts and layout
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Extended wait for complete layout stabilization
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Capture with improved settings
+      // Enhanced html2canvas settings for better PDF quality
       const canvas = await html2canvas(contentRef.current, {
-        scale: 3,
+        scale: 2.5,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#f9fafb',
         height: contentRef.current.scrollHeight,
         width: contentRef.current.scrollWidth,
         logging: false,
-        windowWidth: 1400,
+        windowWidth: 1200,
         windowHeight: contentRef.current.scrollHeight,
         onclone: (clonedDoc) => {
           const clonedStyle = clonedDoc.createElement('style');
           clonedStyle.textContent = styleElement.textContent;
           clonedDoc.head.appendChild(clonedStyle);
+          
+          // Ensure all images are loaded in cloned document
+          const clonedImages = clonedDoc.querySelectorAll('img');
+          clonedImages.forEach((img) => {
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+          });
         }
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      // Improved multi-page handling
+      // Improved multi-page handling with better overlap calculation
       const totalPages = Math.ceil(imgHeight / contentHeight);
-      const pageOverlap = 10; // mm overlap to prevent content cutoff
+      const pageOverlap = 5; // Reduced overlap for better content flow
       
       for (let pageNum = 0; pageNum < totalPages; pageNum++) {
         pdf.addPage();
         
-        const sourceY = Math.max(0, (pageNum * (contentHeight - pageOverlap) * canvas.width) / contentWidth);
-        const maxSourceY = canvas.height - ((contentHeight * canvas.width) / contentWidth);
+        // Calculate source position with improved logic
+        const effectiveContentHeight = contentHeight - (pageNum > 0 ? pageOverlap : 0);
+        const sourceY = Math.max(0, (pageNum * effectiveContentHeight * canvas.width) / contentWidth);
+        const maxSourceY = Math.max(0, canvas.height - ((contentHeight * canvas.width) / contentWidth));
         const adjustedSourceY = Math.min(sourceY, maxSourceY);
         
         const sourceHeight = Math.min(
@@ -304,7 +343,7 @@ const Preview = () => {
           canvas.height - adjustedSourceY
         );
         
-        if (sourceHeight > 0) {
+        if (sourceHeight > 50) { // Only render if there's meaningful content
           const tempCanvas = document.createElement('canvas');
           tempCanvas.width = canvas.width;
           tempCanvas.height = sourceHeight;
@@ -317,7 +356,7 @@ const Preview = () => {
               0, 0, canvas.width, sourceHeight
             );
             
-            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
+            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.92);
             const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
             
             pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);

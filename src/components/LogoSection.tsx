@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { LogoVariation, LogoSet } from '@/types';
@@ -52,32 +51,20 @@ function LogoVariationCreator({ originalLogo, onComplete }: LogoVariationCreator
   const generateVariations = () => {
     const variations: LogoVariation[] = [];
     
-    // Color version on white background
-    variations.push({
-      src: originalLogo,
-      background: '#FFFFFF',
-      type: 'color'
-    });
+    // Updated background colors to match BrandGuideRenderer
+    const backgroundColors = [
+      '#FFFFFF', // White
+      '#000000', // Black  
+      '#3E3BFF', // Brand Blue
+      '#FFEAEA'  // Light Pink
+    ];
     
-    // Color version on black background
-    variations.push({
-      src: originalLogo,
-      background: '#000000',
-      type: 'color'
-    });
-    
-    // Color version on brand color background
-    variations.push({
-      src: originalLogo,
-      background: '#0062FF',
-      type: 'color'
-    });
-    
-    // Color version on gray background
-    variations.push({
-      src: originalLogo,
-      background: '#F5F5F5',
-      type: 'color'
+    backgroundColors.forEach(backgroundColor => {
+      variations.push({
+        src: originalLogo,
+        background: backgroundColor,
+        type: 'color'
+      });
     });
     
     onComplete(variations);

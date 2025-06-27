@@ -41,52 +41,34 @@ export function BrandGuideRenderer({
     (e.target as HTMLImageElement).style.display = 'none';
   };
 
-  // Logo component with proper shape cropping and background colors
+  // Unified logo display component with consistent background colors
   const LogoDisplay = ({ logo, shape, index }: { logo: any; shape: 'square' | 'rounded' | 'circle'; index: number }) => {
-    const getBackgroundColor = () => {
-      switch (logo.background) {
-        case '#FFFFFF':
-        case '#ffffff':
-          return 'bg-white border-2 border-gray-200';
-        case '#000000':
-        case '#000':
-          return 'bg-black';
-        case '#3E3BFF':
-          return 'bg-blue-600';
-        default:
-          return 'bg-gray-100';
-      }
-    };
+    const backgroundColors = [
+      { color: '#FFFFFF', bgClass: 'bg-white', borderClass: 'border-2 border-gray-200', label: 'White' },
+      { color: '#000000', bgClass: 'bg-black', borderClass: '', label: 'Black' },
+      { color: '#3E3BFF', bgClass: 'bg-blue-600', borderClass: '', label: 'Blue' },
+      { color: '#FFEAEA', bgClass: 'bg-pink-100', borderClass: '', label: 'Light Pink' }
+    ];
 
-    const getImageContainerClass = () => {
-      const baseClass = "w-24 h-24 overflow-hidden";
+    const backgroundConfig = backgroundColors[index % backgroundColors.length];
+
+    const getShapeClasses = () => {
       switch (shape) {
         case 'square':
-          return `${baseClass}`;
+          return 'rounded-none';
         case 'rounded':
-          return `${baseClass} rounded-lg`;
+          return 'rounded-lg';
         case 'circle':
-          return `${baseClass} rounded-full`;
+          return 'rounded-full';
         default:
-          return `${baseClass}`;
+          return 'rounded-none';
       }
-    };
-
-    const getTypeLabel = () => {
-      return logo.type === 'color' ? 'Full Color' : 
-             logo.type === 'white' ? 'White' : 'Black';
-    };
-
-    const getBackgroundLabel = () => {
-      return logo.background === '#FFFFFF' || logo.background === '#ffffff' ? 'White' : 
-             logo.background === '#000000' || logo.background === '#000' ? 'Black' : 
-             logo.background === '#3E3BFF' ? 'Blue' : 'Gray';
     };
 
     return (
       <div className={`text-center bg-gray-50 rounded-lg p-4 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
-        <div className={`flex items-center justify-center p-4 rounded-lg shadow-sm mb-3 mx-auto ${getBackgroundColor()}`}>
-          <div className={getImageContainerClass()}>
+        <div className={`flex items-center justify-center p-4 rounded-lg shadow-sm mb-3 mx-auto ${backgroundConfig.bgClass} ${backgroundConfig.borderClass}`}>
+          <div className={`w-24 h-24 overflow-hidden ${getShapeClasses()}`}>
             <img 
               src={logo.src} 
               alt={`${shape} logo ${index + 1}`}
@@ -96,7 +78,7 @@ export function BrandGuideRenderer({
           </div>
         </div>
         <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>
-          {getTypeLabel()} on {getBackgroundLabel()} Background
+          Full Color on {backgroundConfig.label} Background
         </p>
       </div>
     );
@@ -225,31 +207,31 @@ export function BrandGuideRenderer({
         {guide.colors.primary && guide.colors.primary.length > 0 && (
           <div className={`mb-12 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
             <h3 className="text-3xl font-semibold mb-8 text-gray-800" style={{ fontFamily: 'Inter, sans-serif' }}>Primary Colors</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full">
               {guide.colors.primary.map((color: any, index: number) => {
                 const colorName = colorNames[`primary-${index}`] || color.hex;
                 return (
-                  <div key={index} className={`bg-gray-50 rounded-lg p-6 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+                  <div key={index} className={`bg-gray-50 rounded-lg p-6 min-w-0 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                     <div 
                       className="w-full h-24 rounded-lg border shadow-sm mb-4"
                       style={{ backgroundColor: color.hex }}
                     />
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-lg text-gray-900" style={{ fontFamily: 'Inter, sans-serif' }}>{colorName}</h4>
-                      <p className="text-sm text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>HEX: {color.hex}</p>
-                      <p className="text-sm text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>RGB: {color.rgb}</p>
-                      <p className="text-sm text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>CMYK: {color.cmyk}</p>
+                      <h4 className="font-semibold text-lg text-gray-900 truncate" style={{ fontFamily: 'Inter, sans-serif' }}>{colorName}</h4>
+                      <p className="text-sm text-gray-600 break-all" style={{ fontFamily: 'Inter, sans-serif' }}>HEX: {color.hex}</p>
+                      <p className="text-sm text-gray-600 break-all" style={{ fontFamily: 'Inter, sans-serif' }}>RGB: {color.rgb}</p>
+                      <p className="text-sm text-gray-600 break-all" style={{ fontFamily: 'Inter, sans-serif' }}>CMYK: {color.cmyk}</p>
                     </div>
                     
                     {/* Tints */}
                     {color.tints && color.tints.length > 0 && (
                       <div className="mt-4">
                         <p className="text-xs font-medium text-gray-500 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>Tints</p>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           {color.tints.slice(0, 5).map((tint: string, tintIndex: number) => (
                             <div 
                               key={tintIndex}
-                              className="w-8 h-8 rounded border"
+                              className="w-8 h-8 rounded border min-w-[32px]"
                               style={{ backgroundColor: tint }}
                               title={tint}
                             />
@@ -262,11 +244,11 @@ export function BrandGuideRenderer({
                     {color.shades && color.shades.length > 0 && (
                       <div className="mt-2">
                         <p className="text-xs font-medium text-gray-500 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>Shades</p>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           {color.shades.slice(0, 5).map((shade: string, shadeIndex: number) => (
                             <div 
                               key={shadeIndex}
-                              className="w-8 h-8 rounded border"
+                              className="w-8 h-8 rounded border min-w-[32px]"
                               style={{ backgroundColor: shade }}
                               title={shade}
                             />
@@ -285,31 +267,31 @@ export function BrandGuideRenderer({
         {guide.colors.secondary && guide.colors.secondary.length > 0 && (
           <div className={`mb-12 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
             <h3 className="text-3xl font-semibold mb-8 text-gray-800" style={{ fontFamily: 'Inter, sans-serif' }}>Secondary Colors</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full">
               {guide.colors.secondary.map((color: any, index: number) => {
                 const colorName = colorNames[`secondary-${index}`] || color.hex;
                 return (
-                  <div key={index} className={`bg-gray-50 rounded-lg p-6 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+                  <div key={index} className={`bg-gray-50 rounded-lg p-6 min-w-0 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                     <div 
                       className="w-full h-24 rounded-lg border shadow-sm mb-4"
                       style={{ backgroundColor: color.hex }}
                     />
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-lg text-gray-900" style={{ fontFamily: 'Inter, sans-serif' }}>{colorName}</h4>
-                      <p className="text-sm text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>HEX: {color.hex}</p>
-                      <p className="text-sm text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>RGB: {color.rgb}</p>
-                      <p className="text-sm text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>CMYK: {color.cmyk}</p>
+                      <h4 className="font-semibold text-lg text-gray-900 truncate" style={{ fontFamily: 'Inter, sans-serif' }}>{colorName}</h4>
+                      <p className="text-sm text-gray-600 break-all" style={{ fontFamily: 'Inter, sans-serif' }}>HEX: {color.hex}</p>
+                      <p className="text-sm text-gray-600 break-all" style={{ fontFamily: 'Inter, sans-serif' }}>RGB: {color.rgb}</p>
+                      <p className="text-sm text-gray-600 break-all" style={{ fontFamily: 'Inter, sans-serif' }}>CMYK: {color.cmyk}</p>
                     </div>
                     
                     {/* Tints */}
                     {color.tints && color.tints.length > 0 && (
                       <div className="mt-4">
                         <p className="text-xs font-medium text-gray-500 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>Tints</p>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           {color.tints.slice(0, 5).map((tint: string, tintIndex: number) => (
                             <div 
                               key={tintIndex}
-                              className="w-8 h-8 rounded border"
+                              className="w-8 h-8 rounded border min-w-[32px]"
                               style={{ backgroundColor: tint }}
                               title={tint}
                             />
@@ -322,11 +304,11 @@ export function BrandGuideRenderer({
                     {color.shades && color.shades.length > 0 && (
                       <div className="mt-2">
                         <p className="text-xs font-medium text-gray-500 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>Shades</p>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           {color.shades.slice(0, 5).map((shade: string, shadeIndex: number) => (
                             <div 
                               key={shadeIndex}
-                              className="w-8 h-8 rounded border"
+                              className="w-8 h-8 rounded border min-w-[32px]"
                               style={{ backgroundColor: shade }}
                               title={shade}
                             />
@@ -345,31 +327,31 @@ export function BrandGuideRenderer({
         {guide.colors.neutral && guide.colors.neutral.length > 0 && (
           <div className={`mb-12 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
             <h3 className="text-3xl font-semibold mb-8 text-gray-800" style={{ fontFamily: 'Inter, sans-serif' }}>Neutral Colors</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full">
               {guide.colors.neutral.map((color: any, index: number) => {
                 const colorName = colorNames[`neutral-${index}`] || color.hex;
                 return (
-                  <div key={index} className={`bg-gray-50 rounded-lg p-6 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
+                  <div key={index} className={`bg-gray-50 rounded-lg p-6 min-w-0 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                     <div 
                       className="w-full h-24 rounded-lg border shadow-sm mb-4"
                       style={{ backgroundColor: color.hex }}
                     />
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-lg text-gray-900" style={{ fontFamily: 'Inter, sans-serif' }}>{colorName}</h4>
-                      <p className="text-sm text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>HEX: {color.hex}</p>
-                      <p className="text-sm text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>RGB: {color.rgb}</p>
-                      <p className="text-sm text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>CMYK: {color.cmyk}</p>
+                      <h4 className="font-semibold text-lg text-gray-900 truncate" style={{ fontFamily: 'Inter, sans-serif' }}>{colorName}</h4>
+                      <p className="text-sm text-gray-600 break-all" style={{ fontFamily: 'Inter, sans-serif' }}>HEX: {color.hex}</p>
+                      <p className="text-sm text-gray-600 break-all" style={{ fontFamily: 'Inter, sans-serif' }}>RGB: {color.rgb}</p>
+                      <p className="text-sm text-gray-600 break-all" style={{ fontFamily: 'Inter, sans-serif' }}>CMYK: {color.cmyk}</p>
                     </div>
                     
                     {/* Tints */}
                     {color.tints && color.tints.length > 0 && (
                       <div className="mt-4">
                         <p className="text-xs font-medium text-gray-500 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>Tints</p>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           {color.tints.slice(0, 5).map((tint: string, tintIndex: number) => (
                             <div 
                               key={tintIndex}
-                              className="w-8 h-8 rounded border"
+                              className="w-8 h-8 rounded border min-w-[32px]"
                               style={{ backgroundColor: tint }}
                               title={tint}
                             />
@@ -382,11 +364,11 @@ export function BrandGuideRenderer({
                     {color.shades && color.shades.length > 0 && (
                       <div className="mt-2">
                         <p className="text-xs font-medium text-gray-500 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>Shades</p>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           {color.shades.slice(0, 5).map((shade: string, shadeIndex: number) => (
                             <div 
                               key={shadeIndex}
-                              className="w-8 h-8 rounded border"
+                              className="w-8 h-8 rounded border min-w-[32px]"
                               style={{ backgroundColor: shade }}
                               title={shade}
                             />
@@ -412,7 +394,7 @@ export function BrandGuideRenderer({
             <h3 className="text-3xl font-semibold mb-8 text-gray-800" style={{ fontFamily: 'Inter, sans-serif' }}>Primary Logo</h3>
             <div className="flex justify-center">
               <div className="bg-gray-50 rounded-lg p-8 shadow-sm">
-                <div className="flex items-center justify-center w-64 h-64 bg-white border-2 border-gray-200 rounded-lg shadow-sm">
+                <div className="flex items-center justify-center w-64 h-64 bg-white border-2 border-gray-200 rounded-lg shadow-sm overflow-hidden">
                   <img 
                     src={guide.logos.original} 
                     alt="Primary Logo" 
@@ -432,7 +414,7 @@ export function BrandGuideRenderer({
             {guide.logos.square && guide.logos.square.length > 0 && (
               <div className={`mb-10 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                 <h4 className="text-2xl font-medium mb-6 text-gray-700" style={{ fontFamily: 'Inter, sans-serif' }}>Square</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-full">
                   {guide.logos.square.slice(0, 4).map((logo: any, index: number) => (
                     <LogoDisplay key={index} logo={logo} shape="square" index={index} />
                   ))}
@@ -444,7 +426,7 @@ export function BrandGuideRenderer({
             {guide.logos.rounded && guide.logos.rounded.length > 0 && (
               <div className={`mb-10 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                 <h4 className="text-2xl font-medium mb-6 text-gray-700" style={{ fontFamily: 'Inter, sans-serif' }}>Rounded</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-full">
                   {guide.logos.rounded.slice(0, 4).map((logo: any, index: number) => (
                     <LogoDisplay key={index} logo={logo} shape="rounded" index={index} />
                   ))}
@@ -456,7 +438,7 @@ export function BrandGuideRenderer({
             {guide.logos.circle && guide.logos.circle.length > 0 && (
               <div className={`mb-10 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
                 <h4 className="text-2xl font-medium mb-6 text-gray-700" style={{ fontFamily: 'Inter, sans-serif' }}>Circle</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-full">
                   {guide.logos.circle.slice(0, 4).map((logo: any, index: number) => (
                     <LogoDisplay key={index} logo={logo} shape="circle" index={index} />
                   ))}
