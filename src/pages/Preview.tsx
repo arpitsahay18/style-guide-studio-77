@@ -261,14 +261,17 @@ const Preview = () => {
       // Wait a bit more for fonts to fully apply
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Capture the entire content with high resolution
+      // Capture the entire content with higher resolution and better settings
       const canvas = await html2canvas(contentRef.current, {
-        scale: 3, // Higher resolution for better quality
+        scale: 2, // Higher resolution
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#f9fafb',
         height: contentRef.current.scrollHeight,
         width: contentRef.current.scrollWidth,
+        logging: false,
+        windowWidth: 1200,
+        windowHeight: contentRef.current.scrollHeight,
         onclone: (clonedDoc) => {
           // Ensure Inter font is loaded in cloned document
           const clonedStyle = clonedDoc.createElement('style');
@@ -277,23 +280,24 @@ const Preview = () => {
         }
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.9);
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      // If content is too tall, split it across multiple pages
-      if (imgHeight > contentHeight) {
-        const totalPages = Math.ceil(imgHeight / contentHeight);
+      // Calculate how many pages we need
+      const totalPages = Math.ceil(imgHeight / contentHeight);
+      
+      // Split content across multiple pages with better handling
+      for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+        pdf.addPage();
         
-        for (let pageNum = 0; pageNum < totalPages; pageNum++) {
-          pdf.addPage();
-          
-          const sourceY = (pageNum * contentHeight * canvas.width) / contentWidth;
-          const sourceHeight = Math.min(
-            (contentHeight * canvas.width) / contentWidth,
-            canvas.height - sourceY
-          );
-          
+        const sourceY = (pageNum * contentHeight * canvas.width) / contentWidth;
+        const sourceHeight = Math.min(
+          (contentHeight * canvas.width) / contentWidth,
+          canvas.height - sourceY
+        );
+        
+        if (sourceHeight > 0) {
           const tempCanvas = document.createElement('canvas');
           tempCanvas.width = canvas.width;
           tempCanvas.height = sourceHeight;
@@ -306,15 +310,12 @@ const Preview = () => {
               0, 0, canvas.width, sourceHeight
             );
             
-            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.9);
+            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
             const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
             
             pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
           }
         }
-      } else {
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
       }
 
       // Clean up

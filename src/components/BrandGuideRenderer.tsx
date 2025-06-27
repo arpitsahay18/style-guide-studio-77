@@ -41,10 +41,10 @@ export function BrandGuideRenderer({
     (e.target as HTMLImageElement).style.display = 'none';
   };
 
-  // Logo component with proper shape cropping
+  // Logo component with proper shape cropping and background colors
   const LogoDisplay = ({ logo, shape, index }: { logo: any; shape: 'square' | 'rounded' | 'circle'; index: number }) => {
     const getContainerClass = () => {
-      const baseClass = "w-24 h-24 border-2 border-gray-200 flex items-center justify-center mb-3 mx-auto shadow-sm";
+      const baseClass = "w-24 h-24 flex items-center justify-center mb-3 mx-auto shadow-sm";
       switch (shape) {
         case 'square':
           return `${baseClass} overflow-hidden`;
@@ -58,7 +58,6 @@ export function BrandGuideRenderer({
     };
 
     const getImageClass = () => {
-      // Use object-fit: cover for proper cropping while maintaining aspect ratio
       return "w-full h-full object-cover";
     };
 
@@ -72,10 +71,13 @@ export function BrandGuideRenderer({
              logo.background === '#000000' ? ' Black' : ' Color';
     };
 
+    // Add border for white backgrounds to make them visible
+    const needsBorder = logo.background === '#FFFFFF' || logo.background === '#ffffff';
+
     return (
       <div className={`text-center bg-gray-50 rounded-lg p-4 ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
         <div 
-          className={getContainerClass()}
+          className={`${getContainerClass()} ${needsBorder ? 'border-2 border-gray-200' : ''}`}
           style={{ backgroundColor: logo.background }}
         >
           <img 
