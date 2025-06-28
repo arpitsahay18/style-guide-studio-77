@@ -33,6 +33,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Trash2, Plus, Palette, Edit } from 'lucide-react';
 import { hexToRgb, rgbToCmyk, generateTints, generateShades } from '@/utils/colorUtils';
@@ -161,9 +162,8 @@ export function ColorPaletteSection() {
   };
 
   const handleRenameColor = (category: 'primary' | 'secondary' | 'neutral', index: number) => {
-    const currentName = getColorDisplayName(index, category);
     setRenamingColor({ category, index });
-    setTempColorName(currentName);
+    setTempColorName(getColorDisplayName(index, category));
   };
 
   const handleSaveColorName = () => {
@@ -178,11 +178,6 @@ export function ColorPaletteSection() {
         description: `Color name updated to "${finalName}".`,
       });
     }
-  };
-
-  const handleCancelRename = () => {
-    setRenamingColor(null);
-    setTempColorName('');
   };
 
   const ColorSection = ({ 
@@ -243,14 +238,54 @@ export function ColorPaletteSection() {
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleRenameColor(category, index)}
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Rename
-                      </Button>
+                      <Dialog open={renamingColor?.category === category && renamingColor?.index === index} onOpenChange={(open) => !open && setRenamingColor(null)}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleRenameColor(category, index)}
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Rename
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                          <DialogHeader>
+                            <DialogTitle>Rename Color</DialogTitle>
+                            <DialogDescription>
+                              Give this color a custom name that will appear in your brand guide.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                              <Label htmlFor="color-name" className="text-right">
+                                Name
+                              </Label>
+                              <Input
+                                id="color-name"
+                                value={tempColorName}
+                                onChange={(e) => setTempColorName(e.target.value)}
+                                className="col-span-3"
+                                maxLength={20}
+                                placeholder="Enter color name"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleSaveColorName();
+                                  }
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setRenamingColor(null)}>
+                              Cancel
+                            </Button>
+                            <Button onClick={handleSaveColorName}>
+                              Save Name
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                       
                       {canDeleteColor(category) && (
                         <AlertDialog>
@@ -395,51 +430,6 @@ export function ColorPaletteSection() {
           initialColor={editingColor.color.hex}
         />
       )}
-
-      {/* Rename Color Dialog */}
-      <Dialog open={!!renamingColor} onOpenChange={(open) => !open && handleCancelRename()}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Rename Color</DialogTitle>
-            <DialogDescription>
-              Give this color a custom name that will appear in your brand guide.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="color-name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="color-name"
-                value={tempColorName}
-                onChange={(e) => setTempColorName(e.target.value)}
-                className="col-span-3"
-                maxLength={20}
-                placeholder="Enter color name"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSaveColorName();
-                  } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    handleCancelRename();
-                  }
-                }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCancelRename}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveColorName}>
-              Save Name
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
