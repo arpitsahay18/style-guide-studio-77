@@ -93,55 +93,101 @@ const SharedPreview = () => {
     }
   };
 
-  // Helper function to convert Firebase Storage URL to base64
-  const convertImageToBase64 = async (url: string): Promise<string> => {
-    try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    } catch (error) {
-      console.error('Failed to convert image to base64:', error);
-      return url; // fallback to original URL
-    }
-  };
-
-  // Helper function to wait for all fonts to load
-  const waitForFontsToLoad = (): Promise<void> => {
-    return new Promise((resolve) => {
-      if ('fonts' in document) {
-        document.fonts.ready.then(() => {
-          setTimeout(resolve, 1500);
-        });
-      } else {
-        setTimeout(resolve, 2500);
-      }
-    });
-  };
-
-  // Helper function to wait for all images to load
-  const waitForImagesToLoad = (container: HTMLElement): Promise<void> => {
-    return new Promise((resolve) => {
-      const images = container.querySelectorAll('img');
-      const imagePromises = Array.from(images).map((img) => {
-        return new Promise((imgResolve) => {
-          if (img.complete && img.naturalHeight !== 0) {
-            imgResolve(true);
-          } else {
-            img.onload = () => imgResolve(true);
-            img.onerror = () => imgResolve(true);
-            setTimeout(() => imgResolve(true), 5000);
+  // Use the same enhanced image conversion function as Preview.tsx
+  const convertImageToBase64 = async (url: string, retries: number = 3): Promise<string> => {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        console.log(`Converting shared image to base64 (attempt ${attempt + 1}):`, url);
+        
+        const response = await fetch(url, {
+          mode: 'cors',
+          credentials: 'omit',
+          headers: {
+            'Cache-Control': 'no-cache'
           }
         });
-      });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            console.log('Successfully converted shared image to base64');
+            resolve(reader.result as string);
+          };
+          reader.onerror = () => reject(new Error('Failed to convert shared image to base64'));
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.warn(`Shared image conversion attempt ${attempt + 1} failed:`, error);
+        if (attempt === retries - 1) {
+          console.error('All shared image conversion attempts failed, returning original URL:', url);
+          return url;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    return url;
+  };
+
+  // Enhanced image loading for shared preview
+  const waitForImagesToLoad = async (container: HTMLElement): Promise<void> => {
+    console.log('Starting shared preview image loading...');
+    const images = container.querySelectorAll('img');
+    console.log(`Found ${images.length} images in shared preview`);
+    
+    const imagePromises = Array.from(images).map(async (img, index) => {
+      console.log(`Processing shared image ${index + 1}/${images.length}:`, img.src);
       
-      Promise.all(imagePromises).then(() => {
-        setTimeout(resolve, 1000);
+      if (img.src.startsWith('https://firebasestorage.googleapis.com') || 
+          img.src.startsWith('https://storage.googleapis.com')) {
+        try {
+          const base64 = await convertImageToBase64(img.src);
+          img.src = base64;
+          console.log(`Converted shared Firebase image ${index + 1} to base64`);
+        } catch (error) {
+          console.error(`Failed to convert shared image ${index + 1}:`, error);
+        }
+      }
+      
+      return new Promise<void>((resolve) => {
+        if (img.complete && img.naturalHeight !== 0) {
+          console.log(`Shared image ${index + 1} already loaded`);
+          resolve();
+        } else {
+          const handleLoad = () => {
+            console.log(`Shared image ${index + 1} loaded successfully`);
+            img.removeEventListener('load', handleLoad);
+            img.removeEventListener('error', handleError);
+            resolve();
+          };
+          
+          const handleError = () => {
+            console.warn(`Shared image ${index + 1} failed to load:`, img.src);
+            img.removeEventListener('load', handleLoad);
+            img.removeEventListener('error', handleError);
+            resolve();
+          };
+          
+          img.addEventListener('load', handleLoad);
+          img.addEventListener('error', handleError);
+          
+          setTimeout(() => {
+            img.removeEventListener('load', handleLoad);
+            img.removeEventListener('error', handleError);
+            console.log(`Shared image ${index + 1} timeout, continuing...`);
+            resolve();
+          }, 8000);
+        }
       });
     });
+    
+    await Promise.all(imagePromises);
+    console.log('All shared preview images processed');
+    await new Promise(resolve => setTimeout(resolve, 2000));
   };
 
   const loadSharedGuide = async () => {
@@ -226,25 +272,29 @@ const SharedPreview = () => {
   const handleExportPDF = async () => {
     if (!contentRef.current || !sharedGuide) return;
 
-    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 20000);
+    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 25000);
 
     try {
+      console.log('Starting shared preview PDF export');
+      
       // Ensure fonts are loaded
       await loadFontsForSharedGuide(sharedGuide.guide);
+      console.log('Fonts loaded for shared PDF');
       
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: 'a4'
+        format: 'a4',
+        compress: true
       });
 
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 15;
+      const margin = 12;
       const contentWidth = pageWidth - (margin * 2);
       const contentHeight = pageHeight - (margin * 2);
       
-      // Cover Page
+      // Create cover page (same as Preview.tsx)
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
       
@@ -270,31 +320,10 @@ const SharedPreview = () => {
       pdf.setFontSize(12);
       pdf.setTextColor(255, 255, 255);
       pdf.text('Made with Brand Studio', pageWidth / 2, pillY + 8, { align: 'center' });
-      pdf.link(pillX, pillY, pillWidth, pillHeight, { url: 'https://www.google.com' });
 
-      // Enhanced content preparation for PDF
-      await waitForFontsToLoad();
-      await waitForImagesToLoad(contentRef.current);
-
-      // Convert Firebase Storage URLs to base64
-      const images = contentRef.current.querySelectorAll('img');
-      const imagePromises = Array.from(images).map(async (img) => {
-        if (img.src.startsWith('https://firebasestorage.googleapis.com')) {
-          try {
-            const base64 = await convertImageToBase64(img.src);
-            img.src = base64;
-          } catch (error) {
-            console.error('Failed to convert image to base64:', error);
-          }
-        }
-      });
-      
-      await Promise.all(imagePromises);
-
-      // Enhanced PDF styling with font loading
+      // Use the same enhanced styling as Preview.tsx
       const styleElement = document.createElement('style');
       
-      // Collect fonts from the guide
       const guide_fonts = new Set<string>();
       Object.values(sharedGuide.guide.typography.display || {}).forEach((style: any) => {
         if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
@@ -315,7 +344,6 @@ const SharedPreview = () => {
         }
       });
       
-      // Generate font imports
       const fontImports = Array.from(guide_fonts).map(font => 
         `@import url('https://fonts.googleapis.com/css2?family=${font.replace(/\s+/g, '+')}:wght@300;400;500;600;700&display=swap');`
       ).join('\n');
@@ -323,99 +351,145 @@ const SharedPreview = () => {
       styleElement.textContent = `
         ${fontImports}
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
         .pdf-content {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-          max-width: 180mm !important;
+          max-width: 186mm !important;
           overflow-x: hidden !important;
+          background: white !important;
+          padding: 0 !important;
+          margin: 0 !important;
         }
+        
         .pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4 {
           font-weight: 700 !important;
+          page-break-after: avoid !important;
+          break-after: avoid !important;
         }
-        .pdf-content p:not([style*="font-family"]), .pdf-content span:not([style*="font-family"]) {
+        
+        .pdf-content p:not([style*="font-family"]), 
+        .pdf-content span:not([style*="font-family"]) {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
           font-weight: 400 !important;
         }
+        
         .pdf-section {
-          page-break-inside: avoid;
-          break-inside: avoid;
-          margin-bottom: 30px;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          margin-bottom: 24px !important;
           max-width: 100% !important;
           overflow: hidden !important;
         }
+        
         .avoid-break {
-          page-break-inside: avoid;
-          break-inside: avoid;
-          -webkit-column-break-inside: avoid;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          -webkit-column-break-inside: avoid !important;
+          -moz-column-break-inside: avoid !important;
+          column-break-inside: avoid !important;
         }
-        .pdf-section:last-child {
-          margin-bottom: 0;
-        }
+        
         .grid {
           display: grid !important;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
-          gap: 1rem !important;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+          gap: 0.75rem !important;
           width: 100% !important;
           max-width: 100% !important;
         }
+        
         .grid > * {
           min-width: 0 !important;
           max-width: 100% !important;
         }
-        .break-all {
-          word-break: break-all !important;
-          overflow-wrap: break-word !important;
+        
+        .logo-variations {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
         }
-        .truncate {
-          overflow: hidden !important;
-          text-overflow: ellipsis !important;
-          white-space: nowrap !important;
+        
+        .logo-display {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          display: inline-block !important;
+          width: 100% !important;
         }
-        .flex-wrap {
-          flex-wrap: wrap !important;
+        
+        img {
+          max-width: 100% !important;
+          height: auto !important;
+          object-fit: cover !important;
+          display: block !important;
         }
-        .min-w-[32px] {
-          min-width: 32px !important;
+        
+        [style*="font-family"] {
+          font-family: inherit !important;
+        }
+        
+        .container, .max-w-6xl, .mx-auto {
+          max-width: 186mm !important;
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+        }
+        
+        .color-grid {
+          display: grid !important;
+          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+          gap: 1rem !important;
         }
       `;
-      document.head.appendChild(styleElement);
       
+      document.head.appendChild(styleElement);
       contentRef.current.classList.add('pdf-content');
 
-      // Extended wait for complete layout stabilization
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Enhanced image loading and conversion
+      console.log('Converting shared preview images...');
+      await waitForImagesToLoad(contentRef.current);
+      console.log('Shared images converted, waiting for layout...');
+      
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Enhanced html2canvas settings for better PDF quality
+      // Render with html2canvas (same settings as Preview.tsx)
+      console.log('Rendering shared preview with html2canvas...');
       const canvas = await html2canvas(contentRef.current, {
-        scale: 2.5,
+        scale: 2.0,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#f9fafb',
+        backgroundColor: 'white',
         height: contentRef.current.scrollHeight,
         width: contentRef.current.scrollWidth,
         logging: false,
         windowWidth: 1200,
         windowHeight: contentRef.current.scrollHeight,
+        imageTimeout: 10000,
         onclone: (clonedDoc) => {
           const clonedStyle = clonedDoc.createElement('style');
           clonedStyle.textContent = styleElement.textContent;
           clonedDoc.head.appendChild(clonedStyle);
           
-          // Ensure all images are loaded in cloned document
           const clonedImages = clonedDoc.querySelectorAll('img');
           clonedImages.forEach((img) => {
             img.style.maxWidth = '100%';
             img.style.height = 'auto';
+            img.style.objectFit = 'cover';
+            img.style.display = 'block';
+          });
+          
+          const logoSections = clonedDoc.querySelectorAll('.logo-display, .color-card, [class*="typography"]');
+          logoSections.forEach((section) => {
+            section.classList.add('avoid-break');
           });
         }
       });
 
+      // Multi-page PDF generation (same logic as Preview.tsx)
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      // Improved multi-page handling
-      const effectivePageHeight = contentHeight - 5;
+      const effectivePageHeight = contentHeight - 8;
       const totalPages = Math.ceil(imgHeight / effectivePageHeight);
+      
+      console.log(`Generating ${totalPages} pages for shared preview...`);
       
       for (let pageNum = 0; pageNum < totalPages; pageNum++) {
         pdf.addPage();
@@ -424,7 +498,7 @@ const SharedPreview = () => {
         const remainingHeight = canvas.height - sourceY;
         const sourceHeight = Math.min(effectivePageHeight * (canvas.width / contentWidth), remainingHeight);
         
-        if (sourceHeight > 50) {
+        if (sourceHeight > 100) {
           const tempCanvas = document.createElement('canvas');
           tempCanvas.width = canvas.width;
           tempCanvas.height = sourceHeight;
@@ -441,24 +515,27 @@ const SharedPreview = () => {
             const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
             
             pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
+            console.log(`Added shared preview page ${pageNum + 1}/${totalPages}`);
           }
         }
       }
 
-      // Clean up
+      // Cleanup
       contentRef.current.classList.remove('pdf-content');
       document.head.removeChild(styleElement);
       dismissProgress();
 
-      pdf.save(`${sharedGuide.guide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
+      const fileName = `${sharedGuide.guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf`;
+      pdf.save(fileName);
       
+      console.log('Shared preview PDF export completed successfully');
       toast({
         title: "PDF Generated Successfully",
-        description: "The brand guide has been downloaded.",
+        description: "The brand guide has been downloaded with all content included.",
       });
 
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      console.error('Error generating shared preview PDF:', error);
       dismissProgress();
       toast({
         variant: "destructive",

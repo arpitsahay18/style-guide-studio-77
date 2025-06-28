@@ -108,60 +108,84 @@ const Preview = () => {
     }
   };
 
-  // Enhanced image conversion with better error handling
-  const convertImageToBase64 = async (url: string): Promise<string> => {
-    try {
-      // Handle both Firebase URLs and regular URLs
-      const response = await fetch(url, {
-        mode: 'cors',
-        credentials: 'omit'
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  // Enhanced image conversion with better error handling and retries
+  const convertImageToBase64 = async (url: string, retries: number = 3): Promise<string> => {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        console.log(`Converting image to base64 (attempt ${attempt + 1}):`, url);
+        
+        const response = await fetch(url, {
+          mode: 'cors',
+          credentials: 'omit',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            console.log('Successfully converted image to base64');
+            resolve(reader.result as string);
+          };
+          reader.onerror = () => reject(new Error('Failed to convert image to base64'));
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.warn(`Attempt ${attempt + 1} failed:`, error);
+        if (attempt === retries - 1) {
+          console.error('All attempts failed, returning original URL:', url);
+          return url; // Return original URL as final fallback
+        }
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-      
-      const blob = await response.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Failed to convert image to base64'));
-        reader.readAsDataURL(blob);
-      });
-    } catch (error) {
-      console.error('Failed to convert image to base64:', error);
-      return url; // Return original URL as fallback
     }
+    return url;
   };
 
-  // Enhanced image loading with retry logic
+  // Enhanced image loading with proper promise handling
   const waitForImagesToLoad = async (container: HTMLElement): Promise<void> => {
+    console.log('Starting image loading process...');
     const images = container.querySelectorAll('img');
-    const imagePromises = Array.from(images).map(async (img) => {
-      // Convert Firebase URLs to base64
-      if (img.src.startsWith('https://firebasestorage.googleapis.com')) {
+    console.log(`Found ${images.length} images to process`);
+    
+    // Convert Firebase URLs to base64 first
+    const imagePromises = Array.from(images).map(async (img, index) => {
+      console.log(`Processing image ${index + 1}/${images.length}:`, img.src);
+      
+      if (img.src.startsWith('https://firebasestorage.googleapis.com') || 
+          img.src.startsWith('https://storage.googleapis.com')) {
         try {
           const base64 = await convertImageToBase64(img.src);
           img.src = base64;
+          console.log(`Converted Firebase image ${index + 1} to base64`);
         } catch (error) {
-          console.error('Failed to convert image:', error);
+          console.error(`Failed to convert image ${index + 1}:`, error);
         }
       }
       
       return new Promise<void>((resolve) => {
         if (img.complete && img.naturalHeight !== 0) {
+          console.log(`Image ${index + 1} already loaded`);
           resolve();
         } else {
           const handleLoad = () => {
+            console.log(`Image ${index + 1} loaded successfully`);
             img.removeEventListener('load', handleLoad);
             img.removeEventListener('error', handleError);
             resolve();
           };
           
           const handleError = () => {
+            console.warn(`Image ${index + 1} failed to load:`, img.src);
             img.removeEventListener('load', handleLoad);
             img.removeEventListener('error', handleError);
-            console.warn('Image failed to load:', img.src);
             resolve();
           };
           
@@ -172,13 +196,18 @@ const Preview = () => {
           setTimeout(() => {
             img.removeEventListener('load', handleLoad);
             img.removeEventListener('error', handleError);
+            console.log(`Image ${index + 1} timeout, continuing...`);
             resolve();
-          }, 5000);
+          }, 8000);
         }
       });
     });
     
     await Promise.all(imagePromises);
+    console.log('All images processed');
+    
+    // Additional wait for layout stabilization
+    await new Promise(resolve => setTimeout(resolve, 2000));
   };
 
   const loadSharedGuide = async () => {
@@ -256,28 +285,31 @@ const Preview = () => {
   const handleExportPDF = async () => {
     if (!contentRef.current) return;
 
-    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 20000);
+    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 25000);
 
     try {
       const guide = sharedGuide || currentGuide;
+      console.log('Starting PDF export for guide:', guide.name);
       
-      // Step 1: Load all fonts
+      // Step 1: Load all fonts with extended timeout
       await loadFontsForPDF(guide);
+      console.log('Fonts loaded for PDF');
       
-      // Step 2: Setup PDF
+      // Step 2: Setup PDF with optimized settings
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: 'a4'
+        format: 'a4',
+        compress: true
       });
 
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 15;
+      const margin = 12; // Reduced margin for more content space
       const contentWidth = pageWidth - (margin * 2);
       const contentHeight = pageHeight - (margin * 2);
       
-      // Step 3: Create cover page
+      // Step 3: Create enhanced cover page
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
       
@@ -304,80 +336,10 @@ const Preview = () => {
       pdf.setTextColor(255, 255, 255);
       pdf.text('Made with Brand Studio', pageWidth / 2, pillY + 8, { align: 'center' });
 
-      // Step 4: Prepare content for PDF with enhanced styling
+      // Step 4: Enhanced content preparation with better CSS
       const styleElement = document.createElement('style');
-      styleElement.textContent = `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        .pdf-content {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-          max-width: 180mm !important;
-          overflow-x: hidden !important;
-          background: white !important;
-        }
-        
-        .pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4 {
-          font-weight: 700 !important;
-          page-break-after: avoid !important;
-        }
-        
-        .pdf-content p:not([style*="font-family"]), 
-        .pdf-content span:not([style*="font-family"]) {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-          font-weight: 400 !important;
-        }
-        
-        .pdf-section {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-          margin-bottom: 30px !important;
-          max-width: 100% !important;
-          overflow: hidden !important;
-        }
-        
-        .avoid-break {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-          -webkit-column-break-inside: avoid !important;
-        }
-        
-        .grid {
-          display: grid !important;
-          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
-          gap: 1rem !important;
-          width: 100% !important;
-          max-width: 100% !important;
-        }
-        
-        .grid > * {
-          min-width: 0 !important;
-          max-width: 100% !important;
-        }
-        
-        /* Logo specific styles */
-        .logo-variations {
-          page-break-inside: avoid !important;
-        }
-        
-        .logo-display {
-          page-break-inside: avoid !important;
-          display: inline-block !important;
-          width: 100% !important;
-        }
-        
-        /* Ensure images are properly sized */
-        img {
-          max-width: 100% !important;
-          height: auto !important;
-        }
-        
-        /* Typography preview styles */
-        [style*="font-family"] {
-          font-family: inherit !important;
-        }
-      `;
       
-      // Load fonts in the style element
+      // Collect fonts from the guide
       const guide_fonts = new Set<string>();
       Object.values(guide.typography.display || {}).forEach((style: any) => {
         if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
@@ -398,23 +360,121 @@ const Preview = () => {
         }
       });
       
-      // Add font imports to CSS
+      // Generate font imports
       const fontImports = Array.from(guide_fonts).map(font => 
         `@import url('https://fonts.googleapis.com/css2?family=${font.replace(/\s+/g, '+')}:wght@300;400;500;600;700&display=swap');`
       ).join('\n');
       
-      styleElement.textContent = fontImports + '\n' + styleElement.textContent;
-      document.head.appendChild(styleElement);
+      styleElement.textContent = `
+        ${fontImports}
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        .pdf-content {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+          max-width: 186mm !important;
+          overflow-x: hidden !important;
+          background: white !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+        
+        .pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4 {
+          font-weight: 700 !important;
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+        }
+        
+        .pdf-content p:not([style*="font-family"]), 
+        .pdf-content span:not([style*="font-family"]) {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+          font-weight: 400 !important;
+        }
+        
+        .pdf-section {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          margin-bottom: 24px !important;
+          max-width: 100% !important;
+          overflow: hidden !important;
+        }
+        
+        .avoid-break {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          -webkit-column-break-inside: avoid !important;
+          -moz-column-break-inside: avoid !important;
+          column-break-inside: avoid !important;
+        }
+        
+        .grid {
+          display: grid !important;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+          gap: 0.75rem !important;
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+        
+        .grid > * {
+          min-width: 0 !important;
+          max-width: 100% !important;
+        }
+        
+        /* Enhanced logo styles */
+        .logo-variations {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+        
+        .logo-display {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          display: inline-block !important;
+          width: 100% !important;
+        }
+        
+        /* Ensure images render properly */
+        img {
+          max-width: 100% !important;
+          height: auto !important;
+          object-fit: cover !important;
+          display: block !important;
+        }
+        
+        /* Typography preview styles with font loading */
+        [style*="font-family"] {
+          font-family: inherit !important;
+        }
+        
+        /* Prevent content overflow */
+        .container, .max-w-6xl, .mx-auto {
+          max-width: 186mm !important;
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+        }
+        
+        /* Color grid improvements */
+        .color-grid {
+          display: grid !important;
+          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+          gap: 1rem !important;
+        }
+      `;
       
+      document.head.appendChild(styleElement);
       contentRef.current.classList.add('pdf-content');
 
-      // Step 5: Wait for content to stabilize
+      // Step 5: Enhanced image loading and conversion
+      console.log('Converting images to base64...');
       await waitForImagesToLoad(contentRef.current);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('Images converted, waiting for layout...');
+      
+      // Extended wait for complete layout stabilization
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Step 6: Render with html2canvas
+      // Step 6: Render with enhanced html2canvas settings
+      console.log('Rendering with html2canvas...');
       const canvas = await html2canvas(contentRef.current, {
-        scale: 2.5,
+        scale: 2.0, // Reduced scale for better performance
         useCORS: true,
         allowTaint: true,
         backgroundColor: 'white',
@@ -423,29 +483,42 @@ const Preview = () => {
         logging: false,
         windowWidth: 1200,
         windowHeight: contentRef.current.scrollHeight,
+        imageTimeout: 10000,
         onclone: (clonedDoc) => {
+          // Ensure styles are applied to cloned document
           const clonedStyle = clonedDoc.createElement('style');
           clonedStyle.textContent = styleElement.textContent;
           clonedDoc.head.appendChild(clonedStyle);
           
-          // Ensure all images are properly sized in cloned document
+          // Ensure all images are properly sized and loaded
           const clonedImages = clonedDoc.querySelectorAll('img');
           clonedImages.forEach((img) => {
             img.style.maxWidth = '100%';
             img.style.height = 'auto';
             img.style.objectFit = 'cover';
+            img.style.display = 'block';
+          });
+          
+          // Apply avoid-break classes to prevent content splitting
+          const logoSections = clonedDoc.querySelectorAll('.logo-display, .color-card, [class*="typography"]');
+          logoSections.forEach((section) => {
+            section.classList.add('avoid-break');
           });
         }
       });
 
-      // Step 7: Add content to PDF with improved pagination
-      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+      console.log('Canvas rendered, generating PDF pages...');
+
+      // Step 7: Improved multi-page PDF generation
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      // Calculate pages more accurately
-      const effectivePageHeight = contentHeight - 5; // Small margin for safety
+      // Better pagination calculation
+      const effectivePageHeight = contentHeight - 8; // More conservative margin
       const totalPages = Math.ceil(imgHeight / effectivePageHeight);
+      
+      console.log(`Generating ${totalPages} pages...`);
       
       for (let pageNum = 0; pageNum < totalPages; pageNum++) {
         pdf.addPage();
@@ -454,7 +527,7 @@ const Preview = () => {
         const remainingHeight = canvas.height - sourceY;
         const sourceHeight = Math.min(effectivePageHeight * (canvas.width / contentWidth), remainingHeight);
         
-        if (sourceHeight > 50) { // Only add if there's meaningful content
+        if (sourceHeight > 100) { // Only add if there's meaningful content
           const tempCanvas = document.createElement('canvas');
           tempCanvas.width = canvas.width;
           tempCanvas.height = sourceHeight;
@@ -467,10 +540,11 @@ const Preview = () => {
               0, 0, canvas.width, sourceHeight
             );
             
-            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.98);
+            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
             const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
             
             pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
+            console.log(`Added page ${pageNum + 1}/${totalPages}`);
           }
         }
       }
@@ -481,11 +555,13 @@ const Preview = () => {
       dismissProgress();
 
       // Step 9: Save PDF
-      pdf.save(`${guide.name.replace(/\s+/g, '_')}_brand_guide.pdf`);
+      const fileName = `${guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf`;
+      pdf.save(fileName);
       
+      console.log('PDF export completed successfully');
       toast({
         title: "PDF Generated Successfully",
-        description: "Your brand guide has been downloaded with all content included.",
+        description: "Your complete brand guide has been downloaded with all logos and content.",
       });
 
     } catch (error) {
