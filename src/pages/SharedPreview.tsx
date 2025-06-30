@@ -246,8 +246,8 @@ const SharedPreview = () => {
       
       console.log('Shared preview PDF export completed successfully');
       toast({
-        title: "PDF Generated Successfully",
-        description: "The brand guide has been downloaded with all content properly rendered.",
+        title: "Brand Guide Exported",
+        description: "Your brand guide has been exported as PDF. Your download should begin soon.",
       });
 
     } catch (error) {
@@ -255,8 +255,8 @@ const SharedPreview = () => {
       dismissProgress();
       toast({
         variant: "destructive",
-        title: "Error Generating PDF",
-        description: "There was a problem generating the PDF. Please try again.",
+        title: "Export Failed",
+        description: "There was a problem exporting the brand guide. Please try again.",
       });
     }
   };

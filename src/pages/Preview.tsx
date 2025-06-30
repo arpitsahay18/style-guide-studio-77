@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
@@ -266,8 +267,8 @@ const Preview = () => {
       
       console.log('Enhanced PDF export completed successfully');
       toast({
-        title: "PDF Generated Successfully",
-        description: "Your complete brand guide has been downloaded with all logos and content properly rendered.",
+        title: "Brand Guide Exported",
+        description: "Your brand guide has been exported as PDF. Your download should begin soon.",
       });
 
     } catch (error) {
@@ -275,8 +276,8 @@ const Preview = () => {
       dismissProgress();
       toast({
         variant: "destructive",
-        title: "Error Generating PDF",
-        description: "There was a problem generating your PDF. Please try again.",
+        title: "Export Failed",
+        description: "There was a problem exporting your brand guide. Please try again.",
       });
     }
   };

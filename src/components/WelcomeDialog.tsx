@@ -18,30 +18,27 @@ export function WelcomeDialog({ open, onOpenChange, onGetStarted }: WelcomeDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <div className="flex justify-center mb-4">
-          <span className="text-4xl">👋</span>
-        </div>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-center text-2xl">Welcome to Brand Studio</DialogTitle>
+          <DialogTitle className="text-center text-2xl font-bold">
+            👋 Welcome to Brand Studio
+          </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <p>
-            Hello 👋 My name is Arpit Sahay and I made this website because I was lazy enough to not do this myself. 
-            It would be a lie if I say I built this website with intense blood and sweat <em>the truth is I often procastinated just like all designers</em>.
-          </p>
-          <p>
-            Nevertheless, I have put in special love and care while building this website. 
-            I am planning to add many more features to this as I move forward, so if you have any suggestions please let me know <a 
-              href="https://www.linkedin.com/in/arpitsahay18" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary underline hover:text-primary/80"
-            >here</a>.
-          </p>
+        
+        <div className="space-y-6">
+          <div className="aspect-video w-full">
+            <iframe 
+              src="https://player.vimeo.com/video/853228097?title=0&byline=0&portrait=0&badge=0&autopause=0&player_id=0&app_id=58479" 
+              className="w-full h-full rounded-lg"
+              frameBorder="0" 
+              allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" 
+              title="Brand Studio Tutorial"
+            />
+          </div>
         </div>
+        
         <DialogFooter className="mt-6">
-          <Button onClick={handleGetStarted} className="w-full">
+          <Button onClick={handleGetStarted} className="w-full" size="lg">
             Start Generating
           </Button>
         </DialogFooter>

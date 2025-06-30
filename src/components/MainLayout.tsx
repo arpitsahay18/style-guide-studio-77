@@ -37,6 +37,8 @@ export function MainLayout({
   const handleHeaderClick = () => {
     if (navigate) {
       navigate('/');
+    } else {
+      window.location.href = '/';
     }
   };
   
@@ -44,12 +46,10 @@ export function MainLayout({
     <div className="flex flex-col min-h-screen">
       <header className="border-b bg-background">
         <div className="container mx-auto py-4 px-4 flex items-center justify-between">
-          <div 
-            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" 
+          <BrandStudioLogo 
             onClick={handleHeaderClick}
-          >
-            <BrandStudioLogo />
-          </div>
+            className="cursor-pointer"
+          />
           
           <div className="flex items-center gap-4">
             <AuthButton />
@@ -76,9 +76,16 @@ export function MainLayout({
               </p>
             </div>
             <div className="flex gap-4">
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Help</a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Privacy</a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Terms</a>
+              <a href="/help" className="text-sm text-muted-foreground hover:text-foreground">Help</a>
+              <a href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">Privacy</a>
+              <a 
+                href="https://www.linkedin.com/in/arpitsahay18" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Made by Arpit Sahay
+              </a>
             </div>
           </div>
         </div>

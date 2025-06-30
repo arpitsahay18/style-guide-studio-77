@@ -1,46 +1,44 @@
 
 import React from 'react';
 import { MainLayout } from '@/components/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Privacy = () => {
-  const navigate = useNavigate();
-
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-6">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/')}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Brand Studio
-          </Button>
-          <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
-          <p className="text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-4">Privacy Policy</h1>
+          <p className="text-lg text-muted-foreground">
+            How we handle your data and protect your privacy
+          </p>
         </div>
 
-        <div className="space-y-6">
+        <div className="grid gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Information We Collect</CardTitle>
+              <CardTitle>Data Collection</CardTitle>
+              <CardDescription>What information we collect and why</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h3 className="font-semibold mb-2">Brand Guide Data</h3>
+                <h3 className="font-semibold mb-2">Brand Guide Content</h3>
                 <p className="text-sm text-muted-foreground">
-                  We store your brand guide information locally in your browser's storage. This includes colors, typography settings, logos, and custom names you assign to elements.
+                  We store your brand names, colors, typography settings, and uploaded logos to provide the brand guide service. 
+                  This data is necessary for the functionality of the application.
                 </p>
               </div>
               <div>
-                <h3 className="font-semibold mb-2">Uploaded Files</h3>
+                <h3 className="font-semibold mb-2">Authentication Data</h3>
                 <p className="text-sm text-muted-foreground">
-                  Logo images and other files you upload are processed locally in your browser and stored temporarily for the duration of your session.
+                  When you sign in with Google, we receive your email address and profile information to identify your account 
+                  and associate your brand guides with your profile.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-2">Usage Analytics</h3>
+                <p className="text-sm text-muted-foreground">
+                  We may collect anonymous usage statistics to improve the service, but this data cannot be used to identify you personally.
                 </p>
               </div>
             </CardContent>
@@ -48,19 +46,28 @@ const Privacy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>How We Use Your Information</CardTitle>
+              <CardTitle>Data Storage</CardTitle>
+              <CardDescription>How and where your data is stored</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-2">Cloud Storage</h3>
+                <p className="text-sm text-muted-foreground">
+                  Your brand guide data is stored securely in Firebase, Google's cloud database service. 
+                  All data is encrypted in transit and at rest.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-2">File Storage</h3>
+                <p className="text-sm text-muted-foreground">
+                  Uploaded logos and images are stored in Firebase Storage with secure access controls. 
+                  Only you can access your uploaded files.
+                </p>
+              </div>
               <div>
                 <h3 className="font-semibold mb-2">Local Storage</h3>
                 <p className="text-sm text-muted-foreground">
-                  Your brand guide data is stored locally on your device using browser localStorage. This allows your work to persist between sessions without sending data to external servers.
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">Processing and Export</h3>
-                <p className="text-sm text-muted-foreground">
-                  All processing of your brand guides, including PDF generation and color calculations, happens locally in your browser.
+                  Some preferences and temporary data may be stored locally in your browser to improve your experience.
                 </p>
               </div>
             </CardContent>
@@ -68,39 +75,28 @@ const Privacy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Data Security</CardTitle>
+              <CardTitle>Data Sharing</CardTitle>
+              <CardDescription>How your data may be shared</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h3 className="font-semibold mb-2">Local Processing</h3>
+                <h3 className="font-semibold mb-2">Shareable Links</h3>
                 <p className="text-sm text-muted-foreground">
-                  Brand Studio processes all your data locally on your device. Your brand guides, logos, and design elements never leave your browser unless you explicitly export them.
+                  When you create a shareable link, the brand guide content is made accessible to anyone with that link. 
+                  These links expire after 72 hours for security.
                 </p>
               </div>
               <div>
-                <h3 className="font-semibold mb-2">No Server Storage</h3>
+                <h3 className="font-semibold mb-2">No Third-Party Sharing</h3>
                 <p className="text-sm text-muted-foreground">
-                  We do not store your brand guide data on our servers. All information remains on your local device.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Cookies and Tracking</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-semibold mb-2">Essential Cookies</h3>
-                <p className="text-sm text-muted-foreground">
-                  We use minimal essential cookies and localStorage to maintain your session and remember your preferences.
+                  We do not sell, trade, or otherwise transfer your personal information to third parties without your consent, 
+                  except as described in this policy.
                 </p>
               </div>
               <div>
-                <h3 className="font-semibold mb-2">No Analytics Tracking</h3>
+                <h3 className="font-semibold mb-2">Legal Requirements</h3>
                 <p className="text-sm text-muted-foreground">
-                  Brand Studio does not use analytics tracking, advertising cookies, or third-party tracking services.
+                  We may disclose your information if required by law or to protect our rights, property, or safety.
                 </p>
               </div>
             </CardContent>
@@ -109,18 +105,25 @@ const Privacy = () => {
           <Card>
             <CardHeader>
               <CardTitle>Your Rights</CardTitle>
+              <CardDescription>What you can do with your data</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h3 className="font-semibold mb-2">Data Control</h3>
+                <h3 className="font-semibold mb-2">Access and Control</h3>
                 <p className="text-sm text-muted-foreground">
-                  Since all data is stored locally on your device, you have complete control over your information. You can clear your browser's localStorage at any time to remove all stored data.
+                  You can view, edit, and delete your brand guides at any time through the application interface.
                 </p>
               </div>
               <div>
-                <h3 className="font-semibold mb-2">Export and Portability</h3>
+                <h3 className="font-semibold mb-2">Data Deletion</h3>
                 <p className="text-sm text-muted-foreground">
-                  You can export your brand guides as JSON files at any time, giving you full portability of your data.
+                  You can request complete deletion of your account and associated data by contacting us.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-2">Data Export</h3>
+                <p className="text-sm text-muted-foreground">
+                  You can export your brand guides as PDF files at any time to maintain your own copies.
                 </p>
               </div>
             </CardContent>
@@ -128,47 +131,24 @@ const Privacy = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Third-Party Services</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-semibold mb-2">Font Loading</h3>
-                <p className="text-sm text-muted-foreground">
-                  Brand Studio may load fonts from Google Fonts for typography previews. This involves requests to Google's servers but does not include any personal data.
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">No Other Third Parties</h3>
-                <p className="text-sm text-muted-foreground">
-                  We do not integrate with any other third-party services that would access your data.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Changes to This Policy</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                We may update this privacy policy from time to time. Any changes will be reflected on this page with an updated date. Since Brand Studio operates entirely locally, most updates will not affect how your data is handled.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Us</CardTitle>
+              <CardTitle>Contact Information</CardTitle>
+              <CardDescription>How to reach us about privacy concerns</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                If you have any questions about this privacy policy or how Brand Studio handles your data, please contact us.
+                If you have any questions about this Privacy Policy or our data practices, please contact us:
               </p>
-              <div className="text-sm">
-                <p><strong>Email:</strong> privacy@brandstudio.com</p>
-                <p><strong>Created by:</strong> Arpit Sahay</p>
-              </div>
+              <a 
+                href="https://www.linkedin.com/in/arpitsahay18" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Arpit Sahay on LinkedIn
+              </a>
+              <p className="text-xs text-muted-foreground mt-4">
+                Last updated: December 2024
+              </p>
             </CardContent>
           </Card>
         </div>
