@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
 import { BrandGuideRenderer } from '@/components/BrandGuideRenderer';
+import { PDFExportRenderer } from '@/components/PDFExportRenderer';
 import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
 import { jsPDF } from 'jspdf';
@@ -9,8 +10,8 @@ import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useRef } from 'react';
 import { showProgressToast } from '@/components/ui/progress-toast';
+import { convertImageToBase64, preloadImages, createPrintStyles } from '@/utils/pdfExportUtils';
 
 const SharedPreview = () => {
   const { linkId } = useParams();
@@ -19,176 +20,7 @@ const SharedPreview = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-
-  // Enhanced font loading specifically for shared guides
-  const loadFontsForSharedGuide = async (guide: any): Promise<void> => {
-    const fontFamilies = new Set<string>();
-    
-    // Collect all unique font families from typography
-    Object.values(guide.typography.display || {}).forEach((style: any) => {
-      if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
-        const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
-        fontFamilies.add(fontName);
-      }
-    });
-    
-    Object.values(guide.typography.heading || {}).forEach((style: any) => {
-      if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
-        const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
-        fontFamilies.add(fontName);
-      }
-    });
-    
-    Object.values(guide.typography.body || {}).forEach((style: any) => {
-      if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
-        const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
-        fontFamilies.add(fontName);
-      }
-    });
-
-    // Load fonts with explicit DOM injection
-    const fontPromises = Array.from(fontFamilies).map(async (fontFamily) => {
-      return new Promise<void>((resolve) => {
-        const formattedFontFamily = fontFamily.replace(/\s+/g, '+');
-        
-        // Check if font link already exists
-        const existingLink = document.querySelector(`link[href*="${formattedFontFamily}"]`);
-        if (existingLink) {
-          resolve();
-          return;
-        }
-        
-        // Create and load font
-        const link = document.createElement('link');
-        link.href = `https://fonts.googleapis.com/css2?family=${formattedFontFamily}:wght@300;400;500;600;700&display=swap`;
-        link.rel = 'stylesheet';
-        
-        link.onload = () => {
-          console.log(`Loaded font for shared guide: ${fontFamily}`);
-          setTimeout(() => resolve(), 500);
-        };
-        
-        link.onerror = () => {
-          console.warn(`Failed to load font for shared guide: ${fontFamily}`);
-          resolve();
-        };
-        
-        document.head.appendChild(link);
-        
-        // Fallback timeout
-        setTimeout(() => resolve(), 3000);
-      });
-    });
-    
-    await Promise.all(fontPromises);
-    
-    // Wait for fonts to be ready
-    if ('fonts' in document) {
-      try {
-        await document.fonts.ready;
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (error) {
-        console.warn('Font loading check failed:', error);
-      }
-    }
-  };
-
-  // Use the same enhanced image conversion function as Preview.tsx
-  const convertImageToBase64 = async (url: string, retries: number = 3): Promise<string> => {
-    for (let attempt = 0; attempt < retries; attempt++) {
-      try {
-        console.log(`Converting shared image to base64 (attempt ${attempt + 1}):`, url);
-        
-        const response = await fetch(url, {
-          mode: 'cors',
-          credentials: 'omit',
-          headers: {
-            'Cache-Control': 'no-cache'
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const blob = await response.blob();
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            console.log('Successfully converted shared image to base64');
-            resolve(reader.result as string);
-          };
-          reader.onerror = () => reject(new Error('Failed to convert shared image to base64'));
-          reader.readAsDataURL(blob);
-        });
-      } catch (error) {
-        console.warn(`Shared image conversion attempt ${attempt + 1} failed:`, error);
-        if (attempt === retries - 1) {
-          console.error('All shared image conversion attempts failed, returning original URL:', url);
-          return url;
-        }
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-    return url;
-  };
-
-  // Enhanced image loading for shared preview
-  const waitForImagesToLoad = async (container: HTMLElement): Promise<void> => {
-    console.log('Starting shared preview image loading...');
-    const images = container.querySelectorAll('img');
-    console.log(`Found ${images.length} images in shared preview`);
-    
-    const imagePromises = Array.from(images).map(async (img, index) => {
-      console.log(`Processing shared image ${index + 1}/${images.length}:`, img.src);
-      
-      if (img.src.startsWith('https://firebasestorage.googleapis.com') || 
-          img.src.startsWith('https://storage.googleapis.com')) {
-        try {
-          const base64 = await convertImageToBase64(img.src);
-          img.src = base64;
-          console.log(`Converted shared Firebase image ${index + 1} to base64`);
-        } catch (error) {
-          console.error(`Failed to convert shared image ${index + 1}:`, error);
-        }
-      }
-      
-      return new Promise<void>((resolve) => {
-        if (img.complete && img.naturalHeight !== 0) {
-          console.log(`Shared image ${index + 1} already loaded`);
-          resolve();
-        } else {
-          const handleLoad = () => {
-            console.log(`Shared image ${index + 1} loaded successfully`);
-            img.removeEventListener('load', handleLoad);
-            img.removeEventListener('error', handleError);
-            resolve();
-          };
-          
-          const handleError = () => {
-            console.warn(`Shared image ${index + 1} failed to load:`, img.src);
-            img.removeEventListener('load', handleLoad);
-            img.removeEventListener('error', handleError);
-            resolve();
-          };
-          
-          img.addEventListener('load', handleLoad);
-          img.addEventListener('error', handleError);
-          
-          setTimeout(() => {
-            img.removeEventListener('load', handleLoad);
-            img.removeEventListener('error', handleError);
-            console.log(`Shared image ${index + 1} timeout, continuing...`);
-            resolve();
-          }, 8000);
-        }
-      });
-    });
-    
-    await Promise.all(imagePromises);
-    console.log('All shared preview images processed');
-    await new Promise(resolve => setTimeout(resolve, 2000));
-  };
+  const exportRef = useRef<HTMLDivElement>(null);
 
   const loadSharedGuide = async () => {
     if (!linkId) return;
@@ -249,9 +81,6 @@ const SharedPreview = () => {
       
       setSharedGuide(guideData);
       
-      // Load fonts after setting the guide data
-      await loadFontsForSharedGuide(brandGuideData);
-      
     } catch (error) {
       console.error('Error loading shared guide:', error);
       setError('Failed to load the shared guide.');
@@ -270,17 +99,32 @@ const SharedPreview = () => {
   }, [linkId]);
 
   const handleExportPDF = async () => {
-    if (!contentRef.current || !sharedGuide) return;
+    if (!exportRef.current || !sharedGuide) return;
 
-    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 25000);
+    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 30000);
 
     try {
       console.log('Starting shared preview PDF export');
       
-      // Ensure fonts are loaded
-      await loadFontsForSharedGuide(sharedGuide.guide);
-      console.log('Fonts loaded for shared PDF');
+      // Step 1: Create and apply print styles
+      const styleElement = createPrintStyles();
+      document.head.appendChild(styleElement);
       
+      // Step 2: Apply CSS classes for better page breaking
+      const sections = exportRef.current.querySelectorAll('[class*="section"], .color-card, .logo-display, [class*="typography"]');
+      sections.forEach((section) => {
+        section.classList.add('avoid-break');
+      });
+
+      // Step 3: Convert all Firebase images to base64 and preload
+      console.log('Converting shared preview images...');
+      await preloadImages(exportRef.current);
+      console.log('Shared images converted and preloaded');
+      
+      // Step 4: Extended wait for layout stabilization
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Step 5: Create PDF with optimized settings (same as Preview.tsx)
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -290,177 +134,50 @@ const SharedPreview = () => {
 
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 12;
+      const margin = 15;
       const contentWidth = pageWidth - (margin * 2);
       const contentHeight = pageHeight - (margin * 2);
       
-      // Create cover page (same as Preview.tsx)
+      // Step 6: Create enhanced cover page
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
       
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(42);
+      pdf.setFontSize(36);
       pdf.setTextColor(0, 0, 0);
-      pdf.text(sharedGuide.guide.name, pageWidth / 2, pageHeight / 2 - 20, { align: 'center' });
+      pdf.text(sharedGuide.guide.name, pageWidth / 2, pageHeight / 2 - 15, { align: 'center' });
       
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(24);
+      pdf.setFontSize(20);
       pdf.setTextColor(100, 100, 100);
-      pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 8, { align: 'center' });
+      pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 5, { align: 'center' });
 
-      const pillWidth = 60;
-      const pillHeight = 12;
+      const pillWidth = 50;
+      const pillHeight = 10;
       const pillX = (pageWidth - pillWidth) / 2;
-      const pillY = pageHeight / 2 + 30;
+      const pillY = pageHeight / 2 + 25;
       
       pdf.setFillColor(59, 130, 246);
-      pdf.roundedRect(pillX, pillY, pillWidth, pillHeight, 6, 6, 'F');
+      pdf.roundedRect(pillX, pillY, pillWidth, pillHeight, 5, 5, 'F');
       
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(12);
+      pdf.setFontSize(10);
       pdf.setTextColor(255, 255, 255);
-      pdf.text('Made with Brand Studio', pageWidth / 2, pillY + 8, { align: 'center' });
+      pdf.text('Made with Brand Studio', pageWidth / 2, pillY + 6.5, { align: 'center' });
 
-      // Use the same enhanced styling as Preview.tsx
-      const styleElement = document.createElement('style');
-      
-      const guide_fonts = new Set<string>();
-      Object.values(sharedGuide.guide.typography.display || {}).forEach((style: any) => {
-        if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
-          const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
-          guide_fonts.add(fontName);
-        }
-      });
-      Object.values(sharedGuide.guide.typography.heading || {}).forEach((style: any) => {
-        if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
-          const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
-          guide_fonts.add(fontName);
-        }
-      });
-      Object.values(sharedGuide.guide.typography.body || {}).forEach((style: any) => {
-        if (style.fontFamily && style.fontFamily !== 'Inter, sans-serif') {
-          const fontName = style.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
-          guide_fonts.add(fontName);
-        }
-      });
-      
-      const fontImports = Array.from(guide_fonts).map(font => 
-        `@import url('https://fonts.googleapis.com/css2?family=${font.replace(/\s+/g, '+')}:wght@300;400;500;600;700&display=swap');`
-      ).join('\n');
-      
-      styleElement.textContent = `
-        ${fontImports}
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        .pdf-content {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-          max-width: 186mm !important;
-          overflow-x: hidden !important;
-          background: white !important;
-          padding: 0 !important;
-          margin: 0 !important;
-        }
-        
-        .pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4 {
-          font-weight: 700 !important;
-          page-break-after: avoid !important;
-          break-after: avoid !important;
-        }
-        
-        .pdf-content p:not([style*="font-family"]), 
-        .pdf-content span:not([style*="font-family"]) {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-          font-weight: 400 !important;
-        }
-        
-        .pdf-section {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-          margin-bottom: 24px !important;
-          max-width: 100% !important;
-          overflow: hidden !important;
-        }
-        
-        .avoid-break {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-          -webkit-column-break-inside: avoid !important;
-          -moz-column-break-inside: avoid !important;
-          column-break-inside: avoid !important;
-        }
-        
-        .grid {
-          display: grid !important;
-          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
-          gap: 0.75rem !important;
-          width: 100% !important;
-          max-width: 100% !important;
-        }
-        
-        .grid > * {
-          min-width: 0 !important;
-          max-width: 100% !important;
-        }
-        
-        .logo-variations {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-        }
-        
-        .logo-display {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-          display: inline-block !important;
-          width: 100% !important;
-        }
-        
-        img {
-          max-width: 100% !important;
-          height: auto !important;
-          object-fit: cover !important;
-          display: block !important;
-        }
-        
-        [style*="font-family"] {
-          font-family: inherit !important;
-        }
-        
-        .container, .max-w-6xl, .mx-auto {
-          max-width: 186mm !important;
-          padding-left: 0 !important;
-          padding-right: 0 !important;
-        }
-        
-        .color-grid {
-          display: grid !important;
-          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
-          gap: 1rem !important;
-        }
-      `;
-      
-      document.head.appendChild(styleElement);
-      contentRef.current.classList.add('pdf-content');
-
-      // Enhanced image loading and conversion
-      console.log('Converting shared preview images...');
-      await waitForImagesToLoad(contentRef.current);
-      console.log('Shared images converted, waiting for layout...');
-      
-      await new Promise(resolve => setTimeout(resolve, 3000));
-
-      // Render with html2canvas (same settings as Preview.tsx)
+      // Step 7: Render with html2canvas (same settings as Preview.tsx)
       console.log('Rendering shared preview with html2canvas...');
-      const canvas = await html2canvas(contentRef.current, {
-        scale: 2.0,
+      const canvas = await html2canvas(exportRef.current, {
+        scale: 1.5,
         useCORS: true,
         allowTaint: true,
         backgroundColor: 'white',
-        height: contentRef.current.scrollHeight,
-        width: contentRef.current.scrollWidth,
+        height: exportRef.current.scrollHeight,
+        width: exportRef.current.scrollWidth,
         logging: false,
         windowWidth: 1200,
-        windowHeight: contentRef.current.scrollHeight,
-        imageTimeout: 10000,
+        windowHeight: exportRef.current.scrollHeight,
+        imageTimeout: 15000,
         onclone: (clonedDoc) => {
           const clonedStyle = clonedDoc.createElement('style');
           clonedStyle.textContent = styleElement.textContent;
@@ -474,31 +191,31 @@ const SharedPreview = () => {
             img.style.display = 'block';
           });
           
-          const logoSections = clonedDoc.querySelectorAll('.logo-display, .color-card, [class*="typography"]');
-          logoSections.forEach((section) => {
+          const clonedSections = clonedDoc.querySelectorAll('.logo-display, .color-card, [class*="typography"], [class*="section"]');
+          clonedSections.forEach((section) => {
             section.classList.add('avoid-break');
           });
         }
       });
 
-      // Multi-page PDF generation (same logic as Preview.tsx)
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      // Step 8: Multi-page PDF generation (same logic as Preview.tsx)
+      const imgData = canvas.toDataURL('image/jpeg', 0.9);
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      const effectivePageHeight = contentHeight - 8;
-      const totalPages = Math.ceil(imgHeight / effectivePageHeight);
+      const safePageHeight = contentHeight - 10;
+      const totalPages = Math.ceil(imgHeight / safePageHeight);
       
       console.log(`Generating ${totalPages} pages for shared preview...`);
       
       for (let pageNum = 0; pageNum < totalPages; pageNum++) {
         pdf.addPage();
         
-        const sourceY = pageNum * effectivePageHeight * (canvas.width / contentWidth);
+        const sourceY = pageNum * safePageHeight * (canvas.width / contentWidth);
         const remainingHeight = canvas.height - sourceY;
-        const sourceHeight = Math.min(effectivePageHeight * (canvas.width / contentWidth), remainingHeight);
+        const sourceHeight = Math.min(safePageHeight * (canvas.width / contentWidth), remainingHeight);
         
-        if (sourceHeight > 100) {
+        if (sourceHeight > 50) {
           const tempCanvas = document.createElement('canvas');
           tempCanvas.width = canvas.width;
           tempCanvas.height = sourceHeight;
@@ -511,7 +228,7 @@ const SharedPreview = () => {
               0, 0, canvas.width, sourceHeight
             );
             
-            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
+            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.9);
             const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
             
             pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
@@ -520,8 +237,7 @@ const SharedPreview = () => {
         }
       }
 
-      // Cleanup
-      contentRef.current.classList.remove('pdf-content');
+      // Step 9: Cleanup
       document.head.removeChild(styleElement);
       dismissProgress();
 
@@ -531,7 +247,7 @@ const SharedPreview = () => {
       console.log('Shared preview PDF export completed successfully');
       toast({
         title: "PDF Generated Successfully",
-        description: "The brand guide has been downloaded with all content included.",
+        description: "The brand guide has been downloaded with all content properly rendered.",
       });
 
     } catch (error) {
@@ -608,6 +324,18 @@ const SharedPreview = () => {
 
           <div ref={contentRef}>
             <BrandGuideRenderer
+              guide={sharedGuide.guide}
+              colorNames={sharedGuide.colorNames}
+              typographyNames={sharedGuide.typographyNames}
+              typographyVisibility={sharedGuide.typographyVisibility}
+              previewText={sharedGuide.previewText}
+            />
+          </div>
+
+          {/* Hidden PDF export renderer */}
+          <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+            <PDFExportRenderer
+              ref={exportRef}
               guide={sharedGuide.guide}
               colorNames={sharedGuide.colorNames}
               typographyNames={sharedGuide.typographyNames}

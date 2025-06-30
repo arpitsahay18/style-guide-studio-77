@@ -1,3 +1,4 @@
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -39,4 +40,32 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* PDF Export Styles */
+@media print {
+  .avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .pdf-section {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .logo-display-item {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .color-card {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .typography-section {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
 }
