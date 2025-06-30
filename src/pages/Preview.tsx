@@ -117,39 +117,27 @@ const Preview = () => {
 
     try {
       const guide = sharedGuide || currentGuide;
-      console.log('🚀 Starting ENHANCED PDF export for guide:', guide.name);
+      console.log('Starting enhanced PDF export for guide:', guide.name);
       
       // Step 1: Create and apply print styles
-      console.log('📄 Applying print styles...');
       const styleElement = createPrintStyles();
       document.head.appendChild(styleElement);
       
       // Step 2: Apply CSS classes for better page breaking
-      console.log('🔧 Applying page break classes...');
       const sections = exportRef.current.querySelectorAll('[class*="section"], .color-card, .logo-display, [class*="typography"]');
       sections.forEach((section) => {
         section.classList.add('avoid-break');
       });
 
-      // Step 3: CRITICAL - Convert Firebase images to base64 and preload
-      console.log('🖼️ Converting Firebase images to base64...');
+      // Step 3: Convert all Firebase images to base64 and preload
+      console.log('Converting Firebase images to base64...');
       await preloadImages(exportRef.current);
-      console.log('✅ All Firebase images converted and preloaded');
+      console.log('All images converted and preloaded');
       
       // Step 4: Extended wait for layout stabilization
-      console.log('⏳ Waiting for layout stabilization...');
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Step 5: Debug - log all images in export container
-      const allImages = exportRef.current.querySelectorAll('img');
-      console.log('🔍 Images in export container:');
-      allImages.forEach((img, index) => {
-        console.log(`Image ${index + 1}: ${img.src.substring(0, 100)}...`);
-        console.log(`Image ${index + 1} loaded: ${img.complete && img.naturalHeight !== 0}`);
-      });
-
-      // Step 6: Create PDF with optimized settings
-      console.log('📋 Creating PDF document...');
+      // Step 5: Create PDF with optimized settings
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -163,7 +151,7 @@ const Preview = () => {
       const contentWidth = pageWidth - (margin * 2);
       const contentHeight = pageHeight - (margin * 2);
       
-      // Step 7: Create enhanced cover page
+      // Step 6: Create enhanced cover page
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
       
@@ -191,21 +179,20 @@ const Preview = () => {
       pdf.setTextColor(255, 255, 255);
       pdf.text('Made with Brand Studio', pageWidth / 2, pillY + 6.5, { align: 'center' });
 
-      // Step 8: Render content with html2canvas
-      console.log('🎨 Rendering content with html2canvas...');
+      // Step 7: Render content with html2canvas
+      console.log('Rendering content with html2canvas...');
       const canvas = await html2canvas(exportRef.current, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         allowTaint: true,
         backgroundColor: 'white',
         height: exportRef.current.scrollHeight,
         width: exportRef.current.scrollWidth,
-        logging: true,
+        logging: false,
         windowWidth: 1200,
         windowHeight: exportRef.current.scrollHeight,
-        imageTimeout: 20000,
+        imageTimeout: 15000,
         onclone: (clonedDoc) => {
-          console.log('🧬 Cloning document for rendering...');
           // Apply styles to cloned document
           const clonedStyle = clonedDoc.createElement('style');
           clonedStyle.textContent = styleElement.textContent;
@@ -213,12 +200,10 @@ const Preview = () => {
           
           // Ensure images are properly sized
           const clonedImages = clonedDoc.querySelectorAll('img');
-          console.log(`Found ${clonedImages.length} images in cloned document`);
-          clonedImages.forEach((img, index) => {
-            console.log(`Cloned image ${index + 1}: ${img.src.substring(0, 50)}...`);
+          clonedImages.forEach((img) => {
             img.style.maxWidth = '100%';
             img.style.height = 'auto';
-            img.style.objectFit = 'contain';
+            img.style.objectFit = 'cover';
             img.style.display = 'block';
           });
           
@@ -230,17 +215,17 @@ const Preview = () => {
         }
       });
 
-      console.log(`📐 Canvas dimensions: ${canvas.width}x${canvas.height}`);
+      console.log('Canvas rendered, generating PDF pages...');
 
-      // Step 9: Multi-page PDF generation with better pagination
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      // Step 8: Multi-page PDF generation with better pagination
+      const imgData = canvas.toDataURL('image/jpeg', 0.9);
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      const safePageHeight = contentHeight - 10;
+      const safePageHeight = contentHeight - 10; // Conservative margin
       const totalPages = Math.ceil(imgHeight / safePageHeight);
       
-      console.log(`📄 Generating ${totalPages} pages...`);
+      console.log(`Generating ${totalPages} pages...`);
       
       for (let pageNum = 0; pageNum < totalPages; pageNum++) {
         pdf.addPage();
@@ -249,7 +234,7 @@ const Preview = () => {
         const remainingHeight = canvas.height - sourceY;
         const sourceHeight = Math.min(safePageHeight * (canvas.width / contentWidth), remainingHeight);
         
-        if (sourceHeight > 50) {
+        if (sourceHeight > 50) { // Only add if there's meaningful content
           const tempCanvas = document.createElement('canvas');
           tempCanvas.width = canvas.width;
           tempCanvas.height = sourceHeight;
@@ -262,31 +247,31 @@ const Preview = () => {
               0, 0, canvas.width, sourceHeight
             );
             
-            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
+            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.9);
             const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
             
             pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
-            console.log(`✅ Added page ${pageNum + 1}/${totalPages}`);
+            console.log(`Added page ${pageNum + 1}/${totalPages}`);
           }
         }
       }
 
-      // Step 10: Cleanup
+      // Step 9: Cleanup
       document.head.removeChild(styleElement);
       dismissProgress();
 
-      // Step 11: Save PDF
+      // Step 10: Save PDF
       const fileName = `${guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf`;
       pdf.save(fileName);
       
-      console.log('🎉 Enhanced PDF export completed successfully');
+      console.log('Enhanced PDF export completed successfully');
       toast({
         title: "PDF Generated Successfully",
         description: "Your complete brand guide has been downloaded with all logos and content properly rendered.",
       });
 
     } catch (error) {
-      console.error('💥 Error generating PDF:', error);
+      console.error('Error generating PDF:', error);
       dismissProgress();
       toast({
         variant: "destructive",
