@@ -42,7 +42,38 @@
   color: #888;
 }
 
-/* PDF Export Styles */
+/* Enhanced PDF Export Styles */
+.avoid-break {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+  -webkit-column-break-inside: avoid !important;
+  -moz-column-break-inside: avoid !important;
+  column-break-inside: avoid !important;
+}
+
+.pdf-section {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+  margin-bottom: 24px !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.logo-display-item {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
+.color-card {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
+.typography-section {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
 @media print {
   .avoid-break {
     break-inside: avoid !important;
@@ -68,4 +99,14 @@
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
+}
+
+/* Debug styles for PDF export - remove in production */
+.pdf-export-container {
+  border: 2px solid red;
+  padding: 20px;
+}
+
+.pdf-export-container img {
+  border: 1px solid blue;
 }

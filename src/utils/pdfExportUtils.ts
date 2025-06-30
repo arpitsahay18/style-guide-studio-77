@@ -3,40 +3,62 @@
 export const convertImageToBase64 = async (url: string, retries: number = 3): Promise<string> => {
   // If already base64, return as-is
   if (url.startsWith('data:image/')) {
+    console.log('Image is already base64, returning as-is');
     return url;
   }
 
+  console.log(`Converting Firebase image to base64: ${url}`);
+
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      console.log(`Converting image to base64 (attempt ${attempt + 1}):`, url);
+      console.log(`Conversion attempt ${attempt + 1}/${retries}`);
       
-      const response = await fetch(url, {
-        mode: 'cors',
-        credentials: 'omit',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
+      // Create a canvas to convert the image
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const blob = await response.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          console.log('Successfully converted image to base64');
-          resolve(reader.result as string);
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (!ctx) {
+              reject(new Error('Could not get canvas context'));
+              return;
+            }
+            
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            
+            ctx.drawImage(img, 0, 0);
+            const base64 = canvas.toDataURL('image/png');
+            
+            console.log('Successfully converted Firebase image to base64');
+            resolve(base64);
+          } catch (error) {
+            reject(error);
+          }
         };
-        reader.onerror = () => reject(new Error('Failed to convert image to base64'));
-        reader.readAsDataURL(blob);
+        
+        img.onerror = () => {
+          reject(new Error(`Failed to load image: ${url}`));
+        };
+        
+        // Add timeout
+        setTimeout(() => {
+          reject(new Error(`Image load timeout: ${url}`));
+        }, 10000);
       });
+      
+      img.src = url;
+      return await base64Promise;
+      
     } catch (error) {
       console.warn(`Attempt ${attempt + 1} failed:`, error);
       if (attempt === retries - 1) {
-        console.error('All attempts failed, returning original URL:', url);
-        return url; // Return original URL as final fallback
+        console.error('All conversion attempts failed, returning original URL');
+        return url; // Fallback to original URL
       }
       // Wait before retry
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -46,42 +68,47 @@ export const convertImageToBase64 = async (url: string, retries: number = 3): Pr
 };
 
 export const preloadImages = async (container: HTMLElement): Promise<void> => {
-  console.log('Starting image preloading process...');
+  console.log('Starting comprehensive image preloading...');
   const images = container.querySelectorAll('img');
-  console.log(`Found ${images.length} images to preload`);
+  console.log(`Found ${images.length} images to process`);
   
   const imagePromises = Array.from(images).map(async (img, index) => {
-    console.log(`Processing image ${index + 1}/${images.length}:`, img.src);
+    console.log(`Processing image ${index + 1}: ${img.src}`);
     
-    // Convert Firebase URLs to base64
-    if (img.src.startsWith('https://firebasestorage.googleapis.com') || 
-        img.src.startsWith('https://storage.googleapis.com')) {
+    // Convert Firebase Storage URLs to base64
+    if (img.src.includes('firebasestorage.googleapis.com') || 
+        img.src.includes('storage.googleapis.com')) {
       try {
+        console.log(`Converting Firebase image ${index + 1} to base64...`);
         const base64 = await convertImageToBase64(img.src);
         img.src = base64;
-        console.log(`Converted Firebase image ${index + 1} to base64`);
+        console.log(`✅ Firebase image ${index + 1} converted successfully`);
       } catch (error) {
-        console.error(`Failed to convert image ${index + 1}:`, error);
+        console.error(`❌ Failed to convert Firebase image ${index + 1}:`, error);
       }
     }
     
+    // Ensure image is loaded
     return new Promise<void>((resolve) => {
       if (img.complete && img.naturalHeight !== 0) {
         console.log(`Image ${index + 1} already loaded`);
         resolve();
       } else {
         const handleLoad = () => {
-          console.log(`Image ${index + 1} loaded successfully`);
-          img.removeEventListener('load', handleLoad);
-          img.removeEventListener('error', handleError);
+          console.log(`✅ Image ${index + 1} loaded`);
+          cleanup();
           resolve();
         };
         
         const handleError = () => {
-          console.warn(`Image ${index + 1} failed to load:`, img.src);
+          console.warn(`❌ Image ${index + 1} failed to load`);
+          cleanup();
+          resolve();
+        };
+        
+        const cleanup = () => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          resolve();
         };
         
         img.addEventListener('load', handleLoad);
@@ -89,9 +116,8 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
         
         // Timeout fallback
         setTimeout(() => {
-          img.removeEventListener('load', handleLoad);
-          img.removeEventListener('error', handleError);
-          console.log(`Image ${index + 1} timeout, continuing...`);
+          cleanup();
+          console.log(`⏰ Image ${index + 1} timeout, continuing...`);
           resolve();
         }, 8000);
       }
@@ -99,10 +125,10 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
   });
   
   await Promise.all(imagePromises);
-  console.log('All images preloaded');
+  console.log('✅ All images processed and preloaded');
   
-  // Additional wait for layout stabilization
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  // Additional stabilization wait
+  await new Promise(resolve => setTimeout(resolve, 2000));
 };
 
 export const createPrintStyles = (): HTMLStyleElement => {
@@ -111,27 +137,18 @@ export const createPrintStyles = (): HTMLStyleElement => {
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
     .pdf-export-container {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      max-width: 190mm !important;
+      font-family: 'Inter', sans-serif !important;
+      max-width: 210mm !important;
       overflow-x: hidden !important;
       background: white !important;
-      padding: 0 !important;
+      padding: 20mm !important;
       margin: 0 !important;
       color: black !important;
+      line-height: 1.6 !important;
     }
     
-    .pdf-export-container h1, 
-    .pdf-export-container h2, 
-    .pdf-export-container h3, 
-    .pdf-export-container h4 {
-      font-weight: 700 !important;
-      color: black !important;
-    }
-    
-    .pdf-export-container p, 
-    .pdf-export-container span {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-weight: 400 !important;
+    .pdf-export-container * {
+      font-family: 'Inter', sans-serif !important;
       color: black !important;
     }
     
@@ -146,63 +163,80 @@ export const createPrintStyles = (): HTMLStyleElement => {
     .pdf-section {
       break-inside: avoid !important;
       page-break-inside: avoid !important;
-      margin-bottom: 24px !important;
-      max-width: 100% !important;
-      overflow: hidden !important;
+      margin-bottom: 32px !important;
+      padding: 16px !important;
+      border: 1px solid #f0f0f0 !important;
+      border-radius: 8px !important;
     }
     
     .logo-variations-grid {
       display: grid !important;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
-      gap: 0.75rem !important;
-      width: 100% !important;
-      max-width: 100% !important;
-    }
-    
-    .logo-variations-grid > * {
-      min-width: 0 !important;
-      max-width: 100% !important;
+      grid-template-columns: repeat(4, 1fr) !important;
+      gap: 16px !important;
+      margin: 16px 0 !important;
     }
     
     .logo-display-item {
       break-inside: avoid !important;
       page-break-inside: avoid !important;
-      display: inline-block !important;
-      width: 100% !important;
+      text-align: center !important;
+      padding: 12px !important;
+      background: #f8f9fa !important;
+      border-radius: 8px !important;
     }
     
     .color-grid {
       display: grid !important;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
-      gap: 1rem !important;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+      gap: 16px !important;
+      margin: 16px 0 !important;
     }
     
     .color-card {
       break-inside: avoid !important;
       page-break-inside: avoid !important;
+      text-align: center !important;
     }
     
     .typography-section {
       break-inside: avoid !important;
       page-break-inside: avoid !important;
-      margin-bottom: 2rem !important;
+      margin-bottom: 24px !important;
+      padding: 16px !important;
+      background: #fafafa !important;
+      border-radius: 8px !important;
     }
     
     img {
       max-width: 100% !important;
       height: auto !important;
-      object-fit: cover !important;
+      object-fit: contain !important;
       display: block !important;
-    }
-    
-    .container, .max-w-6xl, .mx-auto {
-      max-width: 190mm !important;
-      padding-left: 0 !important;
-      padding-right: 0 !important;
+      margin: 0 auto !important;
     }
     
     @media print {
       .avoid-break {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      
+      .pdf-section {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      
+      .logo-display-item {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      
+      .color-card {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      
+      .typography-section {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
       }
