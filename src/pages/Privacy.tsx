@@ -1,11 +1,8 @@
-
 import React from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
 const Privacy = () => {
-  return (
-    <MainLayout>
+  return <MainLayout>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-4">Privacy Policy</h1>
@@ -138,23 +135,14 @@ const Privacy = () => {
               <p className="text-sm text-muted-foreground mb-4">
                 If you have any questions about this Privacy Policy or our data practices, please contact us:
               </p>
-              <a 
-                href="https://www.linkedin.com/in/arpitsahay18" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
+              <a href="https://www.linkedin.com/in/arpitsahay18" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                 Arpit Sahay on LinkedIn
               </a>
-              <p className="text-xs text-muted-foreground mt-4">
-                Last updated: December 2024
-              </p>
+              <p className="text-xs text-muted-foreground mt-4">Last updated: June 2025</p>
             </CardContent>
           </Card>
         </div>
       </div>
-    </MainLayout>
-  );
+    </MainLayout>;
 };
-
 export default Privacy;
