@@ -23,18 +23,16 @@ export const GeneratedLinksDialog: React.FC<GeneratedLinksDialogProps> = ({
 }) => {
   const { links, loading, deleteLink, copyLinkToClipboard } = useShareableLinks();
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+  const getHoursRemaining = (expiresAt: Date) => {
+    const now = new Date();
+    const diff = expiresAt.getTime() - now.getTime();
+    const hours = Math.ceil(diff / (1000 * 60 * 60));
+    return Math.max(0, hours);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[80vh]">
+      <DialogContent className="sm:max-w-md h-[500px] flex flex-col">
         <DialogHeader>
           <DialogTitle>Generated Links</DialogTitle>
           <DialogDescription>
@@ -42,7 +40,7 @@ export const GeneratedLinksDialog: React.FC<GeneratedLinksDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="max-h-[400px] pr-4">
+        <ScrollArea className="flex-1 pr-4">
           <div className="space-y-4">
             {loading ? (
               <div className="text-center py-4">
@@ -53,35 +51,39 @@ export const GeneratedLinksDialog: React.FC<GeneratedLinksDialogProps> = ({
                 No links generated yet
               </div>
             ) : (
-              links.map((link) => (
-                <div key={link.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{link.brandGuideName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Created: {formatDate(link.createdAt)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Expires: {formatDate(link.expiresAt)}
-                    </p>
+              links.map((link) => {
+                const hoursRemaining = getHoursRemaining(link.expiresAt);
+                return (
+                  <div key={link.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{link.brandGuideName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {hoursRemaining > 0 
+                          ? `Expires in ${hoursRemaining} hour${hoursRemaining !== 1 ? 's' : ''}`
+                          : 'Expired'
+                        }
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyLinkToClipboard(link.url)}
+                        disabled={hoursRemaining === 0}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteLink(link.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyLinkToClipboard(link.url)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteLink(link.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </ScrollArea>

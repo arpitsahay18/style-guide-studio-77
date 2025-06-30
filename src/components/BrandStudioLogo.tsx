@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface BrandStudioLogoProps {
@@ -7,6 +6,8 @@ interface BrandStudioLogoProps {
   withText?: boolean;
   className?: string;
   onClick?: () => void;
+  logoSrc?: string;
+  useSimpleStroke?: boolean;
 }
 
 export function BrandStudioLogo({ 
@@ -14,7 +15,9 @@ export function BrandStudioLogo({
   color = 'currentColor', 
   withText = true,
   className = '',
-  onClick
+  onClick,
+  logoSrc,
+  useSimpleStroke = false
 }: BrandStudioLogoProps) {
   const sizes = {
     sm: { height: 24 },
@@ -23,6 +26,19 @@ export function BrandStudioLogo({
   };
   
   const { height } = sizes[size];
+
+  // Simple stroke logic for logo preview
+  const getStrokeColor = (src: string) => {
+    if (!useSimpleStroke) return 'transparent';
+    
+    // Simple heuristic: if filename contains 'white' or 'light', use black stroke
+    // Otherwise use white stroke (this is a simplified approach)
+    const isLightLogo = src.toLowerCase().includes('white') || src.toLowerCase().includes('light');
+    return isLightLogo ? '#000000' : '#ffffff';
+  };
+  
+  const displaySrc = logoSrc || "/lovable-uploads/48fbf6d8-ff14-4779-8094-0a66f3212c01.png";
+  const strokeColor = useSimpleStroke ? getStrokeColor(displaySrc) : 'transparent';
   
   return (
     <div 
@@ -30,9 +46,13 @@ export function BrandStudioLogo({
       onClick={onClick}
     >
       <img 
-        src="/lovable-uploads/48fbf6d8-ff14-4779-8094-0a66f3212c01.png" 
+        src={displaySrc}
         alt="Brand Studio"
-        style={{ height: height }}
+        style={{ 
+          height: height,
+          border: useSimpleStroke ? `2px solid ${strokeColor}` : 'none',
+          borderRadius: useSimpleStroke ? '8px' : '0'
+        }}
         className="object-contain"
       />
     </div>

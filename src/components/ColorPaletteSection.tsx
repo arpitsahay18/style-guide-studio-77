@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { useBrandGuide } from '@/context/BrandGuideContext';
 import { ColorInput, ColorWithTintsShades } from '@/types';
 import { ColorSwatch } from '@/components/ui/ColorSwatch';
 import { EnhancedColorForm } from './EnhancedColorForm';
+import { ColorRenameDialog } from './ColorRenameDialog';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
   Card,
@@ -26,15 +25,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { Trash2, Plus, Palette, Edit } from 'lucide-react';
 import { hexToRgb, rgbToCmyk, generateTints, generateShades } from '@/utils/colorUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -53,7 +43,6 @@ export function ColorPaletteSection() {
     category: 'primary' | 'secondary' | 'neutral';
     index: number;
   } | null>(null);
-  const [tempColorName, setTempColorName] = useState('');
 
   const handleAddColor = (category: 'primary' | 'secondary' | 'neutral', colorInput: ColorInput) => {
     const rgb = hexToRgb(colorInput.hex);
@@ -158,20 +147,19 @@ export function ColorPaletteSection() {
   };
 
   const canDeleteColor = (category: 'primary' | 'secondary' | 'neutral') => {
-    return currentGuide.colors[category].length > 1;
+    // Allow deletion for all categories, including neutral colors
+    return currentGuide.colors[category].length > 0;
   };
 
   const handleRenameColor = (category: 'primary' | 'secondary' | 'neutral', index: number) => {
     setRenamingColor({ category, index });
-    setTempColorName(getColorDisplayName(index, category));
   };
 
-  const handleSaveColorName = () => {
+  const handleSaveColorName = (newName: string) => {
     if (renamingColor) {
-      const finalName = tempColorName.trim() || getColorDisplayName(renamingColor.index, renamingColor.category);
+      const finalName = newName.trim() || getColorDisplayName(renamingColor.index, renamingColor.category);
       handleColorNameChange(renamingColor.index, renamingColor.category, finalName);
       setRenamingColor(null);
-      setTempColorName('');
       
       toast({
         title: "Color renamed",
@@ -238,54 +226,14 @@ export function ColorPaletteSection() {
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Dialog open={renamingColor?.category === category && renamingColor?.index === index} onOpenChange={(open) => !open && setRenamingColor(null)}>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleRenameColor(category, index)}
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Rename
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                          <DialogHeader>
-                            <DialogTitle>Rename Color</DialogTitle>
-                            <DialogDescription>
-                              Give this color a custom name that will appear in your brand guide.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
-                              <Label htmlFor="color-name" className="text-right">
-                                Name
-                              </Label>
-                              <Input
-                                id="color-name"
-                                value={tempColorName}
-                                onChange={(e) => setTempColorName(e.target.value)}
-                                className="col-span-3"
-                                maxLength={20}
-                                placeholder="Enter color name"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleSaveColorName();
-                                  }
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button variant="outline" onClick={() => setRenamingColor(null)}>
-                              Cancel
-                            </Button>
-                            <Button onClick={handleSaveColorName}>
-                              Save Name
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleRenameColor(category, index)}
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Rename
+                      </Button>
                       
                       {canDeleteColor(category) && (
                         <AlertDialog>
@@ -428,6 +376,16 @@ export function ColorPaletteSection() {
           onCancel={() => setEditingColor(null)}
           title="Edit Color"
           initialColor={editingColor.color.hex}
+        />
+      )}
+
+      {/* Color Rename Dialog */}
+      {renamingColor && (
+        <ColorRenameDialog
+          open={true}
+          onOpenChange={(open) => !open && setRenamingColor(null)}
+          currentName={getColorDisplayName(renamingColor.index, renamingColor.category)}
+          onRename={handleSaveColorName}
         />
       )}
     </div>
