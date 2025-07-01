@@ -44,24 +44,6 @@ const Index = () => {
     setGuideName(newName);
   };
 
-  // Determine logo border color based on logo analysis
-  const getLogoBorderColor = () => {
-    if (!currentGuide.logos.original) {
-      return 'white';
-    }
-
-    // Simple heuristic: if there are primary colors, use them for border
-    if (currentGuide.colors.primary.length === 1) {
-      return currentGuide.colors.primary[0].hex;
-    } else if (currentGuide.colors.primary.length > 1) {
-      const colors = currentGuide.colors.primary.map(color => color.hex).join(', ');
-      return `linear-gradient(45deg, ${colors})`;
-    }
-
-    // Default to a simple border approach
-    return '#e5e7eb'; // gray-200
-  };
-
   const overlayClass = welcomeOpen ? 'pointer-events-none blur-sm' : '';
 
   return (
@@ -79,26 +61,12 @@ const Index = () => {
           <div className="flex items-center gap-4 w-full max-w-md">
             {/* Brand Logo Placeholder */}
             {currentGuide.logos.original && (
-              <div 
-                className="w-12 h-12 rounded-full border-2 flex items-center justify-center overflow-hidden bg-white flex-shrink-0"
-                style={{
-                  borderColor: currentGuide.colors.primary.length === 1 
-                    ? currentGuide.colors.primary[0].hex 
-                    : currentGuide.colors.primary.length > 1 
-                      ? 'transparent'
-                      : '#e5e7eb',
-                  background: currentGuide.colors.primary.length > 1 
-                    ? `linear-gradient(45deg, ${currentGuide.colors.primary.map(color => color.hex).join(', ')})` 
-                    : 'white'
-                }}
-              >
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-white flex items-center justify-center">
-                  <img 
-                    src={currentGuide.logos.original} 
-                    alt="Brand Logo" 
-                    className="w-full h-full object-contain"
-                  />
-                </div>
+              <div className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center overflow-hidden bg-white flex-shrink-0">
+                <img 
+                  src={currentGuide.logos.original} 
+                  alt="Brand Logo" 
+                  className="w-full h-full object-contain"
+                />
               </div>
             )}
             
