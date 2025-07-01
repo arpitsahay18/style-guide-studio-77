@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/s/:path*", "destination": "/" },
+    { "source": "/privacy", "destination": "/" },
+    { "source": "/help", "destination": "/" },
+    { "source": "/:path*", "destination": "/" }
+  ]
+}
