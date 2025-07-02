@@ -64,12 +64,15 @@ export function BrandGuideRenderer({
       }
     };
 
+    // Handle different logo data structures
+    const logoSrc = logo.src || logo.url || logo;
+    
     return (
       <div className={`text-center bg-gray-50 rounded-lg p-4 avoid-break ${isPrintMode ? 'page-break-inside-avoid' : ''}`}>
         <div className={`flex items-center justify-center p-4 rounded-lg shadow-sm mb-3 mx-auto ${backgroundConfig.bgClass} ${backgroundConfig.borderClass}`}>
           <div className={`w-24 h-24 overflow-hidden ${getShapeClasses()}`}>
             <img 
-              src={logo.src} 
+              src={logoSrc} 
               alt={`${shape} logo ${index + 1}`}
               className="w-full h-full object-cover"
               onError={handleImageError}

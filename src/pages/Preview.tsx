@@ -16,7 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { showProgressToast } from '@/components/ui/progress-toast';
-import { convertImageToBase64, preloadImages, createPrintStyles } from '@/utils/pdfExportUtils';
+import { convertImageToBase64, preloadImages, createPrintStyles, extractFontsFromContainer } from '@/utils/pdfExportUtils';
 
 const Preview = () => {
   const { guideId } = useParams();
@@ -120,8 +120,9 @@ const Preview = () => {
       const guide = sharedGuide || currentGuide;
       console.log('Starting enhanced PDF export for guide:', guide.name);
       
-      // Step 1: Create and apply print styles
-      const styleElement = createPrintStyles();
+      // Step 1: Extract fonts and create print styles
+      const fonts = extractFontsFromContainer(exportRef.current);
+      const styleElement = createPrintStyles(fonts);
       document.head.appendChild(styleElement);
       
       // Step 2: Apply CSS classes for better page breaking

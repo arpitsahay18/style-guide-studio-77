@@ -45,6 +45,22 @@ export const convertImageToBase64 = async (url: string, retries: number = 3): Pr
   return url;
 };
 
+export const extractFontsFromContainer = (container: HTMLElement): Set<string> => {
+  const fonts = new Set<string>();
+  
+  // Find all elements with inline font-family styles
+  const elementsWithFonts = container.querySelectorAll('[style*="font-family"]');
+  elementsWithFonts.forEach(element => {
+    const style = (element as HTMLElement).style;
+    if (style.fontFamily) {
+      fonts.add(style.fontFamily);
+    }
+  });
+  
+  console.log('Extracted fonts for PDF:', Array.from(fonts));
+  return fonts;
+};
+
 export const preloadImages = async (container: HTMLElement): Promise<void> => {
   console.log('Starting image preloading process...');
   const images = container.querySelectorAll('img');
@@ -105,10 +121,19 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 1500));
 };
 
-export const createPrintStyles = (): HTMLStyleElement => {
+export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElement => {
   const styleElement = document.createElement('style');
+  
+  // Generate Google Fonts import URL for all unique fonts
+  const fontImports = Array.from(fonts).map(font => {
+    const fontName = font.replace(/'/g, '').split(',')[0];
+    const encodedFont = encodeURIComponent(fontName);
+    return `@import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap');`;
+  }).join('\n');
+  
   styleElement.textContent = `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    ${fontImports}
     
     .pdf-export-container {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -130,8 +155,8 @@ export const createPrintStyles = (): HTMLStyleElement => {
     
     .pdf-export-container p, 
     .pdf-export-container span {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-weight: 400 !important;
+      font-family: inherit !important;
+      font-weight: inherit !important;
       color: black !important;
     }
     
