@@ -16,7 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { showProgressToast } from '@/components/ui/progress-toast';
-import { convertImageToBase64, preloadImages, createPrintStyles, extractFontsFromContainer } from '@/utils/pdfExportUtils';
+import { convertImageToBase64, preloadImages, createPrintStyles, extractFontsFromContainer, preloadGoogleFonts } from '@/utils/pdfExportUtils';
 
 const Preview = () => {
   const { guideId } = useParams();
@@ -125,21 +125,25 @@ const Preview = () => {
       const styleElement = createPrintStyles(fonts);
       document.head.appendChild(styleElement);
       
-      // Step 2: Apply CSS classes for better page breaking
+      // Step 2: Preload Google Fonts
+      console.log('Preloading Google Fonts for PDF...');
+      await preloadGoogleFonts(fonts);
+      
+      // Step 3: Apply CSS classes for better page breaking
       const sections = exportRef.current.querySelectorAll('[class*="section"], .color-card, .logo-display, [class*="typography"]');
       sections.forEach((section) => {
         section.classList.add('avoid-break');
       });
 
-      // Step 3: Convert all Firebase images to base64 and preload
+      // Step 4: Convert all Firebase images to base64 and preload
       console.log('Converting Firebase images to base64...');
       await preloadImages(exportRef.current);
       console.log('All images converted and preloaded');
       
-      // Step 4: Extended wait for layout stabilization
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Step 5: Extended wait for layout stabilization and font loading
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Step 5: Create PDF with optimized settings
+      // Step 6: Create PDF with optimized settings
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -153,7 +157,7 @@ const Preview = () => {
       const contentWidth = pageWidth - (margin * 2);
       const contentHeight = pageHeight - (margin * 2);
       
-      // Step 6: Create enhanced cover page
+      // Step 7: Create enhanced cover page
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
       
@@ -181,7 +185,7 @@ const Preview = () => {
       pdf.setTextColor(255, 255, 255);
       pdf.text('Made with Brand Studio', pageWidth / 2, pillY + 6.5, { align: 'center' });
 
-      // Step 7: Render content with html2canvas
+      // Step 8: Render content with html2canvas
       console.log('Rendering content with html2canvas...');
       const canvas = await html2canvas(exportRef.current, {
         scale: 1.5,
@@ -219,7 +223,7 @@ const Preview = () => {
 
       console.log('Canvas rendered, generating PDF pages...');
 
-      // Step 8: Multi-page PDF generation with better pagination
+      // Step 9: Multi-page PDF generation with better pagination
       const imgData = canvas.toDataURL('image/jpeg', 0.9);
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
@@ -258,11 +262,11 @@ const Preview = () => {
         }
       }
 
-      // Step 9: Cleanup
+      // Step 10: Cleanup
       document.head.removeChild(styleElement);
       dismissProgress();
 
-      // Step 10: Save PDF
+      // Step 11: Save PDF
       const fileName = `${guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf`;
       pdf.save(fileName);
       

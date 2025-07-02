@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { showProgressToast } from '@/components/ui/progress-toast';
-import { convertImageToBase64, preloadImages, createPrintStyles, extractFontsFromContainer } from '@/utils/pdfExportUtils';
+import { convertImageToBase64, preloadImages, createPrintStyles, extractFontsFromContainer, preloadGoogleFonts } from '@/utils/pdfExportUtils';
 
 const SharedPreview = () => {
   const { linkId } = useParams();
@@ -111,21 +111,25 @@ const SharedPreview = () => {
       const styleElement = createPrintStyles(fonts);
       document.head.appendChild(styleElement);
       
-      // Step 2: Apply CSS classes for better page breaking
+      // Step 2: Preload Google Fonts
+      console.log('Preloading Google Fonts for shared preview PDF...');
+      await preloadGoogleFonts(fonts);
+      
+      // Step 3: Apply CSS classes for better page breaking
       const sections = exportRef.current.querySelectorAll('[class*="section"], .color-card, .logo-display, [class*="typography"]');
       sections.forEach((section) => {
         section.classList.add('avoid-break');
       });
 
-      // Step 3: Convert all Firebase images to base64 and preload
+      // Step 4: Convert all Firebase images to base64 and preload
       console.log('Converting shared preview images...');
       await preloadImages(exportRef.current);
       console.log('Shared images converted and preloaded');
       
-      // Step 4: Extended wait for layout stabilization
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Step 5: Extended wait for layout stabilization and font loading
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Step 5: Create PDF with optimized settings (same as Preview.tsx)
+      // Step 6: Create PDF with optimized settings (same as Preview.tsx)
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',

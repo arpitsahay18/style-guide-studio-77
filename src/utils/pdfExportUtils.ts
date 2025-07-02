@@ -45,6 +45,51 @@ export const convertImageToBase64 = async (url: string, retries: number = 3): Pr
   return url;
 };
 
+export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
+  console.log('Starting Google Fonts preloading...');
+  
+  const fontPromises = Array.from(fonts).map(async (fontFamily) => {
+    const fontName = fontFamily.replace(/'/g, '').split(',')[0].trim();
+    
+    // Skip if it's a system font
+    if (['Inter', 'Arial', 'Helvetica', 'Times', 'serif', 'sans-serif', 'monospace'].includes(fontName)) {
+      return;
+    }
+    
+    console.log(`Preloading font: ${fontName}`);
+    
+    try {
+      // Create a test element to force font loading
+      const testElement = document.createElement('div');
+      testElement.style.fontFamily = fontFamily;
+      testElement.style.fontSize = '16px';
+      testElement.style.position = 'absolute';
+      testElement.style.left = '-9999px';
+      testElement.style.top = '-9999px';
+      testElement.textContent = 'Test';
+      document.body.appendChild(testElement);
+      
+      // Use Font Loading API if available
+      if ('fonts' in document) {
+        await document.fonts.load(`16px "${fontName}"`);
+        await document.fonts.load(`400 16px "${fontName}"`);
+        await document.fonts.load(`700 16px "${fontName}"`);
+      }
+      
+      // Wait a bit for the font to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      document.body.removeChild(testElement);
+      console.log(`Font preloaded: ${fontName}`);
+    } catch (error) {
+      console.warn(`Failed to preload font ${fontName}:`, error);
+    }
+  });
+  
+  await Promise.all(fontPromises);
+  console.log('All Google Fonts preloaded');
+};
+
 export const extractFontsFromContainer = (container: HTMLElement): Set<string> => {
   const fonts = new Set<string>();
   
@@ -124,15 +169,21 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
 export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElement => {
   const styleElement = document.createElement('style');
   
-  // Generate Google Fonts import URL for all unique fonts
+  // Generate Google Fonts import URL for all unique fonts with proper weights
   const fontImports = Array.from(fonts).map(font => {
-    const fontName = font.replace(/'/g, '').split(',')[0];
+    const fontName = font.replace(/'/g, '').split(',')[0].trim();
+    
+    // Skip system fonts
+    if (['Inter', 'Arial', 'Helvetica', 'Times', 'serif', 'sans-serif', 'monospace'].includes(fontName)) {
+      return '';
+    }
+    
     const encodedFont = encodeURIComponent(fontName);
-    return `@import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap');`;
-  }).join('\n');
+    return `@import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block');`;
+  }).filter(Boolean).join('\n');
   
   styleElement.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block');
     ${fontImports}
     
     .pdf-export-container {
