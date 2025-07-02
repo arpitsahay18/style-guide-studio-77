@@ -76,7 +76,6 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
       document.body.removeChild(testElement);
     } catch {}
   });
-
   await Promise.all(fontPromises);
 };
 
