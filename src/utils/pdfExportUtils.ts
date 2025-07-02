@@ -1,4 +1,4 @@
-// PDF Export Utilities
+// Convert image URLs to base64
 export const convertImageToBase64 = async (url: string, retries: number = 3): Promise<string> => {
   if (url.startsWith('data:image/')) {
     return url;
@@ -7,11 +7,11 @@ export const convertImageToBase64 = async (url: string, retries: number = 3): Pr
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const response = await fetch(url, {
-  mode: 'cors',
-  credentials: 'omit'
-});
+        mode: 'cors',
+        credentials: 'omit'
+      });
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(HTTP error! status: ${response.status});
       }
 
       const blob = await response.blob();
@@ -31,31 +31,22 @@ export const convertImageToBase64 = async (url: string, retries: number = 3): Pr
   return url;
 };
 
+// Preload Google Fonts
 export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
   const fontPromises = Array.from(fonts).map(async (fontFamily) => {
     const fontName = fontFamily.replace(/'/g, '').split(',')[0].trim();
-
-    // ✅ REMOVE SKIP — allow all fonts to be preloaded
     const encodedFont = encodeURIComponent(fontName);
-    const linkId = `google-font-${encodedFont}`;
+    const linkId = google-font-${encodedFont};
 
-    // Prevent duplicate loading
+    // Avoid duplicate loading
     if (!document.getElementById(linkId)) {
       const link = document.createElement('link');
       link.id = linkId;
       link.rel = 'stylesheet';
-      link.href = `https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap`;
+      link.href = https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap;
       document.head.appendChild(link);
     }
 
-    if ('fonts' in document) {
-      await document.fonts.load(`16px "${fontName}"`);
-      await document.fonts.ready;
-    }
-  });
-
-  await Promise.all(fontPromises);
-};
     try {
       const testElement = document.createElement('div');
       testElement.style.fontFamily = fontFamily;
@@ -67,19 +58,23 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
       document.body.appendChild(testElement);
 
       if ('fonts' in document) {
-        await document.fonts.load(`16px "${fontName}"`);
-        await document.fonts.load(`400 16px "${fontName}"`);
-        await document.fonts.load(`700 16px "${fontName}"`);
+        await document.fonts.load(16px "${fontName}");
+        await document.fonts.load(400 16px "${fontName}");
+        await document.fonts.load(700 16px "${fontName}");
       }
 
       await new Promise(resolve => setTimeout(resolve, 500));
       document.body.removeChild(testElement);
-    } catch {}
+    } catch {
+      // silent failure is okay for font fallback
+    }
+  });
+
   await Promise.all(fontPromises);
 };
 
-const fonts = extractFontsFromContainer(exportRef.current);
-await preloadGoogleFonts(fonts); // << This must be before html2pdf
+// Extract fonts from a container
+export const extractFontsFromContainer = (container: HTMLElement): Set<string> => {
   const fonts = new Set<string>();
   const elementsWithFonts = container.querySelectorAll('[style*="font-family"]');
   elementsWithFonts.forEach(element => {
@@ -91,15 +86,21 @@ await preloadGoogleFonts(fonts); // << This must be before html2pdf
   return fonts;
 };
 
+// Preload all images inside a container
 export const preloadImages = async (container: HTMLElement): Promise<void> => {
   const images = container.querySelectorAll('img');
 
   const imagePromises = Array.from(images).map(async (img) => {
-    if (img.src.startsWith('https://firebasestorage.googleapis.com') || img.src.startsWith('https://storage.googleapis.com')) {
+    if (
+      img.src.startsWith('https://firebasestorage.googleapis.com') ||
+      img.src.startsWith('https://storage.googleapis.com')
+    ) {
       try {
         const base64 = await convertImageToBase64(img.src);
         img.src = base64;
-      } catch {}
+      } catch {
+        // ignore conversion failures
+      }
     }
 
     return new Promise<void>((resolve) => {
@@ -134,7 +135,7 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 1500));
 };
 
-// ✅ FIXED FONT OVERRIDE HERE
+// Create print style overrides with preloaded fonts
 export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElement => {
   const styleElement = document.createElement('style');
 
@@ -144,7 +145,7 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
       return '';
     }
     const encodedFont = encodeURIComponent(fontName);
-    return `@import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block');`;
+    return @import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block');;
   }).filter(Boolean).join('\n');
 
   styleElement.textContent = `
