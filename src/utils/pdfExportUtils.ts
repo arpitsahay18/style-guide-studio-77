@@ -34,10 +34,28 @@ export const convertImageToBase64 = async (url: string, retries: number = 3): Pr
 export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
   const fontPromises = Array.from(fonts).map(async (fontFamily) => {
     const fontName = fontFamily.replace(/'/g, '').split(',')[0].trim();
-    if (['Inter', 'Arial', 'Helvetica', 'Times', 'serif', 'sans-serif', 'monospace'].includes(fontName)) {
-      return;
+
+    // ✅ REMOVE SKIP — allow all fonts to be preloaded
+    const encodedFont = encodeURIComponent(fontName);
+    const linkId = `google-font-${encodedFont}`;
+
+    // Prevent duplicate loading
+    if (!document.getElementById(linkId)) {
+      const link = document.createElement('link');
+      link.id = linkId;
+      link.rel = 'stylesheet';
+      link.href = `https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap`;
+      document.head.appendChild(link);
     }
 
+    if ('fonts' in document) {
+      await document.fonts.load(`16px "${fontName}"`);
+      await document.fonts.ready;
+    }
+  });
+
+  await Promise.all(fontPromises);
+};
     try {
       const testElement = document.createElement('div');
       testElement.style.fontFamily = fontFamily;
@@ -62,7 +80,8 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
   await Promise.all(fontPromises);
 };
 
-export const extractFontsFromContainer = (container: HTMLElement): Set<string> => {
+const fonts = extractFontsFromContainer(exportRef.current);
+await preloadGoogleFonts(fonts); // << This must be before html2pdf
   const fonts = new Set<string>();
   const elementsWithFonts = container.querySelectorAll('[style*="font-family"]');
   elementsWithFonts.forEach(element => {
