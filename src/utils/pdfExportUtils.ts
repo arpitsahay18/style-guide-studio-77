@@ -7,13 +7,9 @@ export const convertImageToBase64 = async (url: string, retries: number = 3): Pr
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const response = await fetch(url, {
-        mode: 'cors',
-        credentials: 'omit',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
-
+  mode: 'cors',
+  credentials: 'omit'
+});
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
