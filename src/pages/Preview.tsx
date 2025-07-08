@@ -331,16 +331,16 @@ const Preview = () => {
         description: "Your brand guide has been exported as PDF successfully.",
       });
 
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      dismissProgress();
-      toast({
-        variant: "destructive",
-        title: "Export Failed",
-        description: `There was a problem exporting your brand guide: ${error.message}`,
-      });
-    }
-  };
+    } catch (err: any) {
+  const error = err as Error;
+  console.error('Error generating PDF:', error);
+  dismissProgress();
+  toast({
+    variant: "destructive",
+    title: "Export Failed",
+    description: `There was a problem exporting your brand guide: ${error.message}`,
+  });
+}
 
   const handleGenerateShareableLink = async () => {
     if (!user) {
