@@ -48,10 +48,10 @@ const loadCustomFonts = async (fonts) => {
     // Load common Google Fonts
     const commonFonts = ['Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat'];
     for (const font of commonFonts) {
-      if (!document.querySelector(`link[href*="fonts.googleapis.com"][href*="${font.replace(/ /g, '+')}"]`)) {
+      if (!document.querySelector(link[href*="fonts.googleapis.com"][href*="${font.replace(/ /g, '+')}"])) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/ /g, '+')}:wght@300;400;500;600;700&display=swap`;
+        link.href = https://fonts.googleapis.com/css2?family=${font.replace(/ /g, '+')}:wght@300;400;500;600;700&display=swap;
         document.head.appendChild(link);
       }
     }
@@ -285,7 +285,7 @@ const Preview = () => {
       const safePageHeight = contentHeight - 10;
       const totalPages = Math.ceil(imgHeight / safePageHeight);
       
-      console.log(`Generating ${totalPages} content pages...`);
+      console.log(Generating ${totalPages} content pages...);
       
       for (let pageNum = 0; pageNum < totalPages; pageNum++) {
         pdf.addPage();
@@ -311,7 +311,7 @@ const Preview = () => {
             const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
             
             pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
-            console.log(`Added page ${pageNum + 1}/${totalPages}`);
+            console.log(Added page ${pageNum + 1}/${totalPages});
           }
         }
       }
@@ -322,7 +322,7 @@ const Preview = () => {
       dismissProgress();
 
       // Step 11: Save PDF
-      const fileName = `${guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf`;
+      const fileName = ${guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf;
       pdf.save(fileName);
       
       console.log('PDF export completed successfully');
@@ -337,7 +337,7 @@ const Preview = () => {
       toast({
         variant: "destructive",
         title: "Export Failed",
-        description: `There was a problem exporting your brand guide: ${error.message}`,
+        description: There was a problem exporting your brand guide: ${error.message},
       });
     }
   };
