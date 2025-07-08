@@ -337,7 +337,7 @@ const Preview = () => {
       toast({
         variant: "destructive",
         title: "Export Failed",
-        description: There was a problem exporting your brand guide: ${error.message},
+        description: `There was a problem exporting your brand guide: ${error.message}`,
       });
     }
   };
