@@ -322,7 +322,7 @@ const Preview = () => {
       dismissProgress();
 
       // Step 11: Save PDF
-      const fileName = ${guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf;
+      const fileName = `${guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf`;
       pdf.save(fileName);
       
       console.log('PDF export completed successfully');
