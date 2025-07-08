@@ -340,7 +340,8 @@ const Preview = () => {
     title: "Export Failed",
     description: `There was a problem exporting your brand guide: ${error.message}`,
   });
-};
+}
+  };
 
   const handleGenerateShareableLink = async () => {
     if (!user) {
