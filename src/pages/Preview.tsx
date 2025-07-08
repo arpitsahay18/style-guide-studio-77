@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
@@ -18,6 +17,54 @@ import { db } from '@/lib/firebase';
 import { showProgressToast } from '@/components/ui/progress-toast';
 import { convertImageToBase64, preloadImages, createPrintStyles, extractFontsFromContainer, preloadGoogleFonts } from '@/utils/pdfExportUtils';
 
+// Font mapping for PDF export - maps common fonts to jsPDF supported fonts
+const getFontMapping = (fontFamily) => {
+  const fontName = fontFamily.toLowerCase().replace(/['"]/g, '');
+  
+  // Common serif fonts
+  if (fontName.includes('times') || fontName.includes('serif') || 
+      fontName.includes('georgia') || fontName.includes('garamond') ||
+      fontName.includes('baskerville') || fontName.includes('minion')) {
+    return 'times';
+  }
+  
+  // Common monospace fonts
+  if (fontName.includes('courier') || fontName.includes('mono') || 
+      fontName.includes('consolas') || fontName.includes('menlo') ||
+      fontName.includes('monaco') || fontName.includes('roboto mono')) {
+    return 'courier';
+  }
+  
+  // Everything else defaults to helvetica (sans-serif)
+  return 'helvetica';
+};
+
+// Simplified font loading utility
+const loadCustomFonts = async (fonts) => {
+  try {
+    // Wait for any existing fonts to load
+    await document.fonts.ready;
+    
+    // Load common Google Fonts
+    const commonFonts = ['Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat'];
+    for (const font of commonFonts) {
+      if (!document.querySelector(link[href*="fonts.googleapis.com"][href*="${font.replace(/ /g, '+')}"])) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = https://fonts.googleapis.com/css2?family=${font.replace(/ /g, '+')}:wght@300;400;500;600;700&display=swap;
+        document.head.appendChild(link);
+      }
+    }
+    
+    // Wait a bit for fonts to load
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return fonts;
+  } catch (error) {
+    console.warn('Font loading failed:', error);
+    return [];
+  }
+};
+
 const Preview = () => {
   const { guideId } = useParams();
   const { 
@@ -30,14 +77,14 @@ const Preview = () => {
   const { toast } = useToast();
   const { generateShareableLink } = useShareableLinks();
   const { user } = useAuth();
-  const [sharedGuide, setSharedGuide] = useState<any>(null);
+  const [sharedGuide, setSharedGuide] = useState(null);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [loading, setLoading] = useState(!!guideId);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareableLink, setShareableLink] = useState('');
-  const contentRef = useRef<HTMLDivElement>(null);
-  const exportRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef(null);
+  const exportRef = useRef(null);
 
   const loadSharedGuide = async () => {
     if (!guideId) return;
@@ -112,38 +159,97 @@ const Preview = () => {
   }, [guideId]);
 
   const handleExportPDF = async () => {
-    if (!exportRef.current) return;
+    if (!exportRef.current) {
+      console.error('Export ref is not available');
+      toast({
+        variant: "destructive",
+        title: "Export Error",
+        description: "Export component is not ready. Please try again.",
+      });
+      return;
+    }
 
     const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 30000);
 
     try {
       const guide = sharedGuide || currentGuide;
-      console.log('Starting enhanced PDF export for guide:', guide.name);
+      console.log('Starting PDF export for guide:', guide.name);
       
-      // Step 1: Extract fonts and create print styles
-      const fonts = extractFontsFromContainer(exportRef.current);
-      const styleElement = createPrintStyles(fonts);
+      // Step 1: Simple font loading
+      console.log('Loading fonts...');
+      await loadCustomFonts([]);
+      
+      // Step 2: Create basic styles
+      const styleElement = document.createElement('style');
+      styleElement.textContent = `
+        .pdf-export {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-smooth: always;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .pdf-export * {
+          -webkit-print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+        
+        .pdf-export img {
+          max-width: 100% !important;
+          height: auto !important;
+          object-fit: contain !important;
+        }
+      `;
       document.head.appendChild(styleElement);
       
-      // Step 2: Preload Google Fonts
-      console.log('Preloading Google Fonts for PDF...');
-      await preloadGoogleFonts(fonts);
+      // Step 3: Apply PDF class
+      exportRef.current.classList.add('pdf-export');
       
-      // Step 3: Apply CSS classes for better page breaking
-      const sections = exportRef.current.querySelectorAll('[class*="section"], .color-card, .logo-display, [class*="typography"]');
-      sections.forEach((section) => {
-        section.classList.add('avoid-break');
+      // Step 4: Handle images if the function exists
+      if (typeof preloadImages === 'function') {
+        console.log('Converting images...');
+        await preloadImages(exportRef.current);
+      }
+      
+      // Step 5: Wait for layout
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Step 6: Create canvas with basic settings
+      console.log('Creating canvas...');
+      const canvas = await html2canvas(exportRef.current, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: 'white',
+        height: exportRef.current.scrollHeight,
+        width: exportRef.current.scrollWidth,
+        logging: true,
+        windowWidth: 1200,
+        windowHeight: exportRef.current.scrollHeight,
+        imageTimeout: 15000,
+        onclone: (clonedDoc) => {
+          // Apply styles to cloned document
+          const clonedStyle = clonedDoc.createElement('style');
+          clonedStyle.textContent = styleElement.textContent;
+          clonedDoc.head.appendChild(clonedStyle);
+          
+          // Apply PDF class
+          const clonedExportRef = clonedDoc.body;
+          clonedExportRef.classList.add('pdf-export');
+          
+          // Fix images
+          const clonedImages = clonedDoc.querySelectorAll('img');
+          clonedImages.forEach((img) => {
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.objectFit = 'contain';
+          });
+        }
       });
 
-      // Step 4: Convert all Firebase images to base64 and preload
-      console.log('Converting Firebase images to base64...');
-      await preloadImages(exportRef.current);
-      console.log('All images converted and preloaded');
-      
-      // Step 5: Extended wait for layout stabilization and font loading
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('Canvas created successfully, size:', canvas.width, 'x', canvas.height);
 
-      // Step 6: Create PDF with optimized settings
+      // Step 7: Create PDF
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -157,7 +263,7 @@ const Preview = () => {
       const contentWidth = pageWidth - (margin * 2);
       const contentHeight = pageHeight - (margin * 2);
       
-      // Step 7: Create enhanced cover page
+      // Step 8: Create cover page
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
       
@@ -171,67 +277,15 @@ const Preview = () => {
       pdf.setTextColor(100, 100, 100);
       pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 5, { align: 'center' });
 
-      // Add brand attribution
-      const pillWidth = 50;
-      const pillHeight = 10;
-      const pillX = (pageWidth - pillWidth) / 2;
-      const pillY = pageHeight / 2 + 25;
-      
-      pdf.setFillColor(59, 130, 246);
-      pdf.roundedRect(pillX, pillY, pillWidth, pillHeight, 5, 5, 'F');
-      
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
-      pdf.setTextColor(255, 255, 255);
-      pdf.text('Made with Brand Studio', pageWidth / 2, pillY + 6.5, { align: 'center' });
-
-      // Step 8: Render content with html2canvas
-      console.log('Rendering content with html2canvas...');
-      const canvas = await html2canvas(exportRef.current, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: 'white',
-        height: exportRef.current.scrollHeight,
-        width: exportRef.current.scrollWidth,
-        logging: false,
-        windowWidth: 1200,
-        windowHeight: exportRef.current.scrollHeight,
-        imageTimeout: 15000,
-        onclone: (clonedDoc) => {
-          // Apply styles to cloned document
-          const clonedStyle = clonedDoc.createElement('style');
-          clonedStyle.textContent = styleElement.textContent;
-          clonedDoc.head.appendChild(clonedStyle);
-          
-          // Ensure images are properly sized
-          const clonedImages = clonedDoc.querySelectorAll('img');
-          clonedImages.forEach((img) => {
-            img.style.maxWidth = '100%';
-            img.style.height = 'auto';
-            img.style.objectFit = 'cover';
-            img.style.display = 'block';
-          });
-          
-          // Apply avoid-break classes
-          const clonedSections = clonedDoc.querySelectorAll('.logo-display, .color-card, [class*="typography"], [class*="section"]');
-          clonedSections.forEach((section) => {
-            section.classList.add('avoid-break');
-          });
-        }
-      });
-
-      console.log('Canvas rendered, generating PDF pages...');
-
-      // Step 9: Multi-page PDF generation with better pagination
-      const imgData = canvas.toDataURL('image/jpeg', 0.9);
+      // Step 9: Add content pages
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const imgWidth = contentWidth;
       const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      const safePageHeight = contentHeight - 10; // Conservative margin
+      const safePageHeight = contentHeight - 10;
       const totalPages = Math.ceil(imgHeight / safePageHeight);
       
-      console.log(`Generating ${totalPages} pages...`);
+      console.log(Generating ${totalPages} content pages...);
       
       for (let pageNum = 0; pageNum < totalPages; pageNum++) {
         pdf.addPage();
@@ -240,7 +294,7 @@ const Preview = () => {
         const remainingHeight = canvas.height - sourceY;
         const sourceHeight = Math.min(safePageHeight * (canvas.width / contentWidth), remainingHeight);
         
-        if (sourceHeight > 50) { // Only add if there's meaningful content
+        if (sourceHeight > 10) {
           const tempCanvas = document.createElement('canvas');
           tempCanvas.width = canvas.width;
           tempCanvas.height = sourceHeight;
@@ -253,27 +307,28 @@ const Preview = () => {
               0, 0, canvas.width, sourceHeight
             );
             
-            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.9);
+            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
             const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
             
             pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
-            console.log(`Added page ${pageNum + 1}/${totalPages}`);
+            console.log(Added page ${pageNum + 1}/${totalPages});
           }
         }
       }
 
       // Step 10: Cleanup
       document.head.removeChild(styleElement);
+      exportRef.current.classList.remove('pdf-export');
       dismissProgress();
 
       // Step 11: Save PDF
-      const fileName = `${guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf`;
+      const fileName = ${guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf;
       pdf.save(fileName);
       
-      console.log('Enhanced PDF export completed successfully');
+      console.log('PDF export completed successfully');
       toast({
         title: "Brand Guide Exported",
-        description: "Your brand guide has been exported as PDF. Your download should begin soon.",
+        description: "Your brand guide has been exported as PDF successfully.",
       });
 
     } catch (error) {
@@ -282,7 +337,7 @@ const Preview = () => {
       toast({
         variant: "destructive",
         title: "Export Failed",
-        description: "There was a problem exporting your brand guide. Please try again.",
+        description: There was a problem exporting your brand guide: ${error.message},
       });
     }
   };
