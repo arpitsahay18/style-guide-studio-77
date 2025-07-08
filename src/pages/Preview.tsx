@@ -285,7 +285,7 @@ const Preview = () => {
       const safePageHeight = contentHeight - 10;
       const totalPages = Math.ceil(imgHeight / safePageHeight);
       
-      console.log(Generating ${totalPages} content pages...);
+      console.log(Generating ${totalPages} content pages...`);
       
       for (let pageNum = 0; pageNum < totalPages; pageNum++) {
         pdf.addPage();
