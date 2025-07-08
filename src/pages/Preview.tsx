@@ -311,7 +311,7 @@ const Preview = () => {
             const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
             
             pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
-            console.log(Added page ${pageNum + 1}/${totalPages});
+            console.log(`Added page ${pageNum + 1}/${totalPages}`);
           }
         }
       }
