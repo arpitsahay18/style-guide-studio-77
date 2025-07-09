@@ -1,3 +1,5 @@
+// PDF Export Utilities
+
 // Convert image URLs to base64
 export const convertImageToBase64 = async (url: string, retries: number = 3): Promise<string> => {
   if (url.startsWith('data:image/')) {
@@ -11,7 +13,7 @@ export const convertImageToBase64 = async (url: string, retries: number = 3): Pr
         credentials: 'omit'
       });
       if (!response.ok) {
-        throw new Error(HTTP error! status: ${response.status});
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const blob = await response.blob();
@@ -36,14 +38,14 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
   const fontPromises = Array.from(fonts).map(async (fontFamily) => {
     const fontName = fontFamily.replace(/'/g, '').split(',')[0].trim();
     const encodedFont = encodeURIComponent(fontName);
-    const linkId = google-font-${encodedFont};
+    const linkId = `google-font-${encodedFont}`;
 
     // Avoid duplicate loading
     if (!document.getElementById(linkId)) {
       const link = document.createElement('link');
       link.id = linkId;
       link.rel = 'stylesheet';
-      link.href = https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap;
+      link.href = `https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap`;
       document.head.appendChild(link);
     }
 
@@ -58,9 +60,9 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
       document.body.appendChild(testElement);
 
       if ('fonts' in document) {
-        await document.fonts.load(16px "${fontName}");
-        await document.fonts.load(400 16px "${fontName}");
-        await document.fonts.load(700 16px "${fontName}");
+        await document.fonts.load(`16px "${fontName}"`);
+        await document.fonts.load(`400 16px "${fontName}"`);
+        await document.fonts.load(`700 16px "${fontName}"`);
       }
 
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -83,6 +85,7 @@ export const extractFontsFromContainer = (container: HTMLElement): Set<string> =
       fonts.add(style.fontFamily);
     }
   });
+  console.log('Extracted Fonts:', fonts);
   return fonts;
 };
 
@@ -140,14 +143,23 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
   const styleElement = document.createElement('style');
 
   const fontImports = Array.from(fonts).map(font => {
-    const fontName = font.replace(/'/g, '').split(',')[0].trim();
+    // Sanitize font name by removing single and double quotes
+    const fontName = font.replace(/['"]/g, '').split(',')[0].trim();
+
+    // Skip system fonts that don't need to be imported
     if (['Arial', 'Helvetica', 'Times', 'serif', 'sans-serif', 'monospace'].includes(fontName)) {
       return '';
     }
-    const encodedFont = encodeURIComponent(fontName);
-    return @import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block');;
-  }).filter(Boolean).join('\n');
 
+    // Encode the sanitized font name for use in the URL
+    const encodedFont = encodeURIComponent(fontName);
+
+    // Generate the @import rule for the font
+    return `@import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block');`;
+  }).filter(Boolean) // Remove empty strings (e.g., for system fonts)
+    .join('\n'); // Combine all @import rules into a single string
+
+  // Add the font imports and additional styles to the style element
   styleElement.textContent = `
     ${fontImports}
 
