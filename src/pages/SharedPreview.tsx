@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
 import { BrandGuideRenderer } from '@/components/BrandGuideRenderer';
 import { PDFExportRenderer } from '@/components/PDFExportRenderer';
+import { StagedProgressBar } from '@/components/ui/StagedProgressBar';
 import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
 import { jsPDF } from 'jspdf';
@@ -10,7 +11,6 @@ import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { showProgressToast } from '@/components/ui/progress-toast';
 import { convertImageToBase64, preloadImages, createPrintStyles, extractFontsFromContainer, preloadGoogleFonts } from '@/utils/pdfExportUtils';
 
 const SharedPreview = () => {
@@ -19,6 +19,7 @@ const SharedPreview = () => {
   const [sharedGuide, setSharedGuide] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -101,7 +102,7 @@ const SharedPreview = () => {
   const handleExportPDF = async () => {
     if (!exportRef.current || !sharedGuide) return;
 
-    const dismissProgress = showProgressToast("Preparing your brand guide PDF...", 30000);
+    setIsExportingPDF(true);
 
     try {
       console.log('Starting shared preview PDF export');
@@ -242,9 +243,8 @@ const SharedPreview = () => {
         }
       }
 
-      // Step 9: Cleanup
+      // Cleanup and save
       document.head.removeChild(styleElement);
-      dismissProgress();
 
       const fileName = `${sharedGuide.guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf`;
       pdf.save(fileName);
@@ -252,17 +252,19 @@ const SharedPreview = () => {
       console.log('Shared preview PDF export completed successfully');
       toast({
         title: "Brand Guide Exported",
-        description: "Your brand guide has been exported as PDF. Your download should begin soon.",
+        description: "Your brand guide has been exported as PDF successfully.",
       });
 
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error('Error generating shared preview PDF:', error);
-      dismissProgress();
       toast({
         variant: "destructive",
         title: "Export Failed",
-        description: "There was a problem exporting the brand guide. Please try again.",
+        description: `There was a problem exporting your brand guide: ${error.message}`,
       });
+    } finally {
+      setIsExportingPDF(false);
     }
   };
 
@@ -320,12 +322,28 @@ const SharedPreview = () => {
             </div>
             
             <div className="flex gap-4">
-              <Button onClick={handleExportPDF} variant="outline" size="lg">
+              <Button 
+                onClick={handleExportPDF} 
+                variant="outline" 
+                size="lg"
+                disabled={isExportingPDF}
+              >
                 <FileDown className="mr-2 h-5 w-5" />
-                Save as PDF
+                {isExportingPDF ? "Generating..." : "Save as PDF"}
               </Button>
             </div>
           </div>
+
+          {isExportingPDF && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+              <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+                <StagedProgressBar 
+                  isActive={isExportingPDF}
+                  onComplete={() => {}} // Progress completes automatically when PDF is done
+                />
+              </div>
+            </div>
+          )}
 
           <div ref={contentRef}>
             <BrandGuideRenderer

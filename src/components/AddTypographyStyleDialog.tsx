@@ -23,6 +23,7 @@ import { Plus } from 'lucide-react';
 
 interface AddTypographyStyleDialogProps {
   category: 'display' | 'heading' | 'body';
+  defaultFontFamily?: string;
 }
 
 const predefinedStyles = {
@@ -42,7 +43,7 @@ const predefinedStyles = {
   ]
 };
 
-export function AddTypographyStyleDialog({ category }: AddTypographyStyleDialogProps) {
+export function AddTypographyStyleDialog({ category, defaultFontFamily }: AddTypographyStyleDialogProps) {
   const { addTypographyStyle } = useBrandGuide();
   const [open, setOpen] = useState(false);
   const [selectedPredefined, setSelectedPredefined] = useState('');
@@ -54,7 +55,7 @@ export function AddTypographyStyleDialog({ category }: AddTypographyStyleDialogP
       const predefined = availablePredefined.find(p => p.key === selectedPredefined);
       if (predefined) {
         const baseStyle = {
-          fontFamily: '"Inter", sans-serif',
+          fontFamily: defaultFontFamily || '"Inter", sans-serif',
           fontSize: '16px',
           fontWeight: '400',
           lineHeight: '1.5',
@@ -75,7 +76,7 @@ export function AddTypographyStyleDialog({ category }: AddTypographyStyleDialogP
   const handleAddCustomStyle = () => {
     const customKey = `custom-${Date.now()}`;
     const customStyle = {
-      fontFamily: '"Inter", sans-serif',
+      fontFamily: defaultFontFamily || '"Inter", sans-serif',
       fontSize: '16px',
       fontWeight: '400',
       lineHeight: '1.5',

@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { NumericInput } from '@/components/ui/NumericInput';
+import { DynamicFontWeightSelect } from '@/components/ui/DynamicFontWeightSelect';
 import { 
   Card, 
   CardContent, 
@@ -23,23 +25,8 @@ import {
 } from '@/components/ui/accordion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FontSelector } from '@/components/FontSelector';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
 import { X } from 'lucide-react';
 
-// Font weight options
-const fontWeightOptions = [
-  { value: '300', label: 'Light (300)' },
-  { value: '400', label: 'Regular (400)' },
-  { value: '500', label: 'Medium (500)' },
-  { value: '600', label: 'Semi-Bold (600)' },
-  { value: '700', label: 'Bold (700)' },
-];
 
 export function TypographySection() {
   const { 
@@ -67,6 +54,11 @@ export function TypographySection() {
 
   const [editingName, setEditingName] = useState<string | null>(null);
   const [tempName, setTempName] = useState('');
+  const [lastSelectedFonts, setLastSelectedFonts] = useState({
+    display: displayFontFamily,
+    heading: headingFontFamily,
+    body: bodyFontFamily
+  });
 
   // Handle font family changes
   const handleFontFamilyChange = (
@@ -81,13 +73,17 @@ export function TypographySection() {
     
     updateTypography(updatedTypography);
     
-    // Update local state for display
+    // Update local state for display and track last selected fonts
+    const cleanFont = value.split(',')[0].trim();
     if (category === 'display') {
-      setDisplayFontFamily(value.split(',')[0].trim());
+      setDisplayFontFamily(cleanFont);
+      setLastSelectedFonts(prev => ({ ...prev, display: cleanFont }));
     } else if (category === 'heading') {
-      setHeadingFontFamily(value.split(',')[0].trim());
+      setHeadingFontFamily(cleanFont);
+      setLastSelectedFonts(prev => ({ ...prev, heading: cleanFont }));
     } else if (category === 'body') {
-      setBodyFontFamily(value.split(',')[0].trim());
+      setBodyFontFamily(cleanFont);
+      setLastSelectedFonts(prev => ({ ...prev, body: cleanFont }));
     }
   };
   
@@ -270,54 +266,54 @@ export function TypographySection() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor={`${category}-${styleKey}-size`}>Font Size</Label>
-                    <Input
+                    <NumericInput
                       id={`${category}-${styleKey}-size`}
-                      type="text"
                       value={style.fontSize}
-                      onChange={(e) => handleStyleUpdate(category, styleKey, 'fontSize', e.target.value)}
+                      onChange={(value) => handleStyleUpdate(category, styleKey, 'fontSize', value)}
+                      suffix="px"
+                      step={1}
+                      min={8}
+                      max={200}
                       className="mt-1"
                     />
                   </div>
                   
                   <div>
                     <Label htmlFor={`${category}-${styleKey}-weight`}>Font Weight</Label>
-                    <Select
+                    <DynamicFontWeightSelect
+                      id={`${category}-${styleKey}-weight`}
+                      fontFamily={style.fontFamily}
                       value={style.fontWeight.toString()}
                       onValueChange={(value) => handleStyleUpdate(category, styleKey, 'fontWeight', value)}
-                    >
-                      <SelectTrigger id={`${category}-${styleKey}-weight`}>
-                        <SelectValue placeholder="Select weight" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fontWeightOptions.map((weight) => (
-                          <SelectItem key={weight.value} value={weight.value}>
-                            {weight.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    />
                   </div>
                   
                   <div>
                     <Label htmlFor={`${category}-${styleKey}-line-height`}>Line Height</Label>
-                    <Input
+                    <NumericInput
                       id={`${category}-${styleKey}-line-height`}
-                      type="text"
                       value={style.lineHeight}
-                      onChange={(e) => handleStyleUpdate(category, styleKey, 'lineHeight', e.target.value)}
+                      onChange={(value) => handleStyleUpdate(category, styleKey, 'lineHeight', value)}
+                      suffix="em"
+                      step={0.1}
+                      min={0.5}
+                      max={3}
                       className="mt-1"
                     />
                   </div>
                   
                   <div>
                     <Label htmlFor={`${category}-${styleKey}-letter-spacing`}>Letter Spacing</Label>
-                    <Input
+                    <NumericInput
                       id={`${category}-${styleKey}-letter-spacing`}
-                      type="text"
                       value={style.letterSpacing || '0em'}
-                      onChange={(e) => handleStyleUpdate(category, styleKey, 'letterSpacing', e.target.value)}
+                      onChange={(value) => handleStyleUpdate(category, styleKey, 'letterSpacing', value)}
+                      suffix="em"
+                      step={0.01}
+                      min={-0.5}
+                      max={1}
                       className="mt-1"
-                      placeholder="0em"
+                      placeholder="0"
                     />
                   </div>
                 </div>
@@ -329,6 +325,7 @@ export function TypographySection() {
         <div className="mt-4">
           <AddTypographyStyleDialog 
             category={category}
+            defaultFontFamily={lastSelectedFonts[category]}
           />
         </div>
       </Accordion>

@@ -27,13 +27,15 @@ export function WelcomeDialog({ open, onOpenChange, onGetStarted }: WelcomeDialo
         
         <div className="space-y-6">
           <div className="aspect-video w-full">
-            <iframe 
-              src="https://player.vimeo.com/video/853228097?title=0&byline=0&portrait=0&badge=0&autopause=0&player_id=0&app_id=58479" 
-              className="w-full h-full rounded-lg"
-              frameBorder="0" 
-              allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" 
-              title="Brand Studio Tutorial"
-            />
+            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+              <iframe
+                src="https://www.loom.com/embed/3f93bc8a9fe24c828edbbc411be7df77?sid=14aa0740-64a2-4b12-a631-2d7a923d8283"
+                frameBorder="0"
+                allowFullScreen
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                title="Brand Studio Tutorial"
+              />
+            </div>
           </div>
         </div>
         
