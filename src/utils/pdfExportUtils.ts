@@ -21,7 +21,7 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
       });
       
       if (!response.ok) {
-        throw new Error(HTTP error! status: ${response.status});
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const blob = await response.blob();
