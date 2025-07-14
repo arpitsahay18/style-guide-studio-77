@@ -175,51 +175,6 @@ export const extractFontsFromContainer = (container: HTMLElement): Set<string> =
   return fonts;
 };
 
-// Preload all images inside a container
-export const preloadImages = async (container: HTMLElement): Promise<void> => {
-  const images = container.querySelectorAll('img');
-
-  const imagePromises = Array.from(images).map(async (img) => {
-    if (
-      img.src.startsWith('https://firebasestorage.googleapis.com') ||
-      img.src.startsWith('https://storage.googleapis.com')
-    ) {
-      try {
-        const base64 = await convertImageToBase64(img.src);
-        img.src = base64;
-      } catch {
-        // ignore conversion failures
-      }
-    }
-
-    return new Promise<void>((resolve) => {
-      if (img.complete && img.naturalHeight !== 0) {
-        resolve();
-      } else {
-        const handleLoad = () => {
-          img.removeEventListener('load', handleLoad);
-          img.removeEventListener('error', handleError);
-          resolve();
-        };
-
-        const handleError = () => {
-          img.removeEventListener('load', handleLoad);
-          img.removeEventListener('error', handleError);
-          resolve();
-        };
-
-        img.addEventListener('load', handleLoad);
-        img.addEventListener('error', handleError);
-
-        setTimeout(() => {
-          img.removeEventListener('load', handleLoad);
-          img.removeEventListener('error', handleError);
-          resolve();
-        }, 8000);
-      }
-    });
-  });
-
   await Promise.all(imagePromises);
   await new Promise(resolve => setTimeout(resolve, 1500));
 };
