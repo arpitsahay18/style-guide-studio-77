@@ -164,6 +164,7 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
     ${fontImports}
 
     .pdf-export-container {
+      min-height: auto !important;
       max-width: 190mm !important;
       overflow-x: hidden !important;
       background: white !important;
