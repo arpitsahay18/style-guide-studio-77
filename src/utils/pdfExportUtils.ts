@@ -124,7 +124,7 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
   const fontPromises = Array.from(fonts).map(async (fontFamily) => {
     const fontName = fontFamily.replace(/'/g, '').split(',')[0].trim();
     const encodedFont = encodeURIComponent(fontName);
-    const linkId = google-font-${encodedFont};
+    const linkId = `google-font-${encodedFont}`;
 
     // Avoid duplicate loading
     if (!document.getElementById(linkId)) {
