@@ -168,8 +168,8 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
       document.body.removeChild(testElement);
     } catch {
       // silent failure is okay for font fallback
-    }
-  });
+    };
+  
 
   await Promise.all(fontPromises);
 };
