@@ -1,36 +1,122 @@
 // PDF Export Utilities
 
-// Convert image URLs to base64
-export const convertImageToBase64 = async (url: string, retries: number = 3): Promise<string> => {
+// Enhanced image conversion with better error handling and retry logic
+export const convertImageToBase64 = async (url: string, retries: number = 5): Promise<string> => {
   if (url.startsWith('data:image/')) {
     return url;
   }
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
+      console.log(`Converting image attempt ${attempt + 1}/${retries}: ${url}`);
+      
       const response = await fetch(url, {
         mode: 'cors',
-        credentials: 'omit'
+        credentials: 'omit',
+        headers: {
+          'Accept': 'image/*',
+        },
+        // Add timeout
+        signal: AbortSignal.timeout(15000)
       });
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const blob = await response.blob();
+      
+      // Verify it's actually an image
+      if (!blob.type.startsWith('image/')) {
+        throw new Error(`Invalid image type: ${blob.type}`);
+      }
+      
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Failed to convert image to base64'));
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          console.log(`Image converted successfully: ${url.substring(0, 50)}...`);
+          resolve(result);
+        };
+        reader.onerror = () => {
+          console.error(`FileReader error for: ${url}`);
+          reject(new Error('Failed to convert image to base64'));
+        };
         reader.readAsDataURL(blob);
       });
     } catch (error) {
+      console.warn(`Image conversion attempt ${attempt + 1} failed:`, error);
+      
       if (attempt === retries - 1) {
-        return url;
+        console.error(`Final attempt failed for image: ${url}`);
+        return url; // Return original URL as fallback
       }
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Exponential backoff
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
     }
   }
   return url;
+};
+
+// Enhanced preload with better image handling
+export const preloadImages = async (container: HTMLElement): Promise<void> => {
+  const images = container.querySelectorAll('img');
+  console.log(`Preloading ${images.length} images...`);
+
+  const imagePromises = Array.from(images).map(async (img, index) => {
+    // Convert Firebase/Google Storage URLs to base64
+    if (
+      img.src.startsWith('https://firebasestorage.googleapis.com') ||
+      img.src.startsWith('https://storage.googleapis.com')
+    ) {
+      try {
+        const base64 = await convertImageToBase64(img.src);
+        img.src = base64;
+        console.log(`Image ${index + 1} converted to base64`);
+      } catch (error) {
+        console.error(`Failed to convert image ${index + 1}:`, error);
+      }
+    }
+
+    return new Promise<void>((resolve) => {
+      if (img.complete && img.naturalHeight !== 0) {
+        console.log(`Image ${index + 1} already loaded`);
+        resolve();
+      } else {
+        const handleLoad = () => {
+          img.removeEventListener('load', handleLoad);
+          img.removeEventListener('error', handleError);
+          console.log(`Image ${index + 1} loaded successfully`);
+          resolve();
+        };
+
+        const handleError = () => {
+          img.removeEventListener('load', handleLoad);
+          img.removeEventListener('error', handleError);
+          console.error(`Image ${index + 1} failed to load:`, img.src);
+          resolve(); // Continue even if image fails
+        };
+
+        img.addEventListener('load', handleLoad);
+        img.addEventListener('error', handleError);
+
+        // Longer timeout for complex images
+        setTimeout(() => {
+          img.removeEventListener('load', handleLoad);
+          img.removeEventListener('error', handleError);
+          console.warn(`Image ${index + 1} timed out`);
+          resolve();
+        }, 15000); // Increased timeout
+      }
+    });
+  });
+
+  await Promise.all(imagePromises);
+  console.log('All images preloaded');
+  
+  // Additional wait for layout stabilization
+  await new Promise(resolve => setTimeout(resolve, 2000));
 };
 
 // Preload Google Fonts
