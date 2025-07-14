@@ -28,7 +28,7 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
       
       // Verify it's actually an image
       if (!blob.type.startsWith('image/')) {
-        throw new Error(Invalid image type: ${blob.type});
+        throw new Error(`Invalid image type: ${blob.type}`);
       }
       
       return new Promise((resolve, reject) => {
