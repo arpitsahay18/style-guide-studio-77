@@ -73,7 +73,7 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
       try {
         const base64 = await convertImageToBase64(img.src);
         img.src = base64;
-        console.log(Image ${index + 1} converted to base64);
+        console.log(`Image ${index + 1} converted to base64`);
       } catch (error) {
         console.error(Failed to convert image ${index + 1}:, error);
       }
