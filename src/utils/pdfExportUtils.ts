@@ -192,7 +192,7 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
     const encodedFont = encodeURIComponent(fontName);
 
     // Generate the @import rule for the font
-    return @import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block');;
+    return @import url(`'https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block'`);;
   }).filter(Boolean) // Remove empty strings (e.g., for system fonts)
     .join('\n'); // Combine all @import rules into a single string
 
