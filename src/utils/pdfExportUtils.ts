@@ -75,7 +75,7 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
         img.src = base64;
         console.log(`Image ${index + 1} converted to base64`);
       } catch (error) {
-        console.error(Failed to convert image ${index + 1}:, error);
+        console.error(`Failed to convert image ${index + 1}:, error`);
       }
     }
 
@@ -94,7 +94,7 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
         const handleError = () => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          console.error(Image ${index + 1} failed to load:, img.src);
+          console.error(`Image ${index + 1} failed to load:, img.src`);
           resolve(); // Continue even if image fails
         };
 
