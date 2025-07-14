@@ -8,7 +8,7 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       // ✅ FIXED: line 11 - using backticks for template string
-      console.log(Converting image attempt ${attempt + 1}/${retries}: ${url});
+      console.log(`Converting image attempt ${attempt + 1}/${retries}: ${url}`);
       
       const response = await fetch(url, {
         mode: 'cors',
