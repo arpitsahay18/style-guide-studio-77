@@ -51,7 +51,7 @@ const loadCustomFonts = async (fonts) => {
       if (!document.querySelector(link[href*="fonts.googleapis.com"][href*="${font.replace(/ /g, '+')}"])) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = https://fonts.googleapis.com/css2?family=${font.replace(/ /g, '+')}:wght@300;400;500;600;700&display=swap;
+        link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/ /g, '+')}:wght@300;400;500;600;700&display=swap`;
         document.head.appendChild(link);
       }
     }
