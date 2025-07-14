@@ -8,7 +8,7 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       // ✅ FIXED: line 11 - using backticks for template string
-      console.log(`Converting image attempt ${attempt + 1}/${retries}: ${url}`);
+      console.log(Converting image attempt ${attempt + 1}/${retries}: ${url});
       
       const response = await fetch(url, {
         mode: 'cors',
@@ -21,14 +21,14 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
 
       if (!response.ok) {
         // ✅ FIXED: line with error message template
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(HTTP error! status: ${response.status});
       }
 
       const blob = await response.blob();
 
       if (!blob.type.startsWith('image/')) {
         // ✅ FIXED: template literal
-        throw new Error(`Invalid image type: ${blob.type}`);
+        throw new Error(Invalid image type: ${blob.type});
       }
 
       return new Promise((resolve, reject) => {
@@ -36,20 +36,20 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
         reader.onloadend = () => {
           const result = reader.result as string;
           // ✅ FIXED: template literal
-          console.log(`Image converted successfully: ${url.substring(0, 50)}...`);
+          console.log(Image converted successfully: ${url.substring(0, 50)}...);
           resolve(result);
         };
         reader.onerror = () => {
-          console.error(`FileReader error for: ${url}`);
+          console.error(FileReader error for: ${url});
           reject(new Error('Failed to convert image to base64'));
         };
         reader.readAsDataURL(blob);
       });
     } catch (error) {
-      console.warn(`Image conversion attempt ${attempt + 1} failed:`, error);
+      console.warn(Image conversion attempt ${attempt + 1} failed:, error);
 
       if (attempt === retries - 1) {
-        console.error(`Final attempt failed for image: ${url}`);
+        console.error(Final attempt failed for image: ${url});
         return url;
       }
 
@@ -62,7 +62,7 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
 // Enhanced preload with better image handling
 export const preloadImages = async (container: HTMLElement): Promise<void> => {
   const images = container.querySelectorAll('img');
-  console.log(`Preloading ${images.length} images...`);
+  console.log(Preloading ${images.length} images...);
 
   const imagePromises = Array.from(images).map(async (img, index) => {
     // Convert Firebase/Google Storage URLs to base64
@@ -73,28 +73,28 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
       try {
         const base64 = await convertImageToBase64(img.src);
         img.src = base64;
-        console.log(`Image ${index + 1} converted to base64`);
+        console.log(Image ${index + 1} converted to base64);
       } catch (error) {
-        console.error(`Failed to convert image ${index + 1}:, error`);
+        console.error(Failed to convert image ${index + 1}:, error);
       }
     }
 
     return new Promise<void>((resolve) => {
       if (img.complete && img.naturalHeight !== 0) {
-        console.log(`Image ${index + 1} already loaded`);
+        console.log(Image ${index + 1} already loaded);
         resolve();
       } else {
         const handleLoad = () => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          console.log(`Image ${index + 1} loaded successfully`);
+          console.log(Image ${index + 1} loaded successfully);
           resolve();
         };
 
         const handleError = () => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          console.error(`Image ${index + 1} failed to load:, img.src`);
+          console.error(Image ${index + 1} failed to load:, img.src);
           resolve(); // Continue even if image fails
         };
 
@@ -105,7 +105,7 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
         setTimeout(() => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          console.warn(`Image ${index + 1} timed out`);
+          console.warn(Image ${index + 1} timed out);
           resolve();
         }, 15000); // Increased timeout
       }
@@ -119,33 +119,21 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 2000));
 };
 
+// Preload Google Fonts
 export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
-  const promises: Promise<any>[] = [];
+  const fontPromises = Array.from(fonts).map(async (fontFamily) => {
+    const fontName = fontFamily.replace(/'/g, '').split(',')[0].trim();
+    const encodedFont = encodeURIComponent(fontName);
+    const linkId = google-font-${encodedFont};
 
-  fonts.forEach((fontFamily) => {
-    const cleaned = fontFamily.replace(/['"]/g, '').split(',')[0].trim();
-    const fontUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(cleaned)}:wght@300;400;500;600;700&display=swap`;
-
-    // Create link tag if not already present
-    if (!document.querySelector(`link[href="${fontUrl}"]`)) {
+    // Avoid duplicate loading
+    if (!document.getElementById(linkId)) {
       const link = document.createElement('link');
-      link.href = fontUrl;
+      link.id = linkId;
       link.rel = 'stylesheet';
+      link.href = https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap;
       document.head.appendChild(link);
     }
-
-    // Preload font rendering using all common weights
-    const fontWeights = [300, 400, 500, 600, 700];
-    fontWeights.forEach(weight => {
-      promises.push(document.fonts.load(`${weight} 16px '${cleaned}'`));
-    });
-  });
-
-  await Promise.all(promises);
-
-  // Wait a bit to let them fully render
-  await new Promise(resolve => setTimeout(resolve, 500));
-};
 
     try {
       const testElement = document.createElement('div');
@@ -158,21 +146,20 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
       document.body.appendChild(testElement);
 
       if ('fonts' in document) {
-        await document.fonts.load(`16px "${fontName}"`);
-        await document.fonts.ready; // <-- ensure font is actually ready
-        await document.fonts.load(`400 16px "${fontName}"`);
-        await document.fonts.load(`700 16px "${fontName}"`);
+        await document.fonts.load(16px "${fontName}");
+        await document.fonts.load(400 16px "${fontName}");
+        await document.fonts.load(700 16px "${fontName}");
       }
 
       await new Promise(resolve => setTimeout(resolve, 500));
       document.body.removeChild(testElement);
     } catch {
       // silent failure is okay for font fallback
-    };
-  
+    }
+  });
 
   await Promise.all(fontPromises);
-}};
+};
 
 // Extract fonts from a container
 export const extractFontsFromContainer = (container: HTMLElement): Set<string> => {
@@ -205,13 +192,13 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
     const encodedFont = encodeURIComponent(fontName);
 
     // Generate the @import rule for the font
-    return `@import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block');`;
+    return @import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block');;
   }).filter(Boolean) // Remove empty strings (e.g., for system fonts)
     .join('\n'); // Combine all @import rules into a single string
 
   // Add the font imports and additional styles to the style element
   styleElement.textContent = 
-    `${fontImports}
+    ${fontImports}
 
     .pdf-export-container {
       height: auto !important;
@@ -312,7 +299,7 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
         page-break-inside: avoid !important;
       }
     }
-  `;
+  ;
 
   return styleElement;
 };
