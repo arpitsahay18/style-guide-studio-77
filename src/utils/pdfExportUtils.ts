@@ -81,7 +81,7 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
 
     return new Promise<void>((resolve) => {
       if (img.complete && img.naturalHeight !== 0) {
-        console.log(Image ${index + 1} already loaded);
+        console.log(`Image ${index + 1} already loaded`);
         resolve();
       } else {
         const handleLoad = () => {
