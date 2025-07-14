@@ -119,21 +119,33 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 2000));
 };
 
-// Preload Google Fonts
 export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
-  const fontPromises = Array.from(fonts).map(async (fontFamily) => {
-    const fontName = fontFamily.replace(/'/g, '').split(',')[0].trim();
-    const encodedFont = encodeURIComponent(fontName);
-    const linkId = `google-font-${encodedFont}`;
+  const promises: Promise<any>[] = [];
 
-    // Avoid duplicate loading
-    if (!document.getElementById(linkId)) {
+  fonts.forEach((fontFamily) => {
+    const cleaned = fontFamily.replace(/['"]/g, '').split(',')[0].trim();
+    const fontUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(cleaned)}:wght@300;400;500;600;700&display=swap`;
+
+    // Create link tag if not already present
+    if (!document.querySelector(`link[href="${fontUrl}"]`)) {
       const link = document.createElement('link');
-      link.id = linkId;
+      link.href = fontUrl;
       link.rel = 'stylesheet';
-      link.href = `https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap`;
       document.head.appendChild(link);
     }
+
+    // Preload font rendering using all common weights
+    const fontWeights = [300, 400, 500, 600, 700];
+    fontWeights.forEach(weight => {
+      promises.push(document.fonts.load(`${weight} 16px '${cleaned}'`));
+    });
+  });
+
+  await Promise.all(promises);
+
+  // Wait a bit to let them fully render
+  await new Promise(resolve => setTimeout(resolve, 500));
+};
 
     try {
       const testElement = document.createElement('div');
