@@ -8,7 +8,8 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      console.log(Converting image attempt ${attempt + 1}/${retries}: ${url});
+      // ✅ FIXED string interpolation
+      console.log(`Converting image attempt ${attempt + 1}/${retries}: ${url}`);
       
       const response = await fetch(url, {
         mode: 'cors',
@@ -16,43 +17,40 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
         headers: {
           'Accept': 'image/*',
         },
-        // Add timeout
-        signal: AbortSignal.timeout(15000)
+        signal: AbortSignal.timeout(15000) // ✅ Assumes Node 18+/modern browser
       });
       
       if (!response.ok) {
-        throw new Error(HTTP error! status: ${response.status});
+        throw new Error(`HTTP error! status: ${response.status}`); // ✅ FIXED string
       }
 
       const blob = await response.blob();
       
-      // Verify it's actually an image
       if (!blob.type.startsWith('image/')) {
-        throw new Error(Invalid image type: ${blob.type});
+        throw new Error(`Invalid image type: ${blob.type}`); // ✅ FIXED string
       }
       
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
           const result = reader.result as string;
-          console.log(Image converted successfully: ${url.substring(0, 50)}...);
+          console.log(`Image converted successfully: ${url.substring(0, 50)}...`); // ✅ FIXED string
           resolve(result);
         };
         reader.onerror = () => {
-          console.error(FileReader error for: ${url});
+          console.error(`FileReader error for: ${url}`); // ✅ FIXED string
           reject(new Error('Failed to convert image to base64'));
         };
         reader.readAsDataURL(blob);
       });
     } catch (error) {
-      console.warn(Image conversion attempt ${attempt + 1} failed:, error);
+      console.warn(`Image conversion attempt ${attempt + 1} failed:`, error); // ✅ FIXED string
       
       if (attempt === retries - 1) {
-        console.error(Final attempt failed for image: ${url});
-        return url; // Return original URL as fallback
+        console.error(`Final attempt failed for image: ${url}`); // ✅ FIXED string
+        return url;
       }
-      
-      // Exponential backoff
+
       await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
     }
   }
@@ -62,10 +60,9 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
 // Enhanced preload with better image handling
 export const preloadImages = async (container: HTMLElement): Promise<void> => {
   const images = container.querySelectorAll('img');
-  console.log(Preloading ${images.length} images...);
+  console.log(`Preloading ${images.length} images...`); // ✅ FIXED string
 
   const imagePromises = Array.from(images).map(async (img, index) => {
-    // Convert Firebase/Google Storage URLs to base64
     if (
       img.src.startsWith('https://firebasestorage.googleapis.com') ||
       img.src.startsWith('https://storage.googleapis.com')
@@ -73,49 +70,47 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
       try {
         const base64 = await convertImageToBase64(img.src);
         img.src = base64;
-        console.log(Image ${index + 1} converted to base64);
+        console.log(`Image ${index + 1} converted to base64`); // ✅ FIXED string
       } catch (error) {
-        console.error(Failed to convert image ${index + 1}:, error);
+        console.error(`Failed to convert image ${index + 1}:`, error); // ✅ FIXED string
       }
     }
 
     return new Promise<void>((resolve) => {
       if (img.complete && img.naturalHeight !== 0) {
-        console.log(Image ${index + 1} already loaded);
+        console.log(`Image ${index + 1} already loaded`); // ✅ FIXED string
         resolve();
       } else {
         const handleLoad = () => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          console.log(Image ${index + 1} loaded successfully);
+          console.log(`Image ${index + 1} loaded successfully`); // ✅ FIXED string
           resolve();
         };
 
         const handleError = () => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          console.error(Image ${index + 1} failed to load:, img.src);
-          resolve(); // Continue even if image fails
+          console.error(`Image ${index + 1} failed to load:`, img.src); // ✅ FIXED string
+          resolve();
         };
 
         img.addEventListener('load', handleLoad);
         img.addEventListener('error', handleError);
 
-        // Longer timeout for complex images
         setTimeout(() => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          console.warn(Image ${index + 1} timed out);
+          console.warn(`Image ${index + 1} timed out`); // ✅ FIXED string
           resolve();
-        }, 15000); // Increased timeout
+        }, 15000);
       }
     });
   });
 
   await Promise.all(imagePromises);
   console.log('All images preloaded');
-  
-  // Additional wait for layout stabilization
+
   await new Promise(resolve => setTimeout(resolve, 2000));
 };
 
@@ -124,14 +119,13 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
   const fontPromises = Array.from(fonts).map(async (fontFamily) => {
     const fontName = fontFamily.replace(/'/g, '').split(',')[0].trim();
     const encodedFont = encodeURIComponent(fontName);
-    const linkId = google-font-${encodedFont};
+    const linkId = `google-font-${encodedFont}`; // ✅ FIXED quotes
 
-    // Avoid duplicate loading
     if (!document.getElementById(linkId)) {
       const link = document.createElement('link');
       link.id = linkId;
       link.rel = 'stylesheet';
-      link.href = https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap;
+      link.href = `https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap`; // ✅ FIXED quotes
       document.head.appendChild(link);
     }
 
@@ -146,15 +140,15 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
       document.body.appendChild(testElement);
 
       if ('fonts' in document) {
-        await document.fonts.load(16px "${fontName}");
-        await document.fonts.load(400 16px "${fontName}");
-        await document.fonts.load(700 16px "${fontName}");
+        await document.fonts.load(`16px "${fontName}"`);
+        await document.fonts.load(`400 16px "${fontName}"`);
+        await document.fonts.load(`700 16px "${fontName}"`);
       }
 
       await new Promise(resolve => setTimeout(resolve, 500));
       document.body.removeChild(testElement);
     } catch {
-      // silent failure is okay for font fallback
+      // silent failure
     }
   });
 
@@ -180,24 +174,15 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
   const styleElement = document.createElement('style');
 
   const fontImports = Array.from(fonts).map(font => {
-    // Sanitize font name by removing single and double quotes
     const fontName = font.replace(/['"]/g, '').split(',')[0].trim();
-
-    // Skip system fonts that don't need to be imported
     if (['Arial', 'Helvetica', 'Times', 'serif', 'sans-serif', 'monospace'].includes(fontName)) {
       return '';
     }
-
-    // Encode the sanitized font name for use in the URL
     const encodedFont = encodeURIComponent(fontName);
+    return `@import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block');`; // ✅ FIXED
+  }).filter(Boolean).join('\n');
 
-    // Generate the @import rule for the font
-    return @import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block');;
-  }).filter(Boolean) // Remove empty strings (e.g., for system fonts)
-    .join('\n'); // Combine all @import rules into a single string
-
-  // Add the font imports and additional styles to the style element
-  styleElement.textContent = 
+  styleElement.textContent = `
     ${fontImports}
 
     .pdf-export-container {
@@ -299,7 +284,7 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
         page-break-inside: avoid !important;
       }
     }
-  ;
+  `;
 
   return styleElement;
 };
