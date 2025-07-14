@@ -198,7 +198,7 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
 
   // Add the font imports and additional styles to the style element
   styleElement.textContent = 
-    ${fontImports}
+    `${fontImports}`
 
     .pdf-export-container {
       height: auto !important;
