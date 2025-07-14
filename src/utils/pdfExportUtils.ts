@@ -87,7 +87,7 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
         const handleLoad = () => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          console.log(Image ${index + 1} loaded successfully);
+          console.log(`Image ${index + 1} loaded successfully`);
           resolve();
         };
 
@@ -105,7 +105,7 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
         setTimeout(() => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          console.warn(Image ${index + 1} timed out);
+          console.warn(`Image ${index + 1} timed out`);
           resolve();
         }, 15000); // Increased timeout
       }
