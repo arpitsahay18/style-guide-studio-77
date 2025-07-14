@@ -131,7 +131,7 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
       const link = document.createElement('link');
       link.id = linkId;
       link.rel = 'stylesheet';
-      link.href = https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap;
+      link.href = `https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap`;
       document.head.appendChild(link);
     }
 
@@ -146,9 +146,9 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
       document.body.appendChild(testElement);
 
       if ('fonts' in document) {
-        await document.fonts.load(16px "${fontName}");
-        await document.fonts.load(400 16px "${fontName}");
-        await document.fonts.load(700 16px "${fontName}");
+        await document.fonts.load(16px `"${fontName}"`);
+        await document.fonts.load(400 16px `"${fontName}"`);
+        await document.fonts.load(700 16px `"${fontName}"`);
       }
 
       await new Promise(resolve => setTimeout(resolve, 500));
