@@ -174,10 +174,10 @@ export const extractFontsFromContainer = (container: HTMLElement): Set<string> =
   console.log('Extracted Fonts:', fonts);
   return fonts;
 };
-
+{
   await Promise.all(imagePromises);
   await new Promise(resolve => setTimeout(resolve, 1500));
-
+};
 // Create print style overrides with preloaded fonts
 export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElement => {
   const styleElement = document.createElement('style');
