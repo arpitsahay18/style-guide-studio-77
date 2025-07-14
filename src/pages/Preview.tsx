@@ -160,190 +160,275 @@ const Preview = () => {
   }, [guideId]);
 
   const handleExportPDF = async () => {
-    if (!exportRef.current) {
-      console.error('Export ref is not available');
-      toast({
-        variant: "destructive",
-        title: "Export Error",
-        description: "Export component is not ready. Please try again.",
-      });
-      return;
-    }
+  if (!exportRef.current) {
+    console.error('Export ref is not available');
+    toast({
+      variant: "destructive",
+      title: "Export Error",
+      description: "Export component is not ready. Please try again.",
+    });
+    return;
+  }
 
-    setIsExportingPDF(true);
+  setIsExportingPDF(true);
 
-    try {
-      const guide = sharedGuide || currentGuide;
-      console.log('Starting PDF export for guide:', guide.name);
-      
-      // Step 1: Simple font loading
-      console.log('Loading fonts...');
-      await loadCustomFonts([]);
-      
-      // Step 2: Create basic styles
-      const styleElement = document.createElement('style');
-      styleElement.textContent = `
-        .pdf-export {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          font-smooth: always;
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
+  try {
+    const guide = sharedGuide || currentGuide;
+    console.log('Starting PDF export for guide:', guide.name);
+    
+    // Step 1: Enhanced font loading with better timing
+    console.log('Loading fonts...');
+    const extractedFonts = extractFontsFromContainer(exportRef.current);
+    await preloadGoogleFonts(extractedFonts);
+    
+    // Step 2: Create comprehensive styles including the original utils
+    console.log('Creating styles...');
+    const styleElement = createPrintStyles(extractedFonts);
+    document.head.appendChild(styleElement);
+    
+    // Step 3: Apply PDF classes and prepare container
+    exportRef.current.classList.add('pdf-export-container');
+    
+    // Step 4: CRITICAL - Enhanced image handling with better error handling
+    console.log('Processing images...');
+    const images = exportRef.current.querySelectorAll('img');
+    console.log(`Found ${images.length} images to process`);
+    
+    // Convert images to base64 with better error handling
+    const imagePromises = Array.from(images).map(async (img, index) => {
+      try {
+        console.log(`Processing image ${index + 1}/${images.length}: ${img.src}`);
+        
+        // Skip if already base64
+        if (img.src.startsWith('data:image/')) {
+          console.log(`Image ${index + 1} already base64`);
+          return Promise.resolve();
         }
         
-        .pdf-export * {
-          -webkit-print-color-adjust: exact !important;
-          color-adjust: exact !important;
+        // Convert to base64
+        const base64 = await convertImageToBase64(img.src, 5); // Increase retries
+        if (base64 !== img.src) {
+          img.src = base64;
+          console.log(`Image ${index + 1} converted to base64`);
         }
         
-        .pdf-export img {
-          max-width: 100% !important;
-          height: auto !important;
-          object-fit: contain !important;
-        }
-      `;
-      document.head.appendChild(styleElement);
-      
-      // Step 3: Apply PDF class
-      exportRef.current.classList.add('pdf-export');
-      
-      // Step 4: Handle images if the function exists
-      if (typeof preloadImages === 'function') {
-        console.log('Converting images...');
-        await preloadImages(exportRef.current);
-      }
-      
-      // Step 5: Wait for layout
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Step 6: Create canvas with basic settings
-      console.log('Creating canvas...');
-      const canvas = await html2canvas(exportRef.current, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: 'white',
-        height: exportRef.current.scrollHeight,
-        width: exportRef.current.scrollWidth,
-        logging: true,
-        windowWidth: 1200,
-        windowHeight: exportRef.current.scrollHeight,
-        imageTimeout: 15000,
-        onclone: (clonedDoc) => {
-          // Apply styles to cloned document
-          const clonedStyle = clonedDoc.createElement('style');
-          clonedStyle.textContent = styleElement.textContent;
-          clonedDoc.head.appendChild(clonedStyle);
-          
-          // Apply PDF class
-          const clonedExportRef = clonedDoc.body;
-          clonedExportRef.classList.add('pdf-export');
-          
-          // Fix images
-          const clonedImages = clonedDoc.querySelectorAll('img');
-          clonedImages.forEach((img) => {
-            img.style.maxWidth = '100%';
-            img.style.height = 'auto';
-            img.style.objectFit = 'contain';
-          });
-        }
-      });
-
-      console.log('Canvas created successfully, size:', canvas.width, 'x', canvas.height);
-
-      // Step 7: Create PDF
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
-
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const margin = 15;
-      const contentWidth = pageWidth - (margin * 2);
-      const contentHeight = pageHeight - (margin * 2);
-      
-      // Step 8: Create cover page
-      pdf.setFillColor(255, 255, 255);
-      pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-      
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(36);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(guide.name, pageWidth / 2, pageHeight / 2 - 15, { align: 'center' });
-      
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(20);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 5, { align: 'center' });
-
-      // Step 9: Add content pages
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const imgWidth = contentWidth;
-      const imgHeight = (canvas.height * contentWidth) / canvas.width;
-      
-      const safePageHeight = contentHeight - 10;
-      const totalPages = Math.ceil(imgHeight / safePageHeight);
-      
-      console.log(`Generating ${totalPages} content pages...`);
-      
-      for (let pageNum = 0; pageNum < totalPages; pageNum++) {
-        pdf.addPage();
-        
-        const sourceY = pageNum * safePageHeight * (canvas.width / contentWidth);
-        const remainingHeight = canvas.height - sourceY;
-        const sourceHeight = Math.min(safePageHeight * (canvas.width / contentWidth), remainingHeight);
-        
-        if (sourceHeight > 10) {
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = canvas.width;
-          tempCanvas.height = sourceHeight;
-          const tempCtx = tempCanvas.getContext('2d');
-          
-          if (tempCtx) {
-            tempCtx.drawImage(
-              canvas,
-              0, sourceY, canvas.width, sourceHeight,
-              0, 0, canvas.width, sourceHeight
-            );
+        // Wait for image to load
+        return new Promise((resolve) => {
+          if (img.complete && img.naturalHeight !== 0) {
+            resolve();
+          } else {
+            const handleLoad = () => {
+              img.removeEventListener('load', handleLoad);
+              img.removeEventListener('error', handleError);
+              resolve();
+            };
             
-            const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
-            const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
+            const handleError = () => {
+              console.warn(`Image ${index + 1} failed to load:`, img.src);
+              img.removeEventListener('load', handleLoad);
+              img.removeEventListener('error', handleError);
+              resolve(); // Continue even if image fails
+            };
             
-            pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidth, pageImgHeight);
-            console.log(`Added page ${pageNum + 1}/${totalPages}`);
+            img.addEventListener('load', handleLoad);
+            img.addEventListener('error', handleError);
+            
+            // Longer timeout for logo images
+            setTimeout(() => {
+              img.removeEventListener('load', handleLoad);
+              img.removeEventListener('error', handleError);
+              resolve();
+            }, 15000); // Increased from 8000ms
           }
+        });
+      } catch (error) {
+        console.error(`Error processing image ${index + 1}:`, error);
+        return Promise.resolve(); // Continue even if conversion fails
+      }
+    });
+    
+    // Wait for ALL images to be processed
+    await Promise.all(imagePromises);
+    console.log('All images processed');
+    
+    // Step 5: Additional wait for layout stabilization
+    console.log('Waiting for layout stabilization...');
+    await new Promise(resolve => setTimeout(resolve, 3000)); // Increased wait time
+    
+    // Step 6: Force layout recalculation
+    exportRef.current.style.height = 'auto';
+    exportRef.current.offsetHeight; // Force reflow
+    
+    // Step 7: Enhanced canvas creation with better settings
+    console.log('Creating canvas...');
+    const canvas = await html2canvas(exportRef.current, {
+      scale: 2, // Increased scale for better quality
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      height: exportRef.current.scrollHeight,
+      width: exportRef.current.scrollWidth,
+      logging: true,
+      windowWidth: 1400, // Increased window width
+      windowHeight: exportRef.current.scrollHeight,
+      imageTimeout: 20000, // Increased timeout
+      removeContainer: false,
+      onclone: (clonedDoc) => {
+        console.log('Processing cloned document...');
+        
+        // Apply comprehensive styles to cloned document
+        const clonedStyle = clonedDoc.createElement('style');
+        clonedStyle.textContent = styleElement.textContent;
+        clonedDoc.head.appendChild(clonedStyle);
+        
+        // Find and style the export container in cloned doc
+        const clonedContainer = clonedDoc.querySelector('[class*="pdf-export-container"]') || clonedDoc.body;
+        clonedContainer.classList.add('pdf-export-container');
+        
+        // Ensure all images are properly sized in cloned doc
+        const clonedImages = clonedDoc.querySelectorAll('img');
+        clonedImages.forEach((img, index) => {
+          img.style.maxWidth = '100%';
+          img.style.height = 'auto';
+          img.style.objectFit = 'contain';
+          img.style.display = 'block';
+          
+          // Force visibility
+          img.style.visibility = 'visible';
+          img.style.opacity = '1';
+          
+          console.log(`Cloned image ${index + 1} styled:`, img.src.substring(0, 50) + '...');
+        });
+        
+        // Apply logo-specific styles to cloned doc
+        const logoGrids = clonedDoc.querySelectorAll('.logo-variations-grid');
+        logoGrids.forEach(grid => {
+          grid.style.display = 'grid';
+          grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(140px, 1fr))';
+          grid.style.gap = '0.75rem';
+          grid.style.width = '100%';
+          grid.style.pageBreakInside = 'avoid';
+        });
+        
+        // Style logo items
+        const logoItems = clonedDoc.querySelectorAll('.logo-display-item');
+        logoItems.forEach(item => {
+          item.style.pageBreakInside = 'avoid';
+          item.style.breakInside = 'avoid';
+          item.style.display = 'inline-block';
+          item.style.width = '100%';
+        });
+      }
+    });
+
+    console.log('Canvas created successfully, size:', canvas.width, 'x', canvas.height);
+    
+    // Verify canvas has content
+    if (canvas.width === 0 || canvas.height === 0) {
+      throw new Error('Canvas creation failed - empty canvas');
+    }
+
+    // Step 8: Create PDF with optimized settings
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: true,
+      precision: 16
+    });
+
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
+    const contentHeight = pageHeight - (margin * 2);
+    
+    // Step 9: Create cover page
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(36);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(guide.name, pageWidth / 2, pageHeight / 2 - 15, { align: 'center' });
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(20);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Brand Guide', pageWidth / 2, pageHeight / 2 + 5, { align: 'center' });
+
+    // Step 10: Add content pages with better image handling
+    const imgData = canvas.toDataURL('image/png', 1.0); // Use PNG for better quality
+    const imgWidth = contentWidth;
+    const imgHeight = (canvas.height * contentWidth) / canvas.width;
+    
+    const safePageHeight = contentHeight - 5; // Reduced margin for more content
+    const totalPages = Math.ceil(imgHeight / safePageHeight);
+    
+    console.log(`Generating ${totalPages} content pages...`);
+    
+    for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+      pdf.addPage();
+      
+      const sourceY = pageNum * safePageHeight * (canvas.width / contentWidth);
+      const remainingHeight = canvas.height - sourceY;
+      const sourceHeight = Math.min(safePageHeight * (canvas.width / contentWidth), remainingHeight);
+      
+      if (sourceHeight > 5) { // Reduced minimum height
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = sourceHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        if (tempCtx) {
+          // Fill with white background
+          tempCtx.fillStyle = 'white';
+          tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+          
+          // Draw the content
+          tempCtx.drawImage(
+            canvas,
+            0, sourceY, canvas.width, sourceHeight,
+            0, 0, canvas.width, sourceHeight
+          );
+          
+          const pageImgData = tempCanvas.toDataURL('image/png', 1.0);
+          const pageImgHeight = (sourceHeight * contentWidth) / canvas.width;
+          
+          pdf.addImage(pageImgData, 'PNG', margin, margin, imgWidth, pageImgHeight);
+          console.log(`Added page ${pageNum + 1}/${totalPages}`);
         }
       }
-
-      // Step 10: Cleanup
-      document.head.removeChild(styleElement);
-      exportRef.current.classList.remove('pdf-export');
-
-      // Step 11: Save PDF
-      const fileName = `${guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf`;
-      pdf.save(fileName);
-      
-      console.log('PDF export completed successfully');
-      toast({
-        title: "Brand Guide Exported",
-        description: "Your brand guide has been exported as PDF successfully.",
-      });
-
-    } catch (err: any) {
-      const error = err as Error;
-      console.error('Error generating PDF:', error);
-      toast({
-        variant: "destructive",
-        title: "Export Failed",
-        description: `There was a problem exporting your brand guide: ${error.message}`,
-      });
-    } finally {
-      setIsExportingPDF(false);
     }
-  };
 
+    // Step 11: Cleanup
+    document.head.removeChild(styleElement);
+    exportRef.current.classList.remove('pdf-export-container');
+    exportRef.current.style.height = ''; // Reset height
+
+    // Step 12: Save PDF
+    const fileName = `${guide.name.replace(/[^a-zA-Z0-9]/g, '_')}_brand_guide.pdf`;
+    pdf.save(fileName);
+    
+    console.log('PDF export completed successfully');
+    toast({
+      title: "Brand Guide Exported",
+      description: "Your brand guide has been exported as PDF successfully.",
+    });
+
+  } catch (err) {
+    const error = err;
+    console.error('Error generating PDF:', error);
+    toast({
+      variant: "destructive",
+      title: "Export Failed",
+      description: `There was a problem exporting your brand guide: ${error.message}`,
+    });
+  } finally {
+    setIsExportingPDF(false);
+  }
+};
+  
   const handleGenerateShareableLink = async () => {
     if (!user) {
       toast({
