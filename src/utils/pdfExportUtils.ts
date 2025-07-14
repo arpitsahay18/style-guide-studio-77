@@ -131,7 +131,7 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
       const link = document.createElement('link');
       link.id = linkId;
       link.rel = 'stylesheet';
-      link.href = https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap;
+      link.href = `https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=swap`;
       document.head.appendChild(link);
     }
 
@@ -192,12 +192,12 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
     const encodedFont = encodeURIComponent(fontName);
 
     // Generate the @import rule for the font
-    return @import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block');;
+    return @import url(`'https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block'`);;
   }).filter(Boolean) // Remove empty strings (e.g., for system fonts)
     .join('\n'); // Combine all @import rules into a single string
 
   // Add the font imports and additional styles to the style element
-  styleElement.textContent = 
+  styleElement.textContent = ` 
     ${fontImports}
 
     .pdf-export-container {
@@ -299,7 +299,7 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
         page-break-inside: avoid !important;
       }
     }
-  ;
+  `;
 
   return styleElement;
 };
