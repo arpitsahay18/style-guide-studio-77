@@ -62,7 +62,7 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
 // Enhanced preload with better image handling
 export const preloadImages = async (container: HTMLElement): Promise<void> => {
   const images = container.querySelectorAll('img');
-  console.log(Preloading ${images.length} images...);
+  console.log(`Preloading ${images.length} images...`);
 
   const imagePromises = Array.from(images).map(async (img, index) => {
     // Convert Firebase/Google Storage URLs to base64
