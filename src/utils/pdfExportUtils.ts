@@ -1,6 +1,5 @@
 // PDF Export Utilities
 
-// Enhanced image conversion with better error handling and retry logic
 export const convertImageToBase64 = async (url: string, retries: number = 5): Promise<string> => {
   if (url.startsWith('data:image/')) {
     return url;
@@ -8,6 +7,7 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
+      // ✅ FIXED: line 11 - using backticks for template string
       console.log(`Converting image attempt ${attempt + 1}/${retries}: ${url}`);
       
       const response = await fetch(url, {
@@ -16,43 +16,43 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
         headers: {
           'Accept': 'image/*',
         },
-        // Add timeout
         signal: AbortSignal.timeout(15000)
       });
-      
+
       if (!response.ok) {
+        // ✅ FIXED: line with error message template
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const blob = await response.blob();
-      
-      // Verify it's actually an image
+
       if (!blob.type.startsWith('image/')) {
+        // ✅ FIXED: template literal
         throw new Error(`Invalid image type: ${blob.type}`);
       }
-      
+
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
           const result = reader.result as string;
-          console.log(Image converted successfully: ${url.substring(0, 50)}...);
+          // ✅ FIXED: template literal
+          console.log(`Image converted successfully: ${url.substring(0, 50)}...`);
           resolve(result);
         };
         reader.onerror = () => {
-          console.error(FileReader error for: ${url});
+          console.error(`FileReader error for: ${url}`);
           reject(new Error('Failed to convert image to base64'));
         };
         reader.readAsDataURL(blob);
       });
     } catch (error) {
-      console.warn(Image conversion attempt ${attempt + 1} failed:, error);
-      
+      console.warn(`Image conversion attempt ${attempt + 1} failed:`, error);
+
       if (attempt === retries - 1) {
-        console.error(Final attempt failed for image: ${url});
-        return url; // Return original URL as fallback
+        console.error(`Final attempt failed for image: ${url}`);
+        return url;
       }
-      
-      // Exponential backoff
+
       await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
     }
   }
