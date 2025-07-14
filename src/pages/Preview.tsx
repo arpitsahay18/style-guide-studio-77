@@ -15,54 +15,14 @@ import { useShareableLinks } from '@/hooks/useShareableLinks';
 import { useAuth } from '@/hooks/useAuth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { convertImageToBase64, preloadImages, createPrintStyles, extractFontsFromContainer, preloadGoogleFonts } from '@/utils/pdfExportUtils';
+import { convertImageToBase64, preloadImages, extractFontsFromContainer } from '@/utils/pdfExportUtils';
+import { loadFontsForPDFExport, createPDFStyles, createFontAwareOnClone } from '@/utils/fontLoadingForPDF';
 
 // Font mapping for PDF export - maps common fonts to jsPDF supported fonts
-const getFontMapping = (fontFamily) => {
-  const fontName = fontFamily.toLowerCase().replace(/['"]/g, '');
-  
-  // Common serif fonts
-  if (fontName.includes('times') || fontName.includes('serif') || 
-      fontName.includes('georgia') || fontName.includes('garamond') ||
-      fontName.includes('baskerville') || fontName.includes('minion')) {
-    return 'times';
-  }
-  
-  // Common monospace fonts
-  if (fontName.includes('courier') || fontName.includes('mono') || 
-      fontName.includes('consolas') || fontName.includes('menlo') ||
-      fontName.includes('monaco') || fontName.includes('roboto mono')) {
-    return 'courier';
-  }
-  
-  // Everything else defaults to helvetica (sans-serif)
-  return 'helvetica';
-};
-
-// Simplified font loading utility
-const loadCustomFonts = async (fonts) => {
-  try {
-    // Wait for any existing fonts to load
-    await document.fonts.ready;
-    
-    // Load common Google Fonts
-    const commonFonts = ['Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat'];
-    for (const font of commonFonts) {
-      if (!document.querySelector(link[href*="fonts.googleapis.com"][href*="${font.replace(/ /g, '+')}"])) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/ /g, '+')}:wght@300;400;500;600;700&display=swap`;
-        document.head.appendChild(link);
-      }
-    }
-    
-    // Wait a bit for fonts to load
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return fonts;
-  } catch (error) {
-    console.warn('Font loading failed:', error);
-    return [];
-  }
+const PDF_FONT_MAPPING = {
+  'Arial': 'helvetica',
+  'Times': 'times',
+  'Courier': 'courier'
 };
 
 const Preview = () => {
@@ -177,13 +137,14 @@ const Preview = () => {
     console.log('Starting PDF export for guide:', guide.name);
     
     // Step 1: Enhanced font loading with better timing
-    console.log('Loading fonts...');
+    console.log('Loading fonts for PDF export...');
     const extractedFonts = extractFontsFromContainer(exportRef.current);
-    await preloadGoogleFonts(extractedFonts);
+    const fontResult = await loadFontsForPDFExport(extractedFonts);
+    console.log('Font loading result:', fontResult);
     
-    // Step 2: Create comprehensive styles including the original utils
-    console.log('Creating styles...');
-    const styleElement = createPrintStyles(extractedFonts);
+    // Step 2: Create comprehensive styles with enhanced font handling
+    console.log('Creating PDF export styles...');
+    const styleElement = createPDFStyles(extractedFonts);
     document.head.appendChild(styleElement);
     
     // Step 3: Apply PDF classes and prepare container
@@ -196,47 +157,48 @@ const Preview = () => {
     
     // Convert images to base64 with better error handling
     const imagePromises = Array.from(images).map(async (img, index) => {
+      const htmlImg = img as HTMLImageElement;
       try {
-        console.log(`Processing image ${index + 1}/${images.length}: ${img.src}`);
+        console.log(`Processing image ${index + 1}/${images.length}: ${htmlImg.src}`);
         
         // Skip if already base64
-        if (img.src.startsWith('data:image/')) {
+        if (htmlImg.src.startsWith('data:image/')) {
           console.log(`Image ${index + 1} already base64`);
           return Promise.resolve();
         }
         
         // Convert to base64
-        const base64 = await convertImageToBase64(img.src, 5); // Increase retries
-        if (base64 !== img.src) {
-          img.src = base64;
+        const base64 = await convertImageToBase64(htmlImg.src, 5); // Increase retries
+        if (base64 !== htmlImg.src) {
+          htmlImg.src = base64;
           console.log(`Image ${index + 1} converted to base64`);
         }
         
         // Wait for image to load
-        return new Promise((resolve) => {
-          if (img.complete && img.naturalHeight !== 0) {
+        return new Promise<void>((resolve) => {
+          if (htmlImg.complete && htmlImg.naturalHeight !== 0) {
             resolve();
           } else {
             const handleLoad = () => {
-              img.removeEventListener('load', handleLoad);
-              img.removeEventListener('error', handleError);
+              htmlImg.removeEventListener('load', handleLoad);
+              htmlImg.removeEventListener('error', handleError);
               resolve();
             };
             
             const handleError = () => {
-              console.warn(`Image ${index + 1} failed to load:`, img.src);
-              img.removeEventListener('load', handleLoad);
-              img.removeEventListener('error', handleError);
+              console.warn(`Image ${index + 1} failed to load:`, htmlImg.src);
+              htmlImg.removeEventListener('load', handleLoad);
+              htmlImg.removeEventListener('error', handleError);
               resolve(); // Continue even if image fails
             };
             
-            img.addEventListener('load', handleLoad);
-            img.addEventListener('error', handleError);
+            htmlImg.addEventListener('load', handleLoad);
+            htmlImg.addEventListener('error', handleError);
             
             // Longer timeout for logo images
             setTimeout(() => {
-              img.removeEventListener('load', handleLoad);
-              img.removeEventListener('error', handleError);
+              htmlImg.removeEventListener('load', handleLoad);
+              htmlImg.removeEventListener('error', handleError);
               resolve();
             }, 15000); // Increased from 8000ms
           }
@@ -273,52 +235,7 @@ const Preview = () => {
       windowHeight: exportRef.current.scrollHeight,
       imageTimeout: 20000, // Increased timeout
       removeContainer: false,
-      onclone: (clonedDoc) => {
-        console.log('Processing cloned document...');
-        
-        // Apply comprehensive styles to cloned document
-        const clonedStyle = clonedDoc.createElement('style');
-        clonedStyle.textContent = styleElement.textContent;
-        clonedDoc.head.appendChild(clonedStyle);
-        
-        // Find and style the export container in cloned doc
-        const clonedContainer = clonedDoc.querySelector('[class*="pdf-export-container"]') || clonedDoc.body;
-        clonedContainer.classList.add('pdf-export-container');
-        
-        // Ensure all images are properly sized in cloned doc
-        const clonedImages = clonedDoc.querySelectorAll('img');
-        clonedImages.forEach((img, index) => {
-          img.style.maxWidth = '100%';
-          img.style.height = 'auto';
-          img.style.objectFit = 'contain';
-          img.style.display = 'block';
-          
-          // Force visibility
-          img.style.visibility = 'visible';
-          img.style.opacity = '1';
-          
-          console.log(`Cloned image ${index + 1} styled:`, img.src.substring(0, 50) + '...');
-        });
-        
-        // Apply logo-specific styles to cloned doc
-        const logoGrids = clonedDoc.querySelectorAll('.logo-variations-grid');
-        logoGrids.forEach(grid => {
-          grid.style.display = 'grid';
-          grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(140px, 1fr))';
-          grid.style.gap = '0.75rem';
-          grid.style.width = '100%';
-          grid.style.pageBreakInside = 'avoid';
-        });
-        
-        // Style logo items
-        const logoItems = clonedDoc.querySelectorAll('.logo-display-item');
-        logoItems.forEach(item => {
-          item.style.pageBreakInside = 'avoid';
-          item.style.breakInside = 'avoid';
-          item.style.display = 'inline-block';
-          item.style.width = '100%';
-        });
-      }
+      onclone: createFontAwareOnClone(styleElement, extractedFonts)
     });
 
     console.log('Canvas created successfully, size:', canvas.width, 'x', canvas.height);

@@ -11,7 +11,8 @@ import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { convertImageToBase64, preloadImages, createPrintStyles, extractFontsFromContainer, preloadGoogleFonts } from '@/utils/pdfExportUtils';
+import { convertImageToBase64, preloadImages, extractFontsFromContainer } from '@/utils/pdfExportUtils';
+import { loadFontsForPDFExport, createPDFStyles, createFontAwareOnClone } from '@/utils/fontLoadingForPDF';
 
 const SharedPreview = () => {
   const { linkId } = useParams();
@@ -107,14 +108,15 @@ const SharedPreview = () => {
     try {
       console.log('Starting shared preview PDF export');
       
-      // Step 1: Extract fonts and create print styles  
+      // Step 1: Enhanced font loading for shared preview PDF
+      console.log('Loading fonts for shared preview PDF export...');
       const fonts = extractFontsFromContainer(exportRef.current);
-      const styleElement = createPrintStyles(fonts);
-      document.head.appendChild(styleElement);
+      const fontResult = await loadFontsForPDFExport(fonts);
+      console.log('Shared preview font loading result:', fontResult);
       
-      // Step 2: Preload Google Fonts
-      console.log('Preloading Google Fonts for shared preview PDF...');
-      await preloadGoogleFonts(fonts);
+      // Step 2: Create enhanced PDF styles
+      const styleElement = createPDFStyles(fonts);
+      document.head.appendChild(styleElement);
       
       // Step 3: Apply CSS classes for better page breaking
       const sections = exportRef.current.querySelectorAll('[class*="section"], .color-card, .logo-display, [class*="typography"]');
@@ -184,24 +186,7 @@ const SharedPreview = () => {
         windowWidth: 1200,
         windowHeight: exportRef.current.scrollHeight,
         imageTimeout: 15000,
-        onclone: (clonedDoc) => {
-          const clonedStyle = clonedDoc.createElement('style');
-          clonedStyle.textContent = styleElement.textContent;
-          clonedDoc.head.appendChild(clonedStyle);
-          
-          const clonedImages = clonedDoc.querySelectorAll('img');
-          clonedImages.forEach((img) => {
-            img.style.maxWidth = '100%';
-            img.style.height = 'auto';
-            img.style.objectFit = 'cover';
-            img.style.display = 'block';
-          });
-          
-          const clonedSections = clonedDoc.querySelectorAll('.logo-display, .color-card, [class*="typography"], [class*="section"]');
-          clonedSections.forEach((section) => {
-            section.classList.add('avoid-break');
-          });
-        }
+        onclone: createFontAwareOnClone(styleElement, fonts)
       });
 
       // Step 8: Multi-page PDF generation (same logic as Preview.tsx)
