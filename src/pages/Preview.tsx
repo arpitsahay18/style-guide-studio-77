@@ -253,7 +253,7 @@ const Preview = () => {
     
     // Step 5: Additional wait for layout stabilization
     console.log('Waiting for layout stabilization...');
-    await new Promise(resolve => setTimeout(resolve, 3000)); // Increased wait time
+    await new Promise(resolve => setTimeout(resolve, 3500)); // Increased wait time
     
     // Step 6: Force layout recalculation
     exportRef.current.style.height = 'auto';
