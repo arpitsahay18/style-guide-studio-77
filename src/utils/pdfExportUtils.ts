@@ -172,7 +172,7 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
   
 
   await Promise.all(fontPromises);
-};
+}};
 
 // Extract fonts from a container
 export const extractFontsFromContainer = (container: HTMLElement): Set<string> => {
