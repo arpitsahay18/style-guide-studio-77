@@ -1,6 +1,6 @@
 // PDF Export Utilities
 
-// Enhanced image conversion with better error handling and retry logic
+// Convert image URLs to base64 with robust error handling and timeout
 export const convertImageToBase64 = async (url: string, retries: number = 5): Promise<string> => {
   if (url.startsWith('data:image/')) {
     return url;
@@ -8,7 +8,8 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      console.log(`Converting image attempt ${attempt + 1}/${retries}: ${url}`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
 
       const response = await fetch(url, {
         mode: 'cors',
@@ -16,9 +17,10 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
         headers: {
           'Accept': 'image/*',
         },
-        // You may need a polyfill for AbortSignal.timeout in some environments
-        signal: (AbortSignal as any).timeout?.(15000),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeout);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -32,37 +34,27 @@ export const convertImageToBase64 = async (url: string, retries: number = 5): Pr
 
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result as string;
-          console.log(`Image converted successfully: ${url.substring(0, 50)}...`);
-          resolve(result);
-        };
-        reader.onerror = () => {
-          console.error(`FileReader error for: ${url}`);
-          reject(new Error('Failed to convert image to base64'));
-        };
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to convert image to base64'));
         reader.readAsDataURL(blob);
       });
     } catch (error) {
-      console.warn(`Image conversion attempt ${attempt + 1} failed:`, error);
-
       if (attempt === retries - 1) {
         console.error(`Final attempt failed for image: ${url}`);
         return url;
       }
-
       await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
     }
   }
+
   return url;
 };
 
-// Enhanced preload with better image handling
+// Preload all images inside a container and convert to base64 if needed
 export const preloadImages = async (container: HTMLElement): Promise<void> => {
   const images = container.querySelectorAll('img');
-  console.log(`Preloading ${images.length} images...`);
 
-  const imagePromises = Array.from(images).map(async (img, index) => {
+  const imagePromises = Array.from(images).map(async (img) => {
     if (
       img.src.startsWith('https://firebasestorage.googleapis.com') ||
       img.src.startsWith('https://storage.googleapis.com')
@@ -70,28 +62,24 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
       try {
         const base64 = await convertImageToBase64(img.src);
         img.src = base64;
-        console.log(`Image ${index + 1} converted to base64`);
       } catch (error) {
-        console.error(`Failed to convert image ${index + 1}:`, error);
+        console.error('Failed to convert image:', img.src, error);
       }
     }
 
     return new Promise<void>((resolve) => {
       if (img.complete && img.naturalHeight !== 0) {
-        console.log(`Image ${index + 1} already loaded`);
         resolve();
       } else {
         const handleLoad = () => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          console.log(`Image ${index + 1} loaded successfully`);
           resolve();
         };
 
         const handleError = () => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          console.error(`Image ${index + 1} failed to load:`, img.src);
           resolve();
         };
 
@@ -101,7 +89,6 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
         setTimeout(() => {
           img.removeEventListener('load', handleLoad);
           img.removeEventListener('error', handleError);
-          console.warn(`Image ${index + 1} timed out`);
           resolve();
         }, 15000);
       }
@@ -109,14 +96,13 @@ export const preloadImages = async (container: HTMLElement): Promise<void> => {
   });
 
   await Promise.all(imagePromises);
-  console.log('All images preloaded');
   await new Promise(resolve => setTimeout(resolve, 2000));
 };
 
-// Preload Google Fonts
+// Preload Google Fonts dynamically
 export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
   const fontPromises = Array.from(fonts).map(async (fontFamily) => {
-    const fontName = fontFamily.replace(/'/g, '').split(',')[0].trim();
+    const fontName = fontFamily.replace(/['"]/g, '').split(',')[0].trim();
     const encodedFont = encodeURIComponent(fontName);
     const linkId = `google-font-${encodedFont}`;
 
@@ -147,14 +133,14 @@ export const preloadGoogleFonts = async (fonts: Set<string>): Promise<void> => {
       await new Promise(resolve => setTimeout(resolve, 500));
       document.body.removeChild(testElement);
     } catch {
-      // silently fail
+      // Silent fail fallback
     }
   });
 
   await Promise.all(fontPromises);
 };
 
-// Extract fonts from a container
+// Extract font families from a container
 export const extractFontsFromContainer = (container: HTMLElement): Set<string> => {
   const fonts = new Set<string>();
   const elementsWithFonts = container.querySelectorAll('[style*="font-family"]');
@@ -164,17 +150,18 @@ export const extractFontsFromContainer = (container: HTMLElement): Set<string> =
       fonts.add(style.fontFamily);
     }
   });
-  console.log('Extracted Fonts:', fonts);
   return fonts;
 };
 
-// Create print style overrides with preloaded fonts
+// Inject styles into DOM for PDF rendering
 export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElement => {
   const styleElement = document.createElement('style');
 
   const fontImports = Array.from(fonts).map(font => {
     const fontName = font.replace(/['"]/g, '').split(',')[0].trim();
-    if (['Arial', 'Helvetica', 'Times', 'serif', 'sans-serif', 'monospace'].includes(fontName)) return '';
+    if (['Arial', 'Helvetica', 'Times', 'serif', 'sans-serif', 'monospace'].includes(fontName)) {
+      return '';
+    }
     const encodedFont = encodeURIComponent(fontName);
     return `@import url('https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;600;700&display=block');`;
   }).filter(Boolean).join('\n');
@@ -184,8 +171,6 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
 
     .pdf-export-container {
       height: auto !important;
-      min-height: unset !important;
-      max-height: unset !important;
       max-width: 190mm !important;
       overflow-x: visible !important;
       background: white !important;
@@ -218,8 +203,7 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
       break-inside: avoid !important;
       page-break-inside: avoid !important;
       margin-bottom: 24px !important;
-      max-width: 100% !important;
-      overflow: hidden !important;
+      width: 100% !important;
     }
 
     .logo-variations-grid {
@@ -227,18 +211,15 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
       gap: 0.75rem !important;
       width: 100% !important;
-      max-width: 100% !important;
     }
 
     .logo-variations-grid > * {
       min-width: 0 !important;
-      max-width: 100% !important;
     }
 
     .logo-display-item {
       break-inside: avoid !important;
       page-break-inside: avoid !important;
-      display: inline-block !important;
       width: 100% !important;
     }
 
@@ -246,11 +227,6 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
       display: grid !important;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
       gap: 1rem !important;
-    }
-
-    .color-card {
-      break-inside: avoid !important;
-      page-break-inside: avoid !important;
     }
 
     .typography-section {
@@ -262,14 +238,21 @@ export const createPrintStyles = (fonts: Set<string> = new Set()): HTMLStyleElem
     img {
       max-width: 100% !important;
       height: auto !important;
-      object-fit: cover !important;
       display: block !important;
+      object-fit: contain !important;
     }
 
     .container, .max-w-6xl, .mx-auto {
       max-width: 190mm !important;
       padding-left: 0 !important;
       padding-right: 0 !important;
+    }
+
+    @media print {
+      .avoid-break {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
     }
   `;
 
